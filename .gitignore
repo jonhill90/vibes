@@ -10,6 +10,7 @@
 /projects/*
 !/projects/
 !/projects/README.md
+!/projects/terraform-labs-v2/
 
 
 # VS Code and System files
