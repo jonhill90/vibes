@@ -1,67 +1,18 @@
-# Terraform State Files (Sensitive)
-terraform.tfstate
-terraform.tfstate.backup
-*.tfstate
-*.tfstate.backup
-.terraform/
-.terraform.lock.hcl
-
-# Terraform Variables (Secrets)
-terraform.tfvars
-*.auto.tfvars
-terraform.tfvars.json
-
-# Terraform Plan Files
-*.tfplan
-.plan.cache
-
-# Terraform Backends
-backend.tf
-
-# Packer Variables (Secrets)
-packer.auto.pkrvars.hcl
-
-# Ansible Vault encrypted files (if unencrypted versions exist)
-*.vault.yml
-*.vault.yaml
-*.encrypted
-
-# Inventory files with secrets
-inventory/
-hosts
-group_vars/  # If it contains secrets, otherwise be cautious
-host_vars/   # If it contains secrets, otherwise be cautious
-
-# SSH keys
-*.pem
-*.pub
-*.key
-id_rsa*
-id_dsa*
-
 # Local environment files
 .env
-*.secrets
-secrets.yml
-.venv
-.archive
 
-# Logs & temporary files
-*.retry
-*.log
-*.bak
-*.swp
-*.swo
-*.tmp
+# Repos
+/repos/*
+!/repos/
+!/repos/README.md
 
-# Ansible cache & collections
-~/.ansible/
-collections/
-__pycache__/
+# Projects
+/projects/*
+!/projects/
+!/projects/README.md
+
 
 # VS Code and System files
 .vscode/
 .DS_Store
-
-# Scratch Files
-.scratch
+__pycache__/
