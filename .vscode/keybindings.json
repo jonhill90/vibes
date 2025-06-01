@@ -1,0 +1,8 @@
+[
+  {
+    "key": "f5",
+    "command": "workbench.action.tasks.runTask",
+    "args": "Run PowerShell Script",
+    "when": "editorLangId == 'powershell'"
+  }
+]

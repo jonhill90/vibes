@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "openmemory": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:8765/mcp/openmemory/sse/vibes-user"
+      ]
+    }
+  }
+}

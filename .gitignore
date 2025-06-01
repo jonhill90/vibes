@@ -13,7 +13,6 @@
 !/projects/terraform-labs-v2/
 
 
-# VS Code and System files
-.vscode/
+# System files
 .DS_Store
 __pycache__/

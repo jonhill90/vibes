@@ -1,0 +1,19 @@
+{
+  "recommendations": [
+    "ms-vscode.azurecli",
+    "ms-azuretools.vscode-docker",
+    "docker.docker",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.autopep8",
+    "HashiCorp.terraform",
+    "hashicorp.hcl",
+    "ms-vscode.powershell",
+    "github.copilot",
+    "github.copilot-chat",
+    "ms-mssql.mssql",
+    "ms-toolsai.jupyter",
+    "redhat.vscode-yaml",
+    "mermaidchart.vscode-mermaid-chart"
+  ]
+}
