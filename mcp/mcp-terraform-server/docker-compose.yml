@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  terraform-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    container_name: terraform-mcp-server
+    restart: unless-stopped
+    environment:
+      # MCP Server Configuration
+      - MCP_SERVER_NAME=terraform-mcp-server
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # Terraform Registry Configuration
+      - TERRAFORM_REGISTRY_URL=${TERRAFORM_REGISTRY_URL:-https://registry.terraform.io}
+      
+      # Optional: Rate limiting and caching
+      - RATE_LIMIT=${RATE_LIMIT:-100}
+      - CACHE_TTL=${CACHE_TTL:-3600}
+    
+    # No ports exposed since this is an MCP server (stdin/stdout communication)
+    # ports:
+    #   - "8081:8081"
+    
+    # Mount local cache for Terraform data (optional)
+    volumes:
+      - terraform-cache:/tmp/terraform-cache
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "ls", "/server/terraform-mcp-server", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  terraform-cache:
+    driver: local
+
+networks:
+  default:
+    name: mcp-network
+    external: true
