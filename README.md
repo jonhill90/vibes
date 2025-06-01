@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jonhill90/vibes)
+
 # Vibes 🎯
 
 > **Learn anything through conversation with Claude Desktop**
