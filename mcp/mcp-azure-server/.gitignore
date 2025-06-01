@@ -1,0 +1,22 @@
+# Environment variables
+.env
+
+# Azure MCP source code (copied from repos)
+azure-mcp/
+
+# Docker volumes
+data/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
