@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mcp-vibes": {
+      "command": "docker",
+      "args": [
+        "exec", 
+        "-i", 
+        "mcp-vibes", 
+        "python3", 
+        "/workspace/server.py"
+      ]
+    }
+  }
+}

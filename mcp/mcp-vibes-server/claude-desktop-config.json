@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "mcp-vibes": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--name",
+        "mcp-vibes-server",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "-v",
+        "/Users/jon/source/vibes:/workspace/vibes:rw",
+        "mcp-vibes:latest"
+      ]
+    }
+  }
+}

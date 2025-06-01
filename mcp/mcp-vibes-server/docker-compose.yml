@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  mcp-vibes:
+    build: .
+    container_name: mcp-vibes
+    volumes:
+      # Mount Docker socket so I can create containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount the vibes folder so I can create files
+      - /mnt/vibes:/workspace/vibes
+      # Persistent workspace for projects
+      - vibes_workspace:/workspace
+    networks:
+      - vibes-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+
+# Create the network that all learning containers will use
+networks:
+  vibes-network:
+    driver: bridge
+
+# Persistent storage for workspace
+volumes:
+  vibes_workspace:
