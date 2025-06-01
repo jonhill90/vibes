@@ -124,14 +124,6 @@ Instead of learning tools to build things, **describe what you want and Claude b
 - **Open source** - All code is visible and auditable
 - **Easy reset** - Start fresh anytime
 
-## 🎬 Real Success Stories
-
-**"I wanted to learn programming but every tutorial lost me. With Vibes, I built my first web app in a weekend just by chatting with Claude."** - Sarah, Marketing Manager
-
-**"Instead of reading Docker docs for hours, I asked Claude 'show me how containers work' and understood it in 20 minutes."** - Mike, System Admin
-
-**"My daughter wanted to learn coding. Vibes let her build games while learning Python naturally through conversation."** - Jennifer, Parent
-
 ## 🚀 Get Started Now
 
 1. **[Understand what Vibes is](docs/what-is-vibes.md)** (5 minutes)
