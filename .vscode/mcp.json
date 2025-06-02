@@ -6,6 +6,13 @@
         "mcp-remote",
         "http://localhost:8765/mcp/openmemory/sse/vibes-user"
       ]
+    },
+    "vibes": {
+      "command": "docker",
+      "args": [
+        "exec", "-i", "mcp-vibes-server",
+        "python3", "/workspace/server.py"
+      ]
     }
   }
 }
