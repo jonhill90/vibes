@@ -2,7 +2,7 @@
   "name": "Vibes Development Workspace",
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
-  "workspaceFolder": "/workspace/vibes",
+  "workspaceFolder": "/workspace",
   "postCreateCommand": "bash /usr/local/share/postCreate.sh",
   "remoteUser": "vscode",
   "customizations": {

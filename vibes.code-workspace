@@ -1,107 +1,30 @@
 {
-	"folders": [
+  "folders": [
     {
       "name": "🎯 Vibes",
       "path": "."
     }
   ],
   "settings": {
-    // ┌───────────────────────────────┐
-    // │ 🖥️ Terminal Configuration     │
-    // └───────────────────────────────┘
     "terminal.integrated.defaultProfile.osx": "zsh",
-    "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
+    "terminal.integrated.defaultProfile.windows": "Windows PowerShell", 
     "terminal.integrated.defaultProfile.linux": "bash",
-
-    "terminal.integrated.profiles.osx": {
-      "bash": {
-        "path": "bash",
-        "args": ["-l"],
-        "icon": "terminal-bash"
-      },
-      "zsh": {
-        "path": "zsh",
-        "args": ["-l"]
-      },
-      "fish": {
-        "path": "fish",
-        "args": ["-l"]
-      },
-      "tmux": {
-        "path": "tmux",
-        "icon": "terminal-tmux"
-      },
-      "pwsh": {
-        "path": "pwsh",
-        "icon": "terminal-powershell"
-      }
-    },
-
-    "terminal.integrated.profiles.linux": {
-      "bash": {
-        "path": "bash",
-        "args": ["-l"]
-      },
-      "zsh": {
-        "path": "zsh",
-        "args": ["-l"]
-      },
-      "pwsh": {
-        "path": "pwsh"
-      }
-    },
-
-    "terminal.integrated.profiles.windows": {
-      "Windows PowerShell": {
-        "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
-      },
-      "PowerShell 7": {
-        "path": "pwsh.exe"
-      },
-      "Git Bash": {
-        "path": "C:\\Program Files\\Git\\bin\\bash.exe"
-      }
-    },
-
-    "powershell.promptToUpdatePowerShell": false,
-
-    // 👇👇👇 Workspace root for terminals
     "terminal.integrated.cwd": "${workspaceFolder}",
-
-    // ┌───────────────────────────────┐
-    // │ 🛠️ Editor Configuration       │
-    // └───────────────────────────────┘
     "editor.inlineSuggest.suppressSuggestions": true,
-    "editor.codeActionsOnSave": {},
     "workbench.startupEditor": "none",
-    "window.commandCenter": false,
-
-    // ┌───────────────────────────────┐
-    // │ 🗂️ File & Extension Mapping   │
-    // └───────────────────────────────┘
-    "files.associations": {
-      ".scratch": "plaintext"
-    },
-
-    "workbench.editorAssociations": {
-      "*.copilotmd": "vscode.markdown.preview.editor",
-      "*.ipynb": "default"
-    },
-
-    // ┌───────────────────────────────┐
-    // │ 🔧 Git Configuration          │
-    // └───────────────────────────────┘
     "git.confirmSync": false,
     "git.enableSmartCommit": true,
-
-    // ┌───────────────────────────────┐
-    // │ ⚙️ Extensions                 │
-    // └───────────────────────────────┘
-    "extensions.ignoreRecommendations": false,
-
-    // ┌───────────────────────────────┐
-    // │ 🧩 UI Visibility Preferences  │
-    // └───────────────────────────────┘
-    "workbench.activityBar.iconClickBehavior": "toggle"
+    "files.associations": {
+      ".scratch": "plaintext"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode-remote.remote-containers",
+      "ms-azuretools.vscode-docker",
+      "ms-python.python",
+      "ms-vscode.azurecli",
+      "hashicorp.terraform"
+    ]
   }
 }

@@ -7,6 +7,10 @@
         "http://host.docker.internal:8765/mcp/openmemory/sse/vibes-user",
         "--allow-http"
       ]
+    },
+    "deepwiki": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.deepwiki.com/sse"]
     }
   }
 }
