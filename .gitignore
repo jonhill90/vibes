@@ -16,3 +16,4 @@
 # System files
 .DS_Store
 __pycache__/
+.scratch
