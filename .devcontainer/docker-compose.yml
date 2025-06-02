@@ -6,12 +6,16 @@ services:
     volumes:
       - ../:/workspace:cached
       - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - vibes-network
+      - vibes-devcontainer-cache:/home/vscode/.cache
+      - vibes-devcontainer-go:/home/vscode/go
     command: sleep infinity
     working_dir: /workspace/vibes
-    
-networks:
-  vibes-network:
-    external: true
-    name: vibes-network
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    user: vscode
+    group_add:
+      - "999"
+
+volumes:
+  vibes-devcontainer-cache:
+  vibes-devcontainer-go:

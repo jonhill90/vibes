@@ -1,10 +1,9 @@
 {
-  "name": "Vibes Development Workspace",
+  "name": "Azure DevOps Workspace",
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
-  "workspaceFolder": "/workspace/vibes",
+  "workspaceFolder": "/workspace",
   "postCreateCommand": "bash /usr/local/share/postCreate.sh",
-  "remoteUser": "vscode",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -23,18 +22,8 @@
         "ms-mssql.mssql",
         "ms-toolsai.jupyter",
         "redhat.vscode-yaml",
-        "mermaidchart.vscode-mermaid-chart",
-        "golang.go",
-        "ms-dotnettools.csharp",
-        "ms-dotnettools.vscode-dotnet-runtime"
-      ],
-      "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "python.defaultInterpreterPath": "/usr/bin/python3",
-        "go.gopath": "/home/vscode/go",
-        "go.goroot": "/usr/local/go",
-        "docker.dockerPath": "/usr/bin/docker"
-      }
+        "mermaidchart.vscode-mermaid-chart"
+      ]
     }
   },
   "features": {

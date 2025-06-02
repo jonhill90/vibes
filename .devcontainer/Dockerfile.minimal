@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install basic tools
 RUN apt-get update \
   && apt-get install -y \
-    curl wget git python3 python3-pip python3-venv pipx jq vim nano \
+    curl wget git python3 python3-pip jq vim nano \
     lsb-release gnupg ca-certificates apt-transport-https \
     build-essential \
   && rm -rf /var/lib/apt/lists/*
@@ -28,8 +28,8 @@ RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >
   && apt-get update && apt-get install -y azure-cli \
   && rm -rf /var/lib/apt/lists/*
 
-# Install Python packages (using --break-system-packages for container environment)
-RUN pip3 install --no-cache-dir --break-system-packages mcp
+# Install Python packages
+RUN pip3 install --no-cache-dir mcp
 
 # Install Node.js packages
 RUN npm install -g @anthropic-ai/claude-code @openai/codex \

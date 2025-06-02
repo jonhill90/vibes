@@ -1,4 +1,4 @@
-# Minimal version for testing - just core tools
+# Ultra-minimal version - skip Python packages that cause issues
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install basic tools
 RUN apt-get update \
   && apt-get install -y \
-    curl wget git python3 python3-pip python3-venv pipx jq vim nano \
+    curl wget git python3 python3-pip jq vim nano \
     lsb-release gnupg ca-certificates apt-transport-https \
     build-essential \
   && rm -rf /var/lib/apt/lists/*
@@ -27,9 +27,6 @@ RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >
   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/azurecli-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list \
   && apt-get update && apt-get install -y azure-cli \
   && rm -rf /var/lib/apt/lists/*
-
-# Install Python packages (using --break-system-packages for container environment)
-RUN pip3 install --no-cache-dir --break-system-packages mcp
 
 # Install Node.js packages
 RUN npm install -g @anthropic-ai/claude-code @openai/codex \
