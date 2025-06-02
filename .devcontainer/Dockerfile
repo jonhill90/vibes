@@ -35,14 +35,15 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then ARCH=linux-arm64; else ARCH=linux-x64; 
   && ln -s /opt/microsoft/powershell/${PS_VER}/pwsh /usr/bin/pwsh \
   && rm /tmp/pw.tar.gz
 
-# Install Claude CLI and make “claude” point at it
+# Install Claude CLI and make "claude" point at it
 RUN npm install -g @anthropic-ai/claude-code \
   && ln -sf "$(npm config get prefix)/bin/claude-code" /usr/local/bin/claude \
   && ln -sf "$(npm config get prefix)/bin/claude-code" /usr/local/bin/claude-code
 
-# Copy the postCreate.sh script to the container
+# Copy scripts to the container
 COPY .devcontainer/scripts/postCreate.sh /usr/local/share/postCreate.sh
-RUN chmod +x /usr/local/share/postCreate.sh
+COPY .devcontainer/scripts/test-network.sh /usr/local/share/test-network.sh
+RUN chmod +x /usr/local/share/postCreate.sh /usr/local/share/test-network.sh
 
 # Install Codex CLI
 RUN npm install -g @openai/codex

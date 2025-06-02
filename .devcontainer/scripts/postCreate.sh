@@ -99,3 +99,19 @@ fi
 
 echo
 success "Post-create steps completed!"
+
+echo
+#── Network connectivity test ──────────────────────────────────────
+info "🌐 Testing vibes-network connectivity..."
+if command -v ping &>/dev/null && command -v curl &>/dev/null; then
+    bash /usr/local/share/test-network.sh
+else
+    warn "ping or curl not available, skipping network test"
+fi
+
+
+# Add these to your shell profile to always navigate to vibes
+alias cdv="cd /workspace/vibes"
+alias vibes="cd /workspace/vibes"
+export VIBES_HOME="/workspace/vibes"
+

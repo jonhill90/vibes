@@ -4,14 +4,8 @@
       "command": "npx",
       "args": [
         "mcp-remote",
-        "http://localhost:8765/mcp/openmemory/sse/vibes-user"
-      ]
-    },
-    "vibes": {
-      "command": "docker",
-      "args": [
-        "exec", "-i", "mcp-vibes-server",
-        "python3", "/workspace/server.py"
+        "http://host.docker.internal:8765/mcp/openmemory/sse/vibes-user",
+        "--allow-http"
       ]
     }
   }

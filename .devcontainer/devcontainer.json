@@ -1,12 +1,8 @@
 {
   "name": "Azure DevOps Workspace",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
-  "runArgs": [
-    "--env-file", "${localWorkspaceFolder}/.env"
-  ],
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
   "postCreateCommand": "bash /usr/local/share/postCreate.sh",
   "customizations": {
     "vscode": {
