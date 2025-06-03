@@ -6,10 +6,7 @@
     },
     "vibes": {
       "command": "docker",
-      "args": [
-        "exec", "-i", "mcp-vibes-server",
-        "python3", "/workspace/server.py"
-      ]
+      "args": ["exec", "-i", "mcp-vibes-server", "python3", "/workspace/server.py"]
     },
     "openmemory": {
       "command": "npx",
@@ -22,6 +19,10 @@
     "terraform": {
       "command": "docker",
       "args": ["exec", "-i", "terraform-mcp-server", "/server/terraform-mcp-server", "stdio"]
+    },
+    "github": {
+      "command": "docker",
+      "args": ["exec", "-i", "github-mcp-server", "/server/github-mcp-server", "stdio"]
     }
   }
 }
