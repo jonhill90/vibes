@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   azure-mcp-server:
+    image: vibes/mcp-azure-server:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -39,5 +40,5 @@ services:
 
 networks:
   default:
-    name: mcp-network
+    name: vibes-network
     external: true

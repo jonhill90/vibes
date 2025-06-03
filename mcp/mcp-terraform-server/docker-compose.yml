@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   terraform-mcp-server:
+    image: vibes/mcp-terraform-server:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -43,5 +44,5 @@ volumes:
 
 networks:
   default:
-    name: mcp-network
+    name: vibes-network
     external: true
