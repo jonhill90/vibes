@@ -14,5 +14,5 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /
 
 RUN pip3 install mcp
 
-WORKDIR /workspace
-COPY server.py .
+WORKDIR /workspace/vibes
+COPY server.py /workspace/

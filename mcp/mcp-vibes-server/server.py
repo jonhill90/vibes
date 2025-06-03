@@ -35,7 +35,7 @@ async def handle_list_tools() -> List[Tool]:
                     "working_dir": {
                         "type": "string",
                         "description": "Working directory (optional)",
-                        "default": "/workspace"
+                        "default": "/workspace/vibes"
                     }
                 },
                 "required": ["command"]
@@ -49,7 +49,7 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
     
     if name == "run_command":
         command = arguments["command"]
-        working_dir = arguments.get("working_dir", "/workspace")
+        working_dir = arguments.get("working_dir", "/workspace/vibes")
         
         try:
             # Change to working directory if specified
