@@ -28,19 +28,58 @@ MCP servers provide Claude Desktop with specific capabilities by implementing th
 
 **Location:** [`mcp-openmemory-server/`](mcp-openmemory-server/)
 
+### 📝 mcp-basic-memory-server
+**Purpose:** Local-first knowledge management through Markdown files
+**Capabilities:**
+- Create and edit structured Markdown notes
+- Semantic search across knowledge base
+- Bidirectional read/write for LLMs
+- Cross-referencing and knowledge graphs
+- Human-readable file storage
+
+**Location:** [`mcp-basic-memory-server/`](mcp-basic-memory-server/)
+
+### ☁️ mcp-azure-server
+**Purpose:** Azure cloud infrastructure management
+**Capabilities:**
+- Complete Azure CLI access
+- Resource group and subscription management
+- Azure services integration
+- Infrastructure monitoring and querying
+
+**Location:** [`mcp-azure-server/`](mcp-azure-server/)
+
+### 🏗️ mcp-terraform-server
+**Purpose:** Infrastructure as Code management
+**Capabilities:**
+- Terraform module search and documentation
+- Provider documentation access
+- Terraform Registry integration
+- Infrastructure planning and validation
+
+**Location:** [`mcp-terraform-server/`](mcp-terraform-server/)
+
+### 🐙 mcp-github-server
+**Purpose:** GitHub repository and project management
+**Capabilities:**
+- Repository operations (create, clone, manage)
+- Issue and pull request management
+- Code search and file operations
+- GitHub API integration
+
+**Location:** [`mcp-github-server/`](mcp-github-server/)
+
 ## Architecture
 
 ```
 mcp/
-├── README.md                    # This file
-├── mcp-vibes-server/           # Custom shell access server
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   ├── server.py
-│   └── ...
-└── mcp-openmemory-server/      # Memory server setup
-    ├── docker-compose.yml
-    └── ...
+├── README.md                        # This file
+├── mcp-vibes-server/               # Custom shell access server
+├── mcp-openmemory-server/          # Vector-based memory system
+├── mcp-basic-memory-server/        # Markdown-based knowledge system
+├── mcp-azure-server/               # Azure infrastructure server
+├── mcp-terraform-server/           # Terraform IaC server
+└── mcp-github-server/              # GitHub integration server
 ```
 
 ## How They Work
@@ -60,20 +99,40 @@ To add a new MCP server:
 4. Update Claude Desktop configuration
 5. Document the server's capabilities
 
-## Configuration
+## Claude Desktop Configuration
 
 Each server is configured in Claude Desktop's `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "mcp-vibes": {
+    "deepwiki": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.deepwiki.com/sse"]
+    },
+    "vibes": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "..."]
+      "args": ["exec", "-i", "mcp-vibes-server", "python3", "/workspace/server.py"]
     },
     "openmemory": {
       "command": "npx",
-      "args": ["mcp-remote", "http://localhost:8765/..."]
+      "args": ["mcp-remote", "http://localhost:8765/mcp/claude/sse/vibes-user"]
+    },
+    "basic-memory": {
+      "command": "docker",
+      "args": ["exec", "-i", "basic-memory-mcp", "/app/start.sh"]
+    },
+    "azure": {
+      "command": "docker",
+      "args": ["exec", "-i", "azure-mcp-server", "dotnet", "azmcp.dll", "server", "start"]
+    },
+    "terraform": {
+      "command": "docker",
+      "args": ["exec", "-i", "terraform-mcp-server", "/server/terraform-mcp-server", "stdio"]
+    },
+    "github": {
+      "command": "docker",
+      "args": ["exec", "-i", "github-mcp-server", "/server/github-mcp-server", "stdio"]
     }
   }
 }
@@ -85,6 +144,22 @@ Each server is configured in Claude Desktop's `claude_desktop_config.json`:
 - Use the `vibes-network` for inter-service communication
 - Mount `/workspace/vibes` for file system access
 - Follow MCP protocol specifications
+
+## Memory Systems Comparison
+
+### OpenMemory (Vector-based)
+- **Best for:** Semantic search and conversation context
+- **Storage:** Qdrant vector database
+- **Strengths:** AI-optimized search, automatic clustering
+- **Use case:** Remembering conversation patterns and project context
+
+### Basic Memory (File-based)
+- **Best for:** Structured knowledge and documentation
+- **Storage:** Human-readable Markdown files
+- **Strengths:** Editability, version control, tool compatibility
+- **Use case:** Building knowledge bases and project documentation
+
+Both memory systems can run simultaneously and serve different purposes in your development workflow.
 
 ---
 
