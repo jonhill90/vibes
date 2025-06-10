@@ -63,8 +63,8 @@ class INMPARAServer:
     def __init__(self):
         """Initialize the INMPARA MCP Server with configuration and components."""
         # Configuration from environment (updated for new vault structure)
-        self.vault_path = os.getenv('INMPARA_VAULT_PATH', '/workspace/vibes/repos/inmpara')
-        self.db_path = os.getenv('SQLITE_DB_PATH', 'vault/.notebook/inmpara.db')
+        self.vault_path = os.getenv('INMPARA_VAULT_PATH', '/app/vault')
+        self.db_path = os.path.join(os.getenv('INMPARA_VAULT_PATH', '/app/vault'), '.notebook', 'inmpara.db')
         self.qdrant_host = os.getenv('QDRANT_HOST', 'localhost')
         self.qdrant_port = int(os.getenv('QDRANT_PORT', '6334'))
         self.collection_name = os.getenv('QDRANT_COLLECTION', 'inmpara_vault')

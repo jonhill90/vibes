@@ -11,16 +11,6 @@ import json
 from typing import Any, Sequence
 from mcp.types import Tool, TextContent
 
-# Import core functionality from current locations
-# These will be moved to core modules in later phases
-from ..phase3_tools import (
-    process_inbox_tool,
-    bulk_reprocess_tool, 
-    get_advanced_analytics_tool,
-    export_knowledge_graph_tool,
-    generate_moc_from_clusters_tool
-)
-
 
 def setup_mcp_tools(server, server_instance):
     """
@@ -208,46 +198,92 @@ def setup_mcp_tools(server, server_instance):
         except Exception as e:
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
-    # ==== LEGACY PHASE 3 TOOLS ====
-    # These use the existing extracted functions for backward compatibility
+    # ==== LEGACY PLACEHOLDER TOOLS ====
+    # These provide basic implementations to replace the missing phase3_tools
     
     @server.call_tool()
     async def process_inbox(arguments: dict) -> Sequence[TextContent]:
-        """Process inbox items with learned patterns and automation (legacy)."""
+        """Process inbox items (legacy compatibility)."""
         try:
-            result = await process_inbox_tool(
-                vault_path=arguments.get("vault_path", server_instance.get_vault_path()),
-                batch_size=int(arguments.get("batch_size", 10)),
-                confidence_threshold=float(arguments.get("confidence_threshold", 0.7)),
-                auto_approve=arguments.get("auto_approve", "false").lower() == "true"
-            )
+            # Use the new inbox manager instead
+            inbox_manager = server_instance.get_component('inbox_manager')
+            if inbox_manager:
+                result = await inbox_manager.process_inbox(
+                    batch_size=int(arguments.get("batch_size", 10)),
+                    confidence_threshold=float(arguments.get("confidence_threshold", 0.7)),
+                    auto_approve=arguments.get("auto_approve", "false").lower() == "true"
+                )
+            else:
+                result = {
+                    "success": False,
+                    "error": "InboxManager not available",
+                    "message": "Use process_inbox_new tool instead"
+                }
+            
             return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
         except Exception as e:
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
     @server.call_tool()
     async def get_advanced_analytics(arguments: dict) -> Sequence[TextContent]:
-        """Get comprehensive vault analytics and insights (legacy)."""
+        """Get comprehensive vault analytics (legacy compatibility)."""
         try:
-            result = await get_advanced_analytics_tool(
-                vault_path=arguments.get("vault_path", server_instance.get_vault_path()),
-                include_patterns=arguments.get("include_patterns", "true").lower() == "true",
-                include_trends=arguments.get("include_trends", "true").lower() == "true"
-            )
+            # Use the new analytics manager instead
+            analytics_manager = server_instance.get_component('analytics_manager')
+            if analytics_manager:
+                result = await analytics_manager.generate_vault_analytics(
+                    include_patterns=arguments.get("include_patterns", "true").lower() == "true",
+                    include_trends=arguments.get("include_trends", "true").lower() == "true"
+                )
+            else:
+                result = {
+                    "success": False,
+                    "error": "AnalyticsManager not available",
+                    "message": "Use get_analytics tool instead"
+                }
+            
             return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
         except Exception as e:
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
     @server.call_tool()
     async def export_knowledge_graph(arguments: dict) -> Sequence[TextContent]:
-        """Export vault as knowledge graph in various formats (legacy)."""
+        """Export vault as knowledge graph (legacy compatibility)."""
         try:
-            result = await export_knowledge_graph_tool(
-                vault_path=arguments.get("vault_path", server_instance.get_vault_path()),
-                format=arguments.get("format", "json"),
-                include_metadata=arguments.get("include_metadata", "true").lower() == "true",
-                output_path=arguments.get("output_path")
-            )
+            # Placeholder implementation
+            result = {
+                "success": False,
+                "error": "Knowledge graph export not yet implemented in refactored version",
+                "message": "This tool will be implemented in a future version"
+            }
+            return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
+        except Exception as e:
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    @server.call_tool()
+    async def bulk_reprocess(arguments: dict) -> Sequence[TextContent]:
+        """Bulk reprocess vault items (legacy compatibility)."""
+        try:
+            # Placeholder implementation
+            result = {
+                "success": False,
+                "error": "Bulk reprocess not yet implemented in refactored version",
+                "message": "This tool will be implemented in a future version"
+            }
+            return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
+        except Exception as e:
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    @server.call_tool()
+    async def generate_moc_from_clusters(arguments: dict) -> Sequence[TextContent]:
+        """Generate MOC from content clusters (legacy compatibility)."""
+        try:
+            # Placeholder implementation
+            result = {
+                "success": False,
+                "error": "MOC generation not yet implemented in refactored version",
+                "message": "This tool will be implemented in a future version"
+            }
             return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
         except Exception as e:
             return [TextContent(type="text", text=f"Error: {str(e)}")]

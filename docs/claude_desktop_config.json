@@ -27,6 +27,10 @@
     "github": {
       "command": "docker",
       "args": ["exec", "-i", "github-mcp-server", "/server/github-mcp-server", "stdio"]
+    },
+    "inmpara": {
+      "command": "docker",
+      "args": ["exec", "-i", "inmpara-mcp-server", "python3", "start_server.py"]
     }
   }
 }

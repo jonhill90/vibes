@@ -17,13 +17,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code and entry point
 COPY src/ ./src/
-COPY server.py start_server.py .
+COPY server.py .
 
 # Create necessary directories (new vault structure)
 RUN mkdir -p /app/vault/.notebook /app/logs
 
 # Set permissions
-RUN chmod +x server.py start_server.py
+RUN chmod +x server.py
 
 # Default environment variables (updated for new structure)
 ENV PYTHONPATH=/app/src
@@ -36,10 +36,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python3 -c "from src.server.mcp_server import INMPARAServer; print('Server imports OK')" || exit 1
 
 # Default command (updated for new entry point)
+CMD ["python3", "server.py"]
 
 # Expose MCP port (for future HTTP transport)
 EXPOSE 8000
 
 # Volume mounts (updated for vault structure)
 VOLUME ["/app/vault", "/app/logs"]
-CMD ["tail", "-f", "/dev/null"]

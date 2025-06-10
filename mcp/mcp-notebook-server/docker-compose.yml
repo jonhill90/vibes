@@ -26,8 +26,7 @@ services:
     
     environment:
       # Vault and database paths (using env vars)
-      - VAULT_PATH=${CONTAINER_VAULT_PATH:-/app/vault}
-      - DATABASE_PATH=${CONTAINER_VAULT_PATH:-/app/vault}/.notebook/inmpara.db
+      - INMPARA_VAULT_PATH=${CONTAINER_VAULT_PATH:-/app/vault}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - DEBUG=${DEBUG:-false}
       - PYTHONPATH=/app/src
@@ -39,7 +38,7 @@ services:
       - QDRANT_COLLECTION=${QDRANT_COLLECTION:-inmpara_vault}
       
       # Processing Configuration (using env vars)
-      - DEFAULT_CONFIDENCE_THRESHOLD=${DEFAULT_CONFIDENCE_THRESHOLD:-0.85}
+      - CONFIDENCE_THRESHOLD=${DEFAULT_CONFIDENCE_THRESHOLD:-0.85}
       - AUTO_APPROVE_HIGH_CONFIDENCE=${AUTO_APPROVE_HIGH_CONFIDENCE:-true}
       - BATCH_SIZE=${BATCH_SIZE:-50}
       
@@ -78,4 +77,5 @@ volumes:
 
 networks:
   default:
-    name: inmpara-network
+    name: vibes-network
+    external: true

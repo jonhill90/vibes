@@ -470,8 +470,3 @@ class INMPARADatabase:
         """Close database connection."""
         # SQLite connections are closed automatically with context managers
         pass
-
-# Create global database instance
-import os
-default_db_path = os.getenv('INMPARA_DB_PATH', '/workspace/vibes/mcp/mcp-notebook-server/data/inmpara_notebook.db')
-db = INMPARADatabase(default_db_path)

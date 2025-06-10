@@ -63,8 +63,8 @@ class INMPARAServer:
     def __init__(self):
         """Initialize the INMPARA MCP Server with configuration and components."""
         # Configuration from environment (updated for new vault structure)
-        self.vault_path = os.getenv('INMPARA_VAULT_PATH', '/workspace/vibes/repos/inmpara')
-        self.db_path = os.getenv('SQLITE_DB_PATH', 'vault/.notebook/inmpara.db')
+        self.vault_path = os.getenv('INMPARA_VAULT_PATH', '/app/vault')
+        self.db_path = os.path.join(os.getenv('INMPARA_VAULT_PATH', '/app/vault'), '.notebook', 'inmpara.db')
         self.qdrant_host = os.getenv('QDRANT_HOST', 'localhost')
         self.qdrant_port = int(os.getenv('QDRANT_PORT', '6334'))
         self.collection_name = os.getenv('QDRANT_COLLECTION', 'inmpara_vault')
@@ -77,11 +77,9 @@ class INMPARAServer:
         self.server = None
         self.database = None
         self.vector_search = None
-        
-        self.session_manager = None
         self.file_manager = None
         
-        # New core modules
+        # Core modules
         self.notes_manager = None
         self.search_manager = None
         self.inbox_manager = None
@@ -112,67 +110,49 @@ class INMPARAServer:
             await self.vector_search.initialize()
             logger.info("Vector search engine initialized")
             
-            # Initialize legacy components for compatibility
+            # Initialize file manager
             self.file_manager = INMPARAFileManager(self.vault_path)
+            logger.info("File manager initialized")
 
-            # Initialize new core modules
-            self.sessions_manager = SessionsManager(
-                vault_path=self.vault_path,
-                database=self.database
-            )
-            logger.info("Sessions manager initialized")
-            
-            self.learning_manager = LearningManager(
-                vault_path=self.vault_path,
-                database=self.database
-            )
-            logger.info("Learning manager initialized")
-            
-            
-            
-            self.session_manager = SessionManager(
-                database=self.database,
-                vector_search=self.vector_search
-            )
-            
-            # Initialize new core modules
+            # Initialize core modules
             self.notes_manager = NotesManager(
                 vault_path=self.vault_path,
-                
-                
                 file_manager=self.file_manager
             )
+            logger.info("Notes manager initialized")
             
             self.search_manager = SearchManager(
                 vault_path=self.vault_path,
                 vector_search_engine=self.vector_search,
                 database=self.database
             )
+            logger.info("Search manager initialized")
             
             self.inbox_manager = InboxManager(
                 vault_path=self.vault_path,
                 notes_manager=self.notes_manager,
-                
-                
+                pattern_learner=None,
                 database=self.database
             )
+            logger.info("Inbox manager initialized")
             
             self.analytics_manager = AnalyticsManager(
                 vault_path=self.vault_path,
                 database=self.database,
                 vector_search=self.vector_search
             )
+            logger.info("Analytics manager initialized")
             
             self.learning_manager = LearningManager(
-                database=self.database,
-                confidence_threshold=self.confidence_threshold
+                database=self.database
             )
+            logger.info("Learning manager initialized")
             
             self.sessions_manager = SessionsManager(
                 database=self.database,
                 vector_search=self.vector_search
             )
-            
+            logger.info("Sessions manager initialized")
             # Create MCP server instance
             self.server = Server("inmpara-notebook-server")
             
@@ -221,9 +201,7 @@ class INMPARAServer:
         components = {
             'database': self.database,
             'vector_search': self.vector_search,
-            'session_manager': self.session_manager,
             'file_manager': self.file_manager,
-            # New core modules
             'notes_manager': self.notes_manager,
             'search_manager': self.search_manager,
             'inbox_manager': self.inbox_manager,
