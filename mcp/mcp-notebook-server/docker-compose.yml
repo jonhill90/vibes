@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.7.4
+    container_name: inmpara-qdrant
+    ports:
+      - "6334:6334"
+      - "6333:6333"
+    volumes:
+      - ./data/qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  inmpara-server:
+    build: .
+    container_name: inmpara-notebook-server
+    depends_on:
+      - qdrant
+    volumes:
+      - /workspace/vibes/repos/inmpara:/app/vault:ro
+      - ./data:/app/data
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6334
+      - INMPARA_VAULT_PATH=/app/vault
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
+volumes:
+  qdrant_storage:
+    driver: local

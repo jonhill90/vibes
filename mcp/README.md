@@ -60,6 +60,17 @@ MCP servers provide Claude Desktop with specific capabilities by implementing th
 **Location:** [`mcp-terraform-server/`](mcp-terraform-server/)
 
 ### 🐙 mcp-github-server
+
+### 📓 mcp-notebook-server
+**Purpose:** AI-powered knowledge management
+**Capabilities:**
+- Automated filing with semantic markup
+- Intelligent content analysis and tagging
+- Knowledge graph operations
+- Semantic search across vault
+- Template application for all content types
+
+**Location:** [`mcp-notebook-server/`](mcp-notebook-server/)
 **Purpose:** GitHub repository and project management
 **Capabilities:**
 - Repository operations (create, clone, manage)
