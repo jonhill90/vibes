@@ -1,4 +1,4 @@
-from src.phase3_helpers import _build_knowledge_graph, _cluster_notes_for_moc, _export_graph_json, _export_graph_graphml, _export_graph_cypher, _generate_moc_content, _update_existing_moc, _log_moc_generation, _calculate_performance_metrics, _analyze_content_distribution, _analyze_vault_structure, _calculate_knowledge_graph_metrics
+from phase3_helpers import _build_knowledge_graph, _cluster_notes_for_moc, _export_graph_json, _export_graph_graphml, _export_graph_cypher, _generate_moc_content, _update_existing_moc, _log_moc_generation, _calculate_performance_metrics, _analyze_content_distribution, _analyze_vault_structure, _calculate_knowledge_graph_metrics
 """
 Phase 3 Tools: Complete Automation & Advanced Analytics
 Advanced batch processing, analytics, and knowledge graph features for INMPARA MCP Server
@@ -16,10 +16,10 @@ import re
 from collections import defaultdict, Counter
 
 # Import our existing components
-from src.content_analyzer import content_analyzer
-from src.pattern_learner import pattern_learner
+from content_analyzer import content_analyzer
+from pattern_learner import pattern_learner
 from .session_manager import session_manager
-from src.database.database import db
+from database.database import db
 from .template_engine import template_engine
 from .utils.phase3_utils import FileUtils
 

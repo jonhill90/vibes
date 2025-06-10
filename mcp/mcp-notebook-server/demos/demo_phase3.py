@@ -4,6 +4,13 @@ Phase 3 Demo: Complete Automation & Advanced Analytics
 Demonstrates all Phase 3 features including inbox processing, analytics, and MOC generation
 """
 
+# Add src to path for imports
+import sys
+from pathlib import Path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / 'src'))
+
+
 import os
 import sys
 import asyncio
@@ -16,7 +23,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 # Import Phase 3 tools
-from src.phase3_tools import (
+from phase3_tools import (
     process_inbox_tool,
     bulk_reprocess_tool,
     get_advanced_analytics_tool, 
@@ -25,10 +32,10 @@ from src.phase3_tools import (
 )
 
 # Import existing components
-from src.database.database import db
-from src.content_analyzer import content_analyzer
-from src.pattern_learner import pattern_learner
-from src.session_manager import session_manager
+from database.database import db
+from content_analyzer import content_analyzer
+from pattern_learner import pattern_learner
+from session_manager import session_manager
 
 async def setup_demo_environment():
     """Setup demo environment with sample content"""

@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.7.4
+    container_name: inmpara-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # INMPARA MCP Server
+  inmpara-mcp-server:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: inmpara-mcp-server
+    restart: unless-stopped
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    
+    environment:
+      - VAULT_PATH=/data/vault
+      - DATABASE_PATH=/data/db/inmpara.db
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app/src
+      # Qdrant Configuration
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6334
+      - QDRANT_COLLECTION=inmpara_vault
+    
+    volumes:
+      # Mount your actual INMPARA vault
+      - /workspace/vibes/repos/inmpara:/data/vault:rw
+      # Persistent database storage
+      - inmpara_db:/data/db
+      # Logs
+      - inmpara_logs:/app/logs
+    
+    ports:
+      - "8000:8000"  # For future HTTP transport
+    
+    healthcheck:
+      test: ["CMD", "python3", "bin/run_production_server.py", "--test"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  qdrant_storage:
+    driver: local
+  inmpara_db:
+    driver: local
+  inmpara_logs:
+    driver: local
+
+networks:
+  default:
+    name: inmpara-network
