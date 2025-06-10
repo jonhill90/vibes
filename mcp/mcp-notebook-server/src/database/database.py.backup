@@ -7,7 +7,7 @@ Handles SQLite database operations for notes, tags, relationships, and learning 
 import sqlite3
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 import logging
@@ -119,42 +119,6 @@ class INMPARADatabase:
                     user_approved BOOLEAN,
                     timestamp DATE DEFAULT CURRENT_TIMESTAMP
                 );
-
-                -- Session tracking tables for Phase 2
-                CREATE TABLE IF NOT EXISTS conversation_sessions (
-                    session_id TEXT PRIMARY KEY,
-                    start_time DATE,
-                    last_activity DATE,
-                    topics TEXT,
-                    domains TEXT,
-                    context_summary TEXT
-                );
-
-                CREATE TABLE IF NOT EXISTS session_summaries (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT,
-                    start_time DATE,
-                    end_time DATE,
-                    duration_minutes REAL,
-                    topics_covered TEXT,
-                    domains_explored TEXT,
-                    insights_captured INTEGER,
-                    notes_created INTEGER,
-                    final_context TEXT
-                );
-
-                CREATE TABLE IF NOT EXISTS session_topics (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT,
-                    topic TEXT
-                );
-
-                CREATE TABLE IF NOT EXISTS session_domains (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT,
-                    domain TEXT
-                );
-
 
                 -- Indexes for performance
                 CREATE INDEX IF NOT EXISTS idx_notes_file_path ON notes(file_path);
@@ -427,7 +391,7 @@ class INMPARADatabase:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             
-            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+            cutoff_date = (datetime.now() - datetime.timedelta(days=days)).isoformat()
             
             # Count by action type
             cursor = conn.execute("""
@@ -460,11 +424,6 @@ class INMPARADatabase:
                 'overall': overall,
                 'by_action': action_stats
             }
-
-    def get_connection(self):
-        """Get database connection for complex operations"""
-        return sqlite3.connect(self.db_path)
-
 
     def close(self):
         """Close database connection."""

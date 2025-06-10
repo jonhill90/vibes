@@ -35,3 +35,6 @@ pytest>=7.0.0
 pytest-asyncio>=0.21.0
 black>=23.0.0
 flake8>=6.0.0
+sentence-transformers
+qdrant-client
+python-frontmatter
