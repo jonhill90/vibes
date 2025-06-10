@@ -1,241 +1,123 @@
 #!/usr/bin/env python3
 """
-INMPARA Notebook MCP Server - Phase 3 Complete
-Production-ready server with all Phase 1, 2, and 3 features
-Complete automation where users can dump content in inbox and trust AI processing
+Production INMPARA Notebook MCP Server - Phase 3
+Complete automation with advanced analytics and learning.
 """
 
 import asyncio
-import os
-import sys
+import argparse
 import logging
+import sys
+import os
 from pathlib import Path
 
-# Add src to Python path
-src_path = Path(__file__).parent / "src"
-sys.path.insert(0, str(src_path))
+# Add src to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from database.database import INMPARADatabase as DatabaseManager
+from server import InmparaMCPServer
+from session_manager import SessionManager
+from conversation_monitor import ConversationMonitor
 
-# MCP imports
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
+# Phase 3 imports
+from phase3_tool_registrations import register_phase3_tools
 
-# Import all components
-from src.database.database import db
-from src.content_analyzer import content_analyzer
-from src.pattern_learner import pattern_learner
-from src.session_manager import session_manager
-
-# Import Phase 1 components
-from src.server import (
-    capture_conversation_insight,
-    auto_create_note,
-    search_notes,
-    suggest_connections,
-    analyze_content,
-    get_note_content,
-    list_notes,
-    create_moc,
-    archive_note,
-    get_vault_status
-)
-
-# Import Phase 2 components
-from src.phase2_tool_registrations import (
-    register_phase2_tools,
-    get_phase2_tool_definitions
-)
-
-# Import Phase 3 components
-from src.phase3_tool_registrations import (
-    register_phase3_tools,
-    get_phase3_tool_definitions
-)
-
-# Create server instance
-server = Server("inmpara-notebook-server")
-
-def setup_environment():
-    """Setup the server environment"""
-    try:
-        # Initialize database
-        logger.info("Initializing database...")
-        db.initialize_database()
-        
-        # Initialize components
-        logger.info("Initializing AI components...")
-        # Components are initialized when imported
-        
-        # Verify vault path exists
-        vault_path = os.getenv('INMPARA_VAULT_PATH', '/workspace/vibes/repos/inmpara')
-        if not os.path.exists(vault_path):
-            logger.warning(f"Vault path does not exist: {vault_path}")
-            logger.info("Server will continue but vault operations may fail")
-        else:
-            logger.info(f"Vault path verified: {vault_path}")
-        
-        logger.info("Environment setup complete")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Environment setup failed: {str(e)}")
-        return False
-
-def register_all_tools():
-    """Register all Phase 1, 2, and 3 tools"""
-    try:
-        logger.info("Registering all MCP tools...")
-        
-        # Phase 1 tools (basic functionality) - already defined in server.py
-        # These are registered when the server module is imported
-        
-        # Phase 2 tools (advanced intelligence)
-        register_phase2_tools(server)
-        logger.info("Phase 2 tools registered")
-        
-        # Phase 3 tools (complete automation)
-        register_phase3_tools(server)
-        logger.info("Phase 3 tools registered")
-        
-        # Get tool counts
-        phase1_tools = 10  # From original implementation
-        phase2_tools = len(get_phase2_tool_definitions())
-        phase3_tools = len(get_phase3_tool_definitions())
-        total_tools = phase1_tools + phase2_tools + phase3_tools
-        
-        logger.info(f"All tools registered successfully:")
-        logger.info(f"  Phase 1: {phase1_tools} tools (basic functionality)")
-        logger.info(f"  Phase 2: {phase2_tools} tools (advanced intelligence)")
-        logger.info(f"  Phase 3: {phase3_tools} tools (complete automation)")
-        logger.info(f"  Total: {total_tools} tools available")
-        
-        return True
-        
-    except Exception as e:
-        logger.error(f"Tool registration failed: {str(e)}")
-        return False
-
-@server.list_tools()
-async def list_tools():
-    """List all available tools across all phases"""
-    tools = []
+def setup_logging(debug=False):
+    """Configure logging for production server"""
+    level = logging.DEBUG if debug else logging.INFO
     
-    # Phase 1 tools
-    phase1_tools = [
-        {
-            "name": "capture_conversation_insight",
-            "description": "Capture insights from conversations and create notes automatically"
-        },
-        {
-            "name": "auto_create_note", 
-            "description": "Create properly formatted INMPARA notes with AI assistance"
-        },
-        {
-            "name": "search_notes",
-            "description": "Search through existing notes using content and metadata"
-        },
-        {
-            "name": "suggest_connections",
-            "description": "Find related notes and suggest connections"
-        },
-        {
-            "name": "analyze_content",
-            "description": "Analyze content for INMPARA classification and tagging"
-        },
-        {
-            "name": "get_note_content",
-            "description": "Retrieve the full content of a specific note"
-        },
-        {
-            "name": "list_notes",
-            "description": "List notes with filtering and sorting options"
-        },
-        {
-            "name": "create_moc",
-            "description": "Create Maps of Content (MOCs) to organize related notes"
-        },
-        {
-            "name": "archive_note",
-            "description": "Archive notes that are no longer active"
-        },
-        {
-            "name": "get_vault_status",
-            "description": "Get overview of vault structure and statistics"
-        }
-    ]
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout),
+            logging.FileHandler('inmpara_mcp_server.log')
+        ]
+    )
     
-    # Add Phase 1 tools
-    for tool_def in phase1_tools:
-        tools.append({
-            "name": tool_def["name"],
-            "description": f"[Phase 1] {tool_def['description']}"
-        })
-    
-    # Add Phase 2 tools
-    for tool_def in get_phase2_tool_definitions():
-        tools.append({
-            "name": tool_def.name,
-            "description": f"[Phase 2] {tool_def.description}"
-        })
-    
-    # Add Phase 3 tools
-    for tool_def in get_phase3_tool_definitions():
-        tools.append({
-            "name": tool_def.name,
-            "description": f"[Phase 3] {tool_def.description}"
-        })
-    
-    return tools
+    # Reduce noise from some modules
+    logging.getLogger('asyncio').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 async def main():
     """Main server entry point"""
-    print("🚀 INMPARA Notebook MCP Server - Phase 3 Complete")
-    print("=" * 60)
-    print("Complete automation where users can dump content in inbox")
-    print("and trust AI processing with comprehensive analytics")
-    print("=" * 60)
+    parser = argparse.ArgumentParser(description='INMPARA Notebook MCP Server - Phase 3')
+    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+    parser.add_argument('--vault-path', default='/workspace/vibes/repos/inmpara', 
+                       help='Path to INMPARA vault')
+    parser.add_argument('--db-path', default='inmpara_mcp.db',
+                       help='Path to SQLite database')
+    parser.add_argument('--port', type=int, default=8000,
+                       help='Server port (for future HTTP transport)')
     
-    # Setup environment
-    if not setup_environment():
-        print("❌ Environment setup failed")
-        sys.exit(1)
+    args = parser.parse_args()
     
-    # Register tools
-    if not register_all_tools():
-        print("❌ Tool registration failed")
-        sys.exit(1)
+    # Setup logging
+    setup_logging(args.debug)
+    logger = logging.getLogger(__name__)
     
-    print("✅ Server initialization complete")
-    print("\nFeatures available:")
-    print("📋 Phase 1: Basic conversation monitoring and note creation")
-    print("🧠 Phase 2: Advanced intelligence with learning and cross-session context")
-    print("🤖 Phase 3: Complete automation with analytics and quality improvement")
-    print()
-    print("🔗 Ready for Claude Desktop integration")
-    print("Add this server to your Claude Desktop MCP configuration")
-    print()
+    logger.info("🚀 Starting INMPARA Notebook MCP Server - Phase 3")
+    logger.info("=" * 60)
+    logger.info("Features: Complete automation, analytics, learning")
+    logger.info(f"Vault path: {args.vault_path}")
+    logger.info(f"Database: {args.db_path}")
     
     try:
-        # Run the server
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                server.create_initialization_options()
-            )
+        # Initialize database
+        db = INMPARADatabase(args.db_path)
+        logger.info("✅ Database initialized")
+        
+        # Initialize session manager
+        session_manager = SessionManager()
+        logger.info("✅ Session manager initialized")
+        
+        # Initialize conversation monitor
+        monitor = ConversationMonitor(session_manager)
+        logger.info("✅ Conversation monitor initialized")
+        
+        # Create MCP server
+        server = InmparaMCPServer(
+            vault_path=args.vault_path,
+            session_manager=session_manager,
+            conversation_monitor=monitor
+        )
+        
+        # Register Phase 3 tools
+        register_phase3_tools(server, args.vault_path)
+        logger.info("✅ Phase 3 tools registered")
+        
+        # Check vault structure
+        vault_path = Path(args.vault_path)
+        if not vault_path.exists():
+            logger.warning(f"⚠️  Vault path does not exist: {args.vault_path}")
+            logger.info("Creating basic vault structure...")
+            vault_path.mkdir(parents=True, exist_ok=True)
+            (vault_path / "00 - Inbox").mkdir(exist_ok=True)
+            (vault_path / "99 - Meta").mkdir(exist_ok=True)
+            logger.info("✅ Basic vault structure created")
+        
+        logger.info("🎯 Server ready for MCP connections")
+        logger.info("=" * 60)
+        logger.info("Phase 3 Features Available:")
+        logger.info("• 📥 process_inbox - Complete automation")
+        logger.info("• 🔧 bulk_reprocess - Quality improvement")
+        logger.info("• 📊 get_advanced_analytics - Comprehensive reporting")
+        logger.info("• 🕸️  export_knowledge_graph - Multi-format export")
+        logger.info("• 📚 generate_moc_from_clusters - Smart MOC creation")
+        logger.info("=" * 60)
+        
+        # Run server
+        await server.run()
+        
     except KeyboardInterrupt:
-        print("\n👋 Server shutting down...")
+        logger.info("📴 Server shutdown requested")
     except Exception as e:
-        logger.error(f"Server error: {str(e)}")
-        print(f"❌ Server error: {str(e)}")
+        logger.error(f"❌ Server error: {e}")
+        import traceback
+        logger.debug(traceback.format_exc())
         sys.exit(1)
+    finally:
+        logger.info("🛑 INMPARA MCP Server stopped")
 
 if __name__ == "__main__":
     asyncio.run(main())
-

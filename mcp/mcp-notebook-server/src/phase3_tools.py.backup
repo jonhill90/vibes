@@ -348,16 +348,7 @@ async def get_advanced_analytics_tool(
                 WHERE created_at >= datetime('now', '-{} days')
             """.format(days_back))
             
-            session_stats_row = cursor.fetchone()
-            if session_stats_row:
-                columns = [desc[0] for desc in cursor.description]
-                session_stats = dict(zip(columns, session_stats_row))
-            else:
-                session_stats = {
-                    "total_sessions": 0,
-                    "total_summaries": 0, 
-                    "avg_topics_per_session": 0.0
-                }
+            session_stats = dict(cursor.fetchone())
         
         # Vault structure analysis
         vault_analytics = await _analyze_vault_structure(vault_path)

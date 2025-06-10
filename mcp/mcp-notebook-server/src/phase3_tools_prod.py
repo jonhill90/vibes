@@ -1,4 +1,4 @@
-from .phase3_helpers import _build_knowledge_graph, _cluster_notes_for_moc, _export_graph_json, _export_graph_graphml, _export_graph_cypher, _generate_moc_content, _update_existing_moc, _log_moc_generation, _calculate_performance_metrics, _analyze_content_distribution, _analyze_vault_structure, _calculate_knowledge_graph_metrics
+from src.phase3_helpers import _build_knowledge_graph, _cluster_notes_for_moc, _export_graph_json, _export_graph_graphml, _export_graph_cypher, _generate_moc_content, _update_existing_moc, _log_moc_generation, _calculate_performance_metrics, _analyze_content_distribution, _analyze_vault_structure, _calculate_knowledge_graph_metrics
 """
 Phase 3 Tools: Complete Automation & Advanced Analytics
 Advanced batch processing, analytics, and knowledge graph features for INMPARA MCP Server
@@ -16,10 +16,10 @@ import re
 from collections import defaultdict, Counter
 
 # Import our existing components
-from .content_analyzer import content_analyzer
-from .pattern_learner import pattern_learner
+from src.content_analyzer import content_analyzer
+from src.pattern_learner import pattern_learner
 from .session_manager import session_manager
-from .database.database import db
+from src.database.database import db
 from .template_engine import template_engine
 from .utils.phase3_utils import FileUtils
 
@@ -309,21 +309,21 @@ async def get_advanced_analytics_tool(
                 ORDER BY date DESC
             """.format(days_back))
             
-            activity_data = [dict(row) for row in cursor.fetchall()]
+            activity_data = [dict(zip([desc[0] for desc in cursor.description], row)) for row in cursor.fetchall()]
             
-            # Learning patterns statistics
+                        # Learning patterns statistics
             cursor = conn.execute("""
                 SELECT 
                     pattern_type,
                     COUNT(*) as pattern_count,
-                    AVG(confidence_impact) as avg_impact,
+                    AVG(confidence) as avg_confidence,
                     MAX(last_updated) as last_updated
                 FROM learning_patterns
                 GROUP BY pattern_type
                 ORDER BY pattern_count DESC
             """)
             
-            learning_stats = [dict(row) for row in cursor.fetchall()]
+            learning_stats = [dict(zip([desc[0] for desc in cursor.description], row)) for row in cursor.fetchall()]
             
             # User feedback analysis
             cursor = conn.execute("""
@@ -336,7 +336,7 @@ async def get_advanced_analytics_tool(
                 GROUP BY action_type
             """.format(days_back))
             
-            feedback_stats = [dict(row) for row in cursor.fetchall()]
+            feedback_stats = [dict(zip([desc[0] for desc in cursor.description], row)) for row in cursor.fetchall()]
             
             # Session insights
             cursor = conn.execute("""

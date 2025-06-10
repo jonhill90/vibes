@@ -1,0 +1,42 @@
+2025-06-10 04:56:56,626 - __main__ - INFO - 🧪 Running Phase 3 functionality test...
+2025-06-10 04:56:56,628 - src.phase3_tools_prod - ERROR - Error in get_advanced_analytics: dictionary update sequence element #0 has length 10; 2 is required
+2025-06-10 04:56:56,628 - __main__ - INFO - ✅ Analytics: False
+2025-06-10 04:56:56,656 - __main__ - INFO - ✅ Knowledge Graph: True
+2025-06-10 04:56:56,657 - __main__ - INFO - ✅ MOC Generation: False
+2025-06-10 04:56:56,657 - __main__ - INFO - 🎉 All Phase 3 tools tested successfully!
+2025-06-10 04:57:06,156 - __main__ - INFO - 🧪 Running Phase 3 functionality test...
+2025-06-10 04:57:06,157 - src.phase3_tools_prod - ERROR - Error in get_advanced_analytics: dictionary update sequence element #0 has length 10; 2 is required
+2025-06-10 04:57:06,157 - __main__ - INFO - ✅ Analytics: False
+2025-06-10 04:57:06,175 - __main__ - INFO - ✅ Knowledge Graph: True
+2025-06-10 04:57:06,176 - __main__ - INFO - ✅ MOC Generation: False
+2025-06-10 04:57:06,176 - __main__ - INFO - 🎉 All Phase 3 tools tested successfully!
+2025-06-10 04:57:22,353 - __main__ - INFO - 🧪 Running Phase 3 functionality test...
+2025-06-10 04:57:22,356 - src.phase3_tools_prod - ERROR - Error in get_advanced_analytics: no such column: confidence_impact
+2025-06-10 04:57:22,356 - __main__ - INFO - ✅ Analytics: False
+2025-06-10 04:57:22,370 - __main__ - INFO - ✅ Knowledge Graph: True
+2025-06-10 04:57:22,371 - __main__ - INFO - ✅ MOC Generation: False
+2025-06-10 04:57:22,371 - __main__ - INFO - 🎉 All Phase 3 tools tested successfully!
+2025-06-10 04:57:41,384 - __main__ - INFO - 🧪 Running Phase 3 functionality test...
+2025-06-10 04:57:41,386 - src.phase3_tools_prod - ERROR - Error in get_advanced_analytics: no such column: timestamp
+2025-06-10 04:57:41,386 - __main__ - INFO - ✅ Analytics: False
+2025-06-10 04:57:41,402 - __main__ - INFO - ✅ Knowledge Graph: True
+2025-06-10 04:57:41,402 - __main__ - INFO - ✅ MOC Generation: False
+2025-06-10 04:57:41,402 - __main__ - INFO - 🎉 All Phase 3 tools tested successfully!
+2025-06-10 04:58:23,877 - __main__ - INFO - 🧪 Running Phase 3 functionality test...
+2025-06-10 04:58:23,879 - src.phase3_tools_prod - ERROR - Error in get_advanced_analytics: no such column: timestamp
+2025-06-10 04:58:23,879 - __main__ - INFO - ✅ Analytics: False
+2025-06-10 04:58:23,897 - __main__ - INFO - ✅ Knowledge Graph: True
+2025-06-10 04:58:23,897 - __main__ - INFO - ✅ MOC Generation: False
+2025-06-10 04:58:23,897 - __main__ - INFO - 🎉 All Phase 3 tools tested successfully!
+2025-06-10 04:58:35,477 - __main__ - INFO - 🧪 Running Phase 3 functionality test...
+2025-06-10 04:58:35,478 - src.phase3_tools_prod - ERROR - Error in get_advanced_analytics: no such column: timestamp
+2025-06-10 04:58:35,479 - __main__ - INFO - ✅ Analytics: False
+2025-06-10 04:58:35,492 - __main__ - INFO - ✅ Knowledge Graph: True
+2025-06-10 04:58:35,493 - __main__ - INFO - ✅ MOC Generation: False
+2025-06-10 04:58:35,493 - __main__ - INFO - 🎉 All Phase 3 tools tested successfully!
+2025-06-10 05:00:28,294 - __main__ - INFO - 🧪 Running Phase 3 functionality test...
+2025-06-10 05:00:28,296 - src.phase3_tools_prod - ERROR - Error in get_advanced_analytics: no such column: timestamp
+2025-06-10 05:00:28,296 - __main__ - INFO - ✅ Analytics: False
+2025-06-10 05:00:28,315 - __main__ - INFO - ✅ Knowledge Graph: True
+2025-06-10 05:00:28,316 - __main__ - INFO - ✅ MOC Generation: False
+2025-06-10 05:00:28,316 - __main__ - INFO - 🎉 All Phase 3 tools tested successfully!
