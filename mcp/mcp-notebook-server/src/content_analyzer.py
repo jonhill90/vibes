@@ -13,6 +13,30 @@ logger = logging.getLogger(__name__)
 
 
 class ContentAnalysisResult:
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for compatibility"""
+        return {
+            "content_type": self.content_type,
+            "primary_domain": self.primary_domain,
+            "domains": self.domains,
+            "tags": self.tags,
+            "title": self.title,
+            "slug": self.slug,
+            "observations": self.observations,
+            "relations": self.relations,
+            "confidence": self.confidence,
+            "destination_folder": self.destination_folder,
+            "reasoning": self.reasoning,
+            "semantic_markup": self.semantic_markup,
+            "word_count": self.word_count,
+            "character_count": self.character_count,
+            "content_hash": self.content_hash
+        }
+
+    def get(self, key: str, default=None):
+        """Dict-like get method for compatibility"""
+        return getattr(self, key, default)
     """Result of content analysis with all metadata."""
     
     def __init__(self):
@@ -526,3 +550,6 @@ class INMPARAContentAnalyzer:
                         })
         
         return best_match
+
+# Create global instance for use across modules
+content_analyzer = INMPARAContentAnalyzer()

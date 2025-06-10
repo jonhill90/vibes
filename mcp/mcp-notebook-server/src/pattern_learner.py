@@ -547,3 +547,8 @@ class PatternLearner:
             stats['recent_feedback_count'] = cursor.fetchone()[0]
         
         return stats
+
+
+# Create global instance for use across modules  
+from .database.database import db
+pattern_learner = PatternLearner(db)

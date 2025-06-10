@@ -485,3 +485,8 @@ class INMPARATemplateEngine:
             validation_result['valid'] = False
         
         return validation_result
+
+# Create global instance for use across modules
+import os
+default_vault_path = os.getenv('INMPARA_VAULT_PATH', '/workspace/vibes/repos/inmpara')
+template_engine = INMPARATemplateEngine(default_vault_path)

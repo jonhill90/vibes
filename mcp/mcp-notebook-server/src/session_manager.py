@@ -569,3 +569,8 @@ class SessionManager:
                     })
         
         return related_sessions[:limit]
+
+
+# Create global instance for use across modules
+from .database.database import db
+session_manager = SessionManager(db)
