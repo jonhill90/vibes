@@ -77,9 +77,11 @@ class INMPARAServer:
         self.server = None
         self.database = None
         self.vector_search = None
+        
+        self.session_manager = None
         self.file_manager = None
         
-        # Core modules
+        # New core modules
         self.notes_manager = None
         self.search_manager = None
         self.inbox_manager = None
@@ -110,49 +112,67 @@ class INMPARAServer:
             await self.vector_search.initialize()
             logger.info("Vector search engine initialized")
             
-            # Initialize file manager
+            # Initialize legacy components for compatibility
             self.file_manager = INMPARAFileManager(self.vault_path)
-            logger.info("File manager initialized")
 
-            # Initialize core modules
+            # Initialize new core modules
+            self.sessions_manager = SessionsManager(
+                vault_path=self.vault_path,
+                database=self.database
+            )
+            logger.info("Sessions manager initialized")
+            
+            self.learning_manager = LearningManager(
+                vault_path=self.vault_path,
+                database=self.database
+            )
+            logger.info("Learning manager initialized")
+            
+            
+            
+            self.session_manager = SessionManager(
+                database=self.database,
+                vector_search=self.vector_search
+            )
+            
+            # Initialize new core modules
             self.notes_manager = NotesManager(
                 vault_path=self.vault_path,
+                
+                
                 file_manager=self.file_manager
             )
-            logger.info("Notes manager initialized")
             
             self.search_manager = SearchManager(
                 vault_path=self.vault_path,
                 vector_search_engine=self.vector_search,
                 database=self.database
             )
-            logger.info("Search manager initialized")
             
             self.inbox_manager = InboxManager(
                 vault_path=self.vault_path,
                 notes_manager=self.notes_manager,
-                pattern_learner=None,
+                
+                
                 database=self.database
             )
-            logger.info("Inbox manager initialized")
             
             self.analytics_manager = AnalyticsManager(
                 vault_path=self.vault_path,
                 database=self.database,
                 vector_search=self.vector_search
             )
-            logger.info("Analytics manager initialized")
             
             self.learning_manager = LearningManager(
-                database=self.database
+                database=self.database,
+                confidence_threshold=self.confidence_threshold
             )
-            logger.info("Learning manager initialized")
             
             self.sessions_manager = SessionsManager(
                 database=self.database,
                 vector_search=self.vector_search
             )
-            logger.info("Sessions manager initialized")
+            
             # Create MCP server instance
             self.server = Server("inmpara-notebook-server")
             
@@ -201,7 +221,9 @@ class INMPARAServer:
         components = {
             'database': self.database,
             'vector_search': self.vector_search,
+            'session_manager': self.session_manager,
             'file_manager': self.file_manager,
+            # New core modules
             'notes_manager': self.notes_manager,
             'search_manager': self.search_manager,
             'inbox_manager': self.inbox_manager,

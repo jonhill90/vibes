@@ -6,7 +6,6 @@ Handles semantic search using Qdrant vector database.
 import asyncio
 import json
 import logging
-import time
 from typing import Dict, List, Optional, Any
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
@@ -26,44 +25,20 @@ class VectorSearchEngine:
         self.collection_name = collection_name
         self.client = None
         self.embedding_model = None
-        self.initialized = False
+        self._initialize()
     
-    async def initialize(self):
-        """Initialize Qdrant client and embedding model with retry logic."""
-        max_retries = 10
-        retry_delay = 2
-        
-        for attempt in range(max_retries):
-            try:
-                logger.info(f"Attempting to connect to Qdrant at {self.host}:{self.port} (attempt {attempt + 1}/{max_retries})")
-                
-                # Initialize client
-                self.client = QdrantClient(url=f"http://{self.host}:{self.port}")
-                
-                # Test connection
-                collections = self.client.get_collections()
-                logger.info(f"Successfully connected to Qdrant. Found {len(collections.collections)} collections.")
-                
-                # Initialize embedding model
-                self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-                
-                # Ensure collection exists
-                await self._ensure_collection_exists()
-                
-                self.initialized = True
-                logger.info(f"Vector search engine initialized - Collection: {self.collection_name}")
-                return
-                
-            except Exception as e:
-                logger.warning(f"Connection attempt {attempt + 1} failed: {e}")
-                if attempt < max_retries - 1:
-                    logger.info(f"Retrying in {retry_delay} seconds...")
-                    await asyncio.sleep(retry_delay)
-                else:
-                    logger.error(f"Failed to initialize vector search after {max_retries} attempts")
-                    raise
+    def _initialize(self):
+        """Initialize Qdrant client and embedding model."""
+        try:
+            self.client = QdrantClient(host=self.host, port=self.port)
+            self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+            self._ensure_collection_exists()
+            logger.info(f"Vector search engine initialized - Collection: {self.collection_name}")
+        except Exception as e:
+            logger.error(f"Failed to initialize vector search: {e}")
+            raise
     
-    async def _ensure_collection_exists(self):
+    def _ensure_collection_exists(self):
         """Create collection if it doesn't exist."""
         try:
             collections = self.client.get_collections()
@@ -86,8 +61,6 @@ class VectorSearchEngine:
     
     def embed_text(self, text: str) -> List[float]:
         """Generate embedding for text."""
-        if not self.initialized:
-            raise RuntimeError("VectorSearchEngine not initialized. Call initialize() first.")
         try:
             embedding = self.embedding_model.encode(text, convert_to_tensor=False)
             return embedding.tolist()
@@ -97,9 +70,6 @@ class VectorSearchEngine:
     
     def add_note(self, note_data: Dict[str, Any]) -> bool:
         """Add a note to the vector index."""
-        if not self.initialized:
-            logger.warning("VectorSearchEngine not initialized. Skipping add_note.")
-            return False
         try:
             # Combine title and content for embedding
             text_content = f"{note_data.get('title', '')} {note_data.get('content', '')}"
@@ -137,9 +107,6 @@ class VectorSearchEngine:
     def search_semantic(self, query: str, filters: Dict[str, Any] = None, 
                        limit: int = 15, similarity_threshold: float = 0.7) -> List[Dict[str, Any]]:
         """Perform semantic similarity search."""
-        if not self.initialized:
-            logger.warning("VectorSearchEngine not initialized. Returning empty results.")
-            return []
         try:
             # Generate query embedding
             query_embedding = self.embed_text(query)
@@ -213,9 +180,6 @@ class VectorSearchEngine:
     def find_related(self, note_id: str, limit: int = 10, 
                     similarity_threshold: float = 0.7) -> List[Dict[str, Any]]:
         """Find notes related to a specific note."""
-        if not self.initialized:
-            logger.warning("VectorSearchEngine not initialized. Returning empty results.")
-            return []
         try:
             # Get the note's vector
             search_results = self.client.retrieve(
@@ -257,9 +221,6 @@ class VectorSearchEngine:
     def suggest_connections(self, text_content: str, existing_note_domains: List[str] = None,
                            limit: int = 5, similarity_threshold: float = 0.7) -> List[Dict[str, Any]]:
         """Suggest connections for new content based on existing notes."""
-        if not self.initialized:
-            logger.warning("VectorSearchEngine not initialized. Returning empty suggestions.")
-            return []
         try:
             # Generate embedding for the content
             content_embedding = self.embed_text(text_content)
@@ -307,9 +268,6 @@ class VectorSearchEngine:
     
     def update_note(self, note_data: Dict[str, Any]) -> bool:
         """Update an existing note in the vector index."""
-        if not self.initialized:
-            logger.warning("VectorSearchEngine not initialized. Skipping update_note.")
-            return False
         try:
             # Delete existing point and add updated one
             self.client.delete(
@@ -325,9 +283,6 @@ class VectorSearchEngine:
     
     def delete_note(self, note_id: str) -> bool:
         """Remove a note from the vector index."""
-        if not self.initialized:
-            logger.warning("VectorSearchEngine not initialized. Skipping delete_note.")
-            return False
         try:
             self.client.delete(
                 collection_name=self.collection_name,
@@ -343,8 +298,6 @@ class VectorSearchEngine:
     
     def get_collection_info(self) -> Dict[str, Any]:
         """Get information about the collection."""
-        if not self.initialized:
-            return {"error": "VectorSearchEngine not initialized"}
         try:
             info = self.client.get_collection(self.collection_name)
             return {
@@ -360,9 +313,6 @@ class VectorSearchEngine:
     
     def bulk_add_notes(self, notes_data: List[Dict[str, Any]]) -> int:
         """Add multiple notes to the vector index efficiently."""
-        if not self.initialized:
-            logger.warning("VectorSearchEngine not initialized. Skipping bulk_add_notes.")
-            return 0
         try:
             points = []
             
