@@ -26,11 +26,9 @@ class NotesManager:
     auto-tagging, and file placement logic.
     """
     
-    def __init__(self, vault_path: str, content_analyzer=None, template_engine=None, file_manager=None):
+    def __init__(self, vault_path: str, file_manager=None):
         """Initialize the NotesManager with required components."""
         self.vault_path = vault_path
-        self.content_analyzer = content_analyzer
-        self.template_engine = template_engine
         self.file_manager = file_manager
         
         # INMPARA folder structure
@@ -156,13 +154,6 @@ class NotesManager:
     
     async def analyze_content(self, content: str, title: str, domain: str) -> Dict[str, Any]:
         """Analyze content for metadata extraction and classification."""
-        if self.content_analyzer:
-            try:
-                # Use sophisticated content analyzer
-                analysis = await self.content_analyzer.analyze_content(content, title)
-                return analysis
-            except Exception as e:
-                logger.warning(f"Content analyzer failed, using basic analysis: {e}")
         
         # Basic content analysis fallback
         word_count = len(content.split())

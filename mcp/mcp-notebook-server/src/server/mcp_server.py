@@ -28,23 +28,17 @@ if parent_dir not in sys.path:
 # Database and core components
 from database.database import INMPARADatabase
 from database.vector_search import VectorSearchEngine
-from content_analyzer import INMPARAContentAnalyzer
-from template_engine import INMPARATemplateEngine
-from conversation_monitor import ConversationMonitor
-from pattern_learner import PatternLearner
-from session_manager import SessionManager
 from utils.file_utils import INMPARAFileManager
 
 # Core business logic modules
-from core.notes import NotesManager
-from core.search import SearchManager
-from core.inbox import InboxManager
-from core.analytics import AnalyticsManager
-from core.learning import LearningManager
-from core.sessions import SessionsManager
+from core import NotesManager
+from core import SearchManager
+from core import InboxManager
+from core import AnalyticsManager
+from core import SessionsManager, LearningManager
 
 # Tool registration
-from .tools import setup_mcp_tools
+from server.tools import setup_mcp_tools
 
 # Configure logging
 logging.basicConfig(
@@ -84,11 +78,6 @@ class INMPARAServer:
         self.database = None
         self.vector_search = None
         
-        # Legacy components (for compatibility)
-        self.content_analyzer = None
-        self.template_engine = None
-        self.conversation_monitor = None
-        self.pattern_learner = None
         self.session_manager = None
         self.file_manager = None
         
@@ -124,19 +113,22 @@ class INMPARAServer:
             logger.info("Vector search engine initialized")
             
             # Initialize legacy components for compatibility
-            self.content_analyzer = INMPARAContentAnalyzer()
-            self.template_engine = INMPARATemplateEngine(self.vault_path)
             self.file_manager = INMPARAFileManager(self.vault_path)
-            
-            self.pattern_learner = PatternLearner(
-                database=self.database,
-                confidence_threshold=self.confidence_threshold
+
+            # Initialize new core modules
+            self.sessions_manager = SessionsManager(
+                vault_path=self.vault_path,
+                database=self.database
             )
+            logger.info("Sessions manager initialized")
             
-            self.conversation_monitor = ConversationMonitor(
-                database=self.database,
-                vector_search=self.vector_search
+            self.learning_manager = LearningManager(
+                vault_path=self.vault_path,
+                database=self.database
             )
+            logger.info("Learning manager initialized")
+            
+            
             
             self.session_manager = SessionManager(
                 database=self.database,
@@ -146,8 +138,8 @@ class INMPARAServer:
             # Initialize new core modules
             self.notes_manager = NotesManager(
                 vault_path=self.vault_path,
-                content_analyzer=self.content_analyzer,
-                template_engine=self.template_engine,
+                
+                
                 file_manager=self.file_manager
             )
             
@@ -160,8 +152,8 @@ class INMPARAServer:
             self.inbox_manager = InboxManager(
                 vault_path=self.vault_path,
                 notes_manager=self.notes_manager,
-                pattern_learner=self.pattern_learner,
-                content_analyzer=self.content_analyzer,
+                
+                
                 database=self.database
             )
             
@@ -229,10 +221,6 @@ class INMPARAServer:
         components = {
             'database': self.database,
             'vector_search': self.vector_search,
-            'content_analyzer': self.content_analyzer,
-            'template_engine': self.template_engine,
-            'conversation_monitor': self.conversation_monitor,
-            'pattern_learner': self.pattern_learner,
             'session_manager': self.session_manager,
             'file_manager': self.file_manager,
             # New core modules

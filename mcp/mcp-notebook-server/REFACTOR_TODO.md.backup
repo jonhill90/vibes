@@ -90,10 +90,10 @@ mcp-notebook-server/
 - ✅ Create `./server.py`:
   ```python
   #!/usr/bin/env python3
-  """INMPARA Notebook MCP Server Entry Point"""
+  \"\"\"INMPARA Notebook MCP Server Entry Point\"\"\"
   from src.server.mcp_server import INMPARAServer
   
-  if __name__ == "__main__":
+  if __name__ == \"__main__\":
       INMPARAServer().run()
   ```
 

@@ -26,7 +26,7 @@ class InboxManager:
     """
     
     def __init__(self, vault_path: str, notes_manager=None, pattern_learner=None,
-                 content_analyzer=None, database=None):
+                 database=None):
         """Initialize the InboxManager with required components."""
         self.vault_path = vault_path
         self.inbox_path = os.path.join(vault_path, "0 - Inbox")
@@ -34,7 +34,6 @@ class InboxManager:
         # Component dependencies
         self.notes_manager = notes_manager
         self.pattern_learner = pattern_learner
-        self.content_analyzer = content_analyzer
         self.database = database
         
         # Processing configuration
@@ -237,358 +236,51 @@ class InboxManager:
             title = self._extract_title(filename, content)
             
             # Use content analyzer if available
-            if self.content_analyzer:
-                analysis = await self.content_analyzer.analyze_content(content, title)
-            else:
-                # Basic analysis fallback
-                analysis = self._basic_content_analysis(content, title)
             
-            # Add file metadata
-            stat = os.stat(file_path)
-            analysis.update({
-                'file_path': file_path,
-                'filename': filename,
-                'title': title,
-                'file_size': stat.st_size,
-                'created_time': stat.st_ctime,
-                'modified_time': stat.st_mtime
-            })
+            # Basic analysis fallback
+            analysis = self._analyze_content_basic(content, title)
             
             return {
                 'success': True,
-                'analysis': analysis
+                'analysis': analysis,
+                'file_path': file_path,
+                'title': title,
+                'content_length': len(content)
             }
             
         except Exception as e:
-            logger.error(f"Error analyzing inbox file: {e}")
+            logger.error(f"Failed to analyze file {file_path}: {e}")
             return {'success': False, 'error': str(e)}
     
-    async def get_routing_decision(self, analysis: Dict[str, Any], file_path: str) -> Dict[str, Any]:
-        """
-        Get routing decision with confidence based on learned patterns.
+    def _analyze_content_basic(self, content: str, title: str) -> Dict[str, Any]:
+        """Basic content analysis as fallback."""
+        lines = content.split('\n')
+        word_count = len(content.split())
         
-        Args:
-            analysis: File analysis results
-            file_path: Path to the file
-            
-        Returns:
-            Dict with routing decision and confidence
-        """
-        try:
-            # Get learned patterns if available
-            learned_patterns = {}
-            if self.pattern_learner:
-                learned_patterns = self.pattern_learner.get_learned_patterns()
-            
-            # Determine destination folder
-            destination = self._determine_destination(analysis, learned_patterns)
-            
-            # Determine tags
-            suggested_tags = self._suggest_tags(analysis, learned_patterns)
-            
-            # Determine domain
-            domain = self._determine_domain(analysis, learned_patterns)
-            
-            # Calculate confidence based on various factors
-            confidence = self._calculate_routing_confidence(
-                analysis, destination, suggested_tags, domain, learned_patterns
-            )
-            
-            routing_decision = {
-                'destination_folder': destination['folder'],
-                'suggested_filename': destination['filename'],
-                'tags': suggested_tags,
-                'domain': domain,
-                'confidence': confidence,
-                'reasoning': destination.get('reasoning', ''),
-                'learned_patterns_applied': len(learned_patterns) > 0
-            }
-            
-            return routing_decision
-            
-        except Exception as e:
-            logger.error(f"Error getting routing decision: {e}")
-            return {
-                'destination_folder': '1 - Notes',
-                'tags': [],
-                'domain': 'General',
-                'confidence': 0.1,
-                'error': str(e)
-            }
-    
-    async def auto_process_file(self, item: Dict[str, Any], routing_decision: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Automatically process a file based on routing decision.
+        # Simple domain classification
+        domain = 'general'
+        if any(word in content.lower() for word in ['code', 'programming', 'function', 'class']):
+            domain = 'technical'
+        elif any(word in content.lower() for word in ['meeting', 'agenda', 'todo', 'task']):
+            domain = 'productivity'
+        elif any(word in content.lower() for word in ['idea', 'concept', 'thought', 'inspiration']):
+            domain = 'ideas'
         
-        Args:
-            item: Inbox item information
-            routing_decision: Routing decision with destination and metadata
-            
-        Returns:
-            Dict with processing result
-        """
-        try:
-            file_path = item['path']
-            
-            # Read file content
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # Extract title
-            title = routing_decision.get('suggested_filename', os.path.basename(file_path))
-            title = title.replace('.md', '').replace('-', ' ').title()
-            
-            # Create note using NotesManager
-            if self.notes_manager:
-                note_result = await self.notes_manager.create_note(
-                    title=title,
-                    content=content,
-                    tags=routing_decision.get('tags', []),
-                    domain=routing_decision.get('domain', 'General'),
-                    source='inbox_auto'
-                )
-                
-                if note_result['success']:
-                    # Move original file to processed or delete
-                    processed_path = self._move_to_processed(file_path)
-                    
-                    return {
-                        'success': True,
-                        'item': item,
-                        'note_created': note_result,
-                        'original_moved_to': processed_path,
-                        'message': 'File auto-processed successfully'
-                    }
-                else:
-                    return {
-                        'success': False,
-                        'item': item,
-                        'error': note_result.get('error', 'Note creation failed')
-                    }
-            else:
-                return {
-                    'success': False,
-                    'item': item,
-                    'error': 'NotesManager not available'
-                }
-            
-        except Exception as e:
-            logger.error(f"Error auto-processing file: {e}")
-            return {
-                'success': False,
-                'item': item,
-                'error': str(e)
-            }
-    
-    def get_inbox_items(self) -> List[Dict[str, Any]]:
-        """Get list of items in the inbox folder."""
-        items = []
-        
-        if not os.path.exists(self.inbox_path):
-            logger.warning(f"Inbox path does not exist: {self.inbox_path}")
-            return items
-        
-        try:
-            for root, dirs, files in os.walk(self.inbox_path):
-                for file in files:
-                    if file.endswith('.md'):
-                        file_path = os.path.join(root, file)
-                        stat = os.stat(file_path)
-                        
-                        items.append({
-                            'name': file,
-                            'path': file_path,
-                            'size': stat.st_size,
-                            'created': stat.st_ctime,
-                            'modified': stat.st_mtime
-                        })
-            
-            # Sort by modification time (newest first)
-            items.sort(key=lambda x: x['modified'], reverse=True)
-            
-        except Exception as e:
-            logger.error(f"Error getting inbox items: {e}")
-        
-        return items
+        return {
+            'domain': domain,
+            'confidence': 0.7,  # Basic analysis confidence
+            'word_count': word_count,
+            'line_count': len(lines),
+            'suggested_tags': [domain],
+            'processing_recommendation': 'review' if word_count > 500 else 'auto'
+        }
     
     def _extract_title(self, filename: str, content: str) -> str:
         """Extract title from filename or content."""
-        # Try to get title from content first (if it has frontmatter)
-        if content.startswith('---'):
-            try:
-                import yaml
-                parts = content.split('---', 2)
-                if len(parts) >= 3:
-                    frontmatter = yaml.safe_load(parts[1])
-                    if 'title' in frontmatter:
-                        return frontmatter['title']
-            except:
-                pass
-        
-        # Try to get title from first heading
+        # Try to get title from first line if it looks like a title
         lines = content.split('\n')
-        for line in lines:
-            if line.startswith('# '):
-                return line[2:].strip()
+        if lines and len(lines[0]) < 100 and not lines[0].startswith('#'):
+            return lines[0].strip()
         
-        # Fall back to filename
-        title = filename.replace('.md', '').replace('_', ' ').replace('-', ' ')
-        return title.title()
-    
-    def _basic_content_analysis(self, content: str, title: str) -> Dict[str, Any]:
-        """Basic content analysis fallback."""
-        import re
-        
-        word_count = len(content.split())
-        
-        # Extract keywords
-        words = re.findall(r'\b[a-zA-Z]{3,}\b', content.lower())
-        keywords = list(set(words))[:10]
-        
-        # Determine basic content type
-        content_lower = content.lower()
-        if 'project' in content_lower:
-            content_type = 'project'
-        elif 'meeting' in content_lower:
-            content_type = 'meeting'
-        elif any(word in content_lower for word in ['todo', 'task', 'action']):
-            content_type = 'tasks'
-        else:
-            content_type = 'note'
-        
-        return {
-            'word_count': word_count,
-            'keywords': keywords,
-            'content_type': content_type,
-            'complexity': 'high' if word_count > 500 else 'medium' if word_count > 100 else 'low'
-        }
-    
-    def _determine_destination(self, analysis: Dict[str, Any], learned_patterns: Dict) -> Dict[str, Any]:
-        """Determine destination folder based on analysis and patterns."""
-        content_type = analysis.get('content_type', 'note')
-        
-        # Default mapping
-        folder_mapping = {
-            'project': '3 - Projects',
-            'meeting': '1 - Notes/Meetings',
-            'tasks': '1 - Notes/Tasks',
-            'note': '1 - Notes'
-        }
-        
-        folder = folder_mapping.get(content_type, '1 - Notes')
-        
-        # Apply learned patterns if available
-        if learned_patterns and 'folder_patterns' in learned_patterns:
-            pattern_match = self._apply_folder_patterns(analysis, learned_patterns['folder_patterns'])
-            if pattern_match:
-                folder = pattern_match['folder']
-        
-        # Generate filename
-        title = analysis.get('title', 'Untitled')
-        safe_title = re.sub(r'[<>:"/\\|?*]', '', title)
-        timestamp = datetime.now().strftime("%Y%m%d")
-        filename = f"{safe_title} - {timestamp}.md"
-        
-        return {
-            'folder': folder,
-            'filename': filename,
-            'reasoning': f"Content type: {content_type}"
-        }
-    
-    def _suggest_tags(self, analysis: Dict[str, Any], learned_patterns: Dict) -> List[str]:
-        """Suggest tags based on analysis and learned patterns."""
-        tags = []
-        
-        # Add content type tag
-        content_type = analysis.get('content_type')
-        if content_type and content_type != 'note':
-            tags.append(content_type)
-        
-        # Add keyword-based tags
-        keywords = analysis.get('keywords', [])
-        for keyword in keywords[:3]:  # Top 3 keywords
-            if len(keyword) > 3:
-                tags.append(keyword)
-        
-        # Apply learned tag patterns
-        if learned_patterns and 'tag_patterns' in learned_patterns:
-            pattern_tags = self._apply_tag_patterns(analysis, learned_patterns['tag_patterns'])
-            tags.extend(pattern_tags)
-        
-        return list(set(tags))[:6]  # Max 6 unique tags
-    
-    def _determine_domain(self, analysis: Dict[str, Any], learned_patterns: Dict) -> str:
-        """Determine domain based on analysis and learned patterns."""
-        # Default domain detection
-        keywords = analysis.get('keywords', [])
-        content = ' '.join(keywords).lower()
-        
-        if any(word in content for word in ['ai', 'machine', 'learning', 'neural']):
-            return 'AI'
-        elif any(word in content for word in ['business', 'strategy', 'market']):
-            return 'Business'
-        elif any(word in content for word in ['code', 'programming', 'software']):
-            return 'Technology'
-        else:
-            return 'General'
-    
-    def _calculate_routing_confidence(self, analysis: Dict, destination: Dict,
-                                    tags: List[str], domain: str, learned_patterns: Dict) -> float:
-        """Calculate confidence score for routing decision."""
-        confidence = 0.5  # Base confidence
-        
-        # Boost confidence based on clear indicators
-        content_type = analysis.get('content_type')
-        if content_type in ['project', 'meeting']:
-            confidence += 0.2
-        
-        # Boost confidence if learned patterns were applied
-        if learned_patterns:
-            confidence += 0.2
-        
-        # Boost confidence based on keyword strength
-        keywords = analysis.get('keywords', [])
-        if len(keywords) > 5:
-            confidence += 0.1
-        
-        # Cap at 1.0
-        return min(confidence, 1.0)
-    
-    def _apply_folder_patterns(self, analysis: Dict, patterns: List[Dict]) -> Optional[Dict]:
-        """Apply learned folder patterns to analysis."""
-        # Simplified pattern matching
-        for pattern in patterns:
-            if pattern.get('accuracy', 0) > 0.8:
-                return pattern
-        return None
-    
-    def _apply_tag_patterns(self, analysis: Dict, patterns: List[Dict]) -> List[str]:
-        """Apply learned tag patterns to analysis."""
-        suggested_tags = []
-        for pattern in patterns:
-            if pattern.get('accuracy', 0) > 0.7:
-                suggested_tags.extend(pattern.get('tags', []))
-        return suggested_tags[:3]
-    
-    def _move_to_processed(self, file_path: str) -> str:
-        """Move processed file to a processed folder or delete it."""
-        try:
-            processed_dir = os.path.join(self.vault_path, "_processed")
-            os.makedirs(processed_dir, exist_ok=True)
-            
-            filename = os.path.basename(file_path)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            new_filename = f"{timestamp}_{filename}"
-            new_path = os.path.join(processed_dir, new_filename)
-            
-            os.rename(file_path, new_path)
-            return new_path
-            
-        except Exception as e:
-            logger.error(f"Error moving processed file: {e}")
-            # If moving fails, just delete the original
-            try:
-                os.remove(file_path)
-                return "deleted"
-            except:
-                return "error"
+        # Fall back to filename without extension
+        return os.path.splitext(filename)[0]

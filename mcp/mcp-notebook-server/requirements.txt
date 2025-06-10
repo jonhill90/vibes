@@ -2,7 +2,6 @@
 mcp>=1.0.0
 
 # Database and Search
-sqlite3
 qdrant-client>=1.7.0
 sentence-transformers>=2.2.0
 
@@ -22,19 +21,9 @@ watchdog>=3.0.0
 # Utilities
 python-dotenv>=1.0.0
 aiofiles>=23.0.0
-asyncio
-datetime
-uuid
-hashlib
-json
-re
-pathlib
 
-# Development
+# Development (optional)
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 black>=23.0.0
 flake8>=6.0.0
-sentence-transformers
-qdrant-client
-python-frontmatter
