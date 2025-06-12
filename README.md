@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jonhill90/vibes)
+
 # Vibes - Conversational Development Environment
 
 Vibes transforms Claude Desktop into a conversational development environment through distributed MCP servers. Instead of learning command-line tools, you describe what you want to build and Claude implements it while teaching you.
@@ -50,9 +52,24 @@ Expanding toward observable AI execution and team collaboration:
 
 ```bash
 git clone https://github.com/jonhill90/vibes.git
-cd vibes/mcp
+cd mcp/mcp-vibes-server
+docker network create vibes-network
 docker-compose up -d
-# Configure Claude Desktop MCP settings (see docs/)
+```
+
+## Configure Claude Desktop MCP settings
+- macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+- Windows: %APPDATA%\Claude\claude_desktop_config.json
+
+```json
+{
+  "mcpServers": {
+    "vibes": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-vibes-server", "python3", "/workspace/server.py"]
+    }
+  }
+}
 ```
 
 ## Current Capabilities
