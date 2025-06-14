@@ -2,14 +2,14 @@
 # Simple wrapper to take and describe screenshots
 
 TARGET="${1:-http://host.docker.internal:8082}"
-SCREENSHOT_PATH="/workspace/vibes/projects/Agent-0/screenshots/$(date +%Y%m%d_%H%M%S).png"
+SCREENSHOT_PATH="/workspace/vibes/screenshots/$(date +%Y%m%d_%H%M%S).png"
 
 # Create screenshots directory
-mkdir -p /workspace/vibes/projects/Agent-0/screenshots
+mkdir -p /workspace/vibes/screenshots
 
 # Take screenshot
 echo "📸 Taking screenshot of: $TARGET"
-/workspace/vibes/projects/Agent-0/tools/take-screenshot.sh "$TARGET" "$SCREENSHOT_PATH"
+/workspace/vibes/tools/visual/take-screenshot.sh "$TARGET" "$SCREENSHOT_PATH"
 
 # Show file info
 if [ -f "$SCREENSHOT_PATH" ]; then

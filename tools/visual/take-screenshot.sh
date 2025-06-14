@@ -1,7 +1,7 @@
 #!/bin/bash
 # Take screenshot using browserless API
 URL="${1:-http://host.docker.internal:8082}"
-OUTPUT="${2:-/workspace/vibes/projects/Agent-0/screenshot.png}"
+OUTPUT="${2:-/workspace/vibes/screenshots/screenshot.png}"
 
 echo "Taking screenshot of $URL..."
 

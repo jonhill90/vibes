@@ -15,6 +15,9 @@
 !/projects/Agent-0/
 !/projects/Agent-1/
 
+# Screenshots
+/screenshots/*
+
 # System files
 .DS_Store
 __pycache__/
