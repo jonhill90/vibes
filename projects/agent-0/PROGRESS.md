@@ -48,3 +48,50 @@
 - Created NAMING_CONVENTION.md for clarity
 - Zero-indexed naming aligns with programming conventions
 
+
+---
+
+## Date: 2024-06-14 (Update 2)
+### Current Situation Assessment
+- Concept UI is already running in Docker container on port 8082
+- Container name: concept-app-container
+- Browser access has been attempted (logs show HeadlessChrome requests)
+- Need simple browser/screenshot tool to give Agent-0 "eyes"
+
+### What's Already Available:
+- `/workspace/vibes/repos/concept/` - The Discord-like UI mockup
+- Concept is containerized and accessible on port 8082
+- Chromium installed but needs snap configuration
+
+### Next Immediate Steps:
+1. Create minimal HTTP-based screenshot service
+2. Use existing browserless or find alternative approach
+3. Document the visual feedback workflow for Agent-0
+
+### Key Learning:
+- Always check what's already running before creating new services
+- The concept UI is the target we need to screenshot, not something to rebuild
+
+### Success: Visual Capabilities Established!
+- ✓ Browserless running on port 3333
+- ✓ Screenshot tool working using Docker networking (host.docker.internal)
+- ✓ Successfully captured screenshot of Concept UI at port 8082
+- ✓ Created easy-to-use wrapper scripts:
+  - `/tools/take-screenshot.sh` - Core screenshot functionality
+  - `/tools/view.sh` - Simple wrapper with timestamped outputs
+
+### Key Learning:
+- Must use `host.docker.internal` when accessing services from inside Docker
+- Browserless provides simple HTTP API for screenshots
+- No need for complex Chrome/Chromium setup inside containers
+
+### Tools Now Available:
+```bash
+# Take a screenshot
+/workspace/vibes/projects/Agent-0/tools/view.sh http://host.docker.internal:8082
+
+# View what's running
+docker ps
+```
+
+Agent-0 now has eyes! 👀
