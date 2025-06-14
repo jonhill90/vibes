@@ -7,7 +7,7 @@ echo "Taking screenshot of $URL..."
 
 # Use browserless screenshot API
 curl -X POST \
-  http://host.docker.internal:3333/screenshot \
+  http://host.docker.internal:9333/screenshot \
   -H 'Content-Type: application/json' \
   -d "{
     \"url\": \"$URL\",
