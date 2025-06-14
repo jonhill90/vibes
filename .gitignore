@@ -10,8 +10,10 @@
 /projects/*
 !/projects/
 !/projects/README.md
+!/projects/vibes/
 !/projects/terraform-labs-v2/
-
+!/projects/Agent-0/
+!/projects/Agent-1/
 
 # System files
 .DS_Store
