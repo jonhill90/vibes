@@ -1,0 +1,17 @@
+services:
+  mcp-middleware:
+    build: .
+    container_name: mcp-middleware-server
+    environment:
+      - MCP_DISCOVERY_DIR=/app/mcps
+      - REGISTRY_FILE=/app/data/mcp_registry.json
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    networks:
+      - default
+
+networks:
+  default:
+    name: vibes-network
+    external: true
