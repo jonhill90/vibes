@@ -1,29 +1,14 @@
-FROM python:3.10-slim
-
-# Install docker CLI for container communication
-RUN apt-get update && apt-get install -y \
-    curl \
-    && curl -fsSL https://get.docker.com -o get-docker.sh \
-    && sh get-docker.sh \
-    && rm get-docker.sh \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.11-slim-buster
 
 WORKDIR /app
 
-# Install Python dependencies
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the MCP server
-COPY mcp_remote_server.py .
+COPY server.py .
+COPY claude_config_example.json .
 
-# Copy MCP discovery directory
-COPY mcps/ mcps/
+EXPOSE 5001
 
-# Create data directory
-RUN mkdir -p /app/data
+CMD ["python", "server.py"]
 
-EXPOSE 5000
-
-CMD ["python", "/app/mcp_remote_server.py"]
