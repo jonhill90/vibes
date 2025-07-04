@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "middleware": {
-      "command": "npx",
-      "args": ["mcp-remote", "http://localhost:5001/sse"]
-    }
-  }
-}
