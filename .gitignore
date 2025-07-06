@@ -1,5 +1,6 @@
 # Local environment files
 .env
+.vibes/
 
 # Repos
 /repos/*
