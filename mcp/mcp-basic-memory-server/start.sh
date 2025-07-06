@@ -17,6 +17,5 @@ cat > /root/.basic-memory/config.json << 'CONFIG'
 }
 CONFIG
 
-# Start MCP server without any extra output - only JSON should go to stdout
-export BASIC_MEMORY_PROJECT=obsidian
-exec basic-memory --project obsidian mcp 2>/dev/null
+# Start MCP server using the default project (no --project flag needed since we set default_project)
+exec basic-memory mcp 2>/dev/null

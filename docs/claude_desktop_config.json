@@ -8,13 +8,17 @@
       "command": "npx",
       "args": ["mcp-remote", "http://localhost:8765/mcp/claude/sse/vibes-user"]
     },
-    "azure": {
+    "basic-memory": {
       "command": "docker",
-      "args": ["exec", "-i", "azure-mcp-server", "dotnet", "azmcp.dll", "server", "start"]
+      "args": ["exec", "-i", "basic-memory-mcp", "/app/start.sh"]
     },
     "github": {
       "command": "docker",
       "args": ["exec", "-i", "github-mcp-server", "/server/github-mcp-server", "stdio"]
+    },
+    "azure": {
+      "command": "docker",
+      "args": ["exec", "-i", "azure-mcp-server", "dotnet", "azmcp.dll", "server", "start"]
     },
     "terraform": {
       "command": "docker",

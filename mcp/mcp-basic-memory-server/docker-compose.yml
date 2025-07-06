@@ -6,8 +6,8 @@ services:
     environment:
       - BASIC_MEMORY_DIR=/obsidian-vault
     volumes:
-      # Mount Jon's Obsidian vault from iCloud
-      - "/Users/jon/Library/Mobile Documents/iCloud~md~obsidian/Documents/Jon's Notebook:/obsidian-vault"
+      # Mount Obsidian vault using environment variable
+      - "${HOST_VAULT_PATH}:/obsidian-vault"
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - vibes-network
