@@ -4,11 +4,21 @@ services:
     build: .
     container_name: mcp-vibesbox-server
     restart: unless-stopped
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${VIBES_PATH:-/workspace/vibes}:/workspace/vibes:rw
       - mcp-vibesbox-workspace:/workspace
-    command: ["tail", "-f", "/dev/null"]
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    # systemd requires this
+    command: ["/sbin/init"]
     # Future: Add port mappings for VNC access
     # ports:
     #   - "5900:5900"  # VNC server

@@ -1,0 +1,22 @@
+services:
+  mcp-vibesbox-monitor:
+    image: vibes/mcp-vibesbox-monitor:latest
+    container_name: mcp-vibesbox-monitor
+    restart: unless-stopped
+    ports:
+      - "8090:8000"  # Web app access on port 8080
+    volumes:
+      - monitor-data:/app/data
+    environment:
+      - VIBESBOX_SERVER_HOST=mcp-vibesbox-server
+      - VIBESBOX_SERVER_PORT=5901
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+
+networks:
+  default:
+    name: vibes-network
+    external: true
+
+volumes:
+  monitor-data:

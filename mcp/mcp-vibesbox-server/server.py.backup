@@ -47,7 +47,7 @@ def take_screenshot_base64(display: str = ":1") -> str:
     os.makedirs(screenshots_dir, exist_ok=True)
     
     # Create permanent filename
-    permanent_filename = f"{screenshots_dir}/{timestamp}_vibesbox_1920x1080.png"
+    permanent_filename = f"{screenshots_dir}/{timestamp}_vibesbox_1024x768.png"
     
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
         try:
@@ -233,7 +233,7 @@ async def handle_list_tools() -> List[Tool]:
                     "geometry": {
                         "type": "string",
                         "description": "Screen resolution",
-                        "default": "1920x1080"
+                        "default": "1024x768"
                     },
                     "password": {
                         "type": "string",
@@ -411,7 +411,7 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
     
     elif name == "start_vnc_server":
         display = arguments.get("display", ":1")
-        geometry = arguments.get("geometry", "1920x1080")
+        geometry = arguments.get("geometry", "1024x768")
         password = arguments.get("password", "vibes123")
         
         try:

@@ -2,24 +2,11 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install systemd and essential packages for snap support
+# Install base system packages
 RUN apt-get update && apt-get install -y \
-    systemd systemd-sysv \
     curl wget git python3 python3-pip jq vim nano \
     lsb-release gnupg ca-certificates \
-    dbus \
     && rm -rf /var/lib/apt/lists/*
-
-# Remove unnecessary systemd services for container
-RUN find /etc/systemd/system \
-    /lib/systemd/system \
-    -path '*.wants/*' \
-    \( -name '*getty*' \
-    -o -name '*systemd-logind*' \
-    -o -name '*systemd-vconsole-setup*' \
-    -o -name '*systemd-readahead*' \
-    -o -name '*udev*' \) \
-    -exec rm -v {} \;
 
 # Install Docker CLI
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
@@ -27,9 +14,10 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /
     && apt-get update && apt-get install -y docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-# Install snapd with proper systemd support
-RUN apt-get update && apt-get install -y snapd \
-    && systemctl enable snapd.socket \
+# Install Google Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
 # Install VNC, desktop environment, and GUI automation tools
@@ -45,7 +33,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip3 install mcp pillow
 
 WORKDIR /workspace/vibes
+# Enhanced drag_mouse with timing delays - $(date)
 COPY server.py /workspace/
 
-# Use systemd as init
-CMD ["/sbin/init"]
+# TODO: Add VNC startup scripts and configuration
