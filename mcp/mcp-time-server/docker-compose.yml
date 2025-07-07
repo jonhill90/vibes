@@ -1,0 +1,17 @@
+services:
+  mcp-time-server:
+    image: vibes/mcp-time-server:latest
+    build: .
+    container_name: mcp-time-server
+    restart: unless-stopped
+    volumes:
+      - mcp-time-workspace:/workspace
+    command: ["tail", "-f", "/dev/null"]
+
+networks:
+  default:
+    name: vibes-network
+    external: true
+
+volumes:
+  mcp-time-workspace:
