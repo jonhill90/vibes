@@ -60,17 +60,6 @@ MCP servers provide Claude Desktop with specific capabilities by implementing th
 **Location:** [`mcp-terraform-server/`](mcp-terraform-server/)
 
 ### 🐙 mcp-github-server
-
-### 📓 mcp-notebook-server
-**Purpose:** AI-powered knowledge management
-**Capabilities:**
-- Automated filing with semantic markup
-- Intelligent content analysis and tagging
-- Knowledge graph operations
-- Semantic search across vault
-- Template application for all content types
-
-**Location:** [`mcp-notebook-server/`](mcp-notebook-server/)
 **Purpose:** GitHub repository and project management
 **Capabilities:**
 - Repository operations (create, clone, manage)
@@ -79,6 +68,39 @@ MCP servers provide Claude Desktop with specific capabilities by implementing th
 - GitHub API integration
 
 **Location:** [`mcp-github-server/`](mcp-github-server/)
+
+### 🌐 mcp-browserless-server
+**Purpose:** Browser automation and screenshot capabilities
+**Capabilities:**
+- Headless Chrome browser functionality
+- Screenshot capture via HTTP API
+- Browser automation through REST endpoints
+- Provides "eyes" for Agent-0 project
+- Accessible on port 9333 externally
+
+**Location:** [`mcp-browserless-server/`](mcp-browserless-server/)
+
+### ⏰ mcp-time-server
+**Purpose:** Time and timezone functionality
+**Capabilities:**
+- Current time retrieval in any timezone
+- Timezone abbreviation support (EST, PST, GMT, UTC, etc.)
+- Environment configuration via .env file
+- Timestamp formatting and conversion
+- Comprehensive IANA timezone support
+
+**Location:** [`mcp-time-server/`](mcp-time-server/)
+
+### 🖥️ mcp-vibesbox-server
+**Purpose:** Unified shell access + VNC GUI automation (in development)
+**Capabilities:**
+- Execute shell commands (currently implemented)
+- Desktop screenshot capture (planned)
+- GUI automation (click, type, keys) (planned)
+- Multi-vibesbox environment management (planned)
+- Template system for different environment types (planned)
+
+**Location:** [`mcp-vibesbox-server/`](mcp-vibesbox-server/)
 
 ## Architecture
 
@@ -90,7 +112,10 @@ mcp/
 ├── mcp-basic-memory-server/        # Markdown-based knowledge system
 ├── mcp-azure-server/               # Azure infrastructure server
 ├── mcp-terraform-server/           # Terraform IaC server
-└── mcp-github-server/              # GitHub integration server
+├── mcp-github-server/              # GitHub integration server
+├── mcp-browserless-server/         # Browser automation server
+├── mcp-time-server/                # Time and timezone server
+└── mcp-vibesbox-server/            # VNC GUI automation server (dev)
 ```
 
 ## How They Work
