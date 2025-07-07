@@ -23,6 +23,10 @@
     "terraform": {
       "command": "docker",
       "args": ["exec", "-i", "terraform-mcp-server", "/server/terraform-mcp-server", "stdio"]
+    },
+    "time": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-time-server", "python3", "/workspace/server.py"]
     }
   }
 }
