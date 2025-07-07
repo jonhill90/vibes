@@ -4,6 +4,10 @@
       "command": "docker",
       "args": ["exec", "-i", "mcp-vibes-server", "python3", "/workspace/server.py"]
     },
+    "vibesbox": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-vibesbox-server", "python3", "/workspace/server.py"]
+    },
     "openmemory": {
       "command": "npx",
       "args": ["mcp-remote", "http://localhost:8765/mcp/claude/sse/vibes-user"]
