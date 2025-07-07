@@ -8,6 +8,7 @@ in containerized desktop environments with visual feedback.
 
 import asyncio
 import subprocess
+from datetime import datetime
 import os
 import base64
 import tempfile
@@ -36,7 +37,17 @@ def run_vnc_command(command: str, display: str = ":1") -> subprocess.CompletedPr
     )
 
 def take_screenshot_base64(display: str = ":1") -> str:
-    """Take screenshot and return as base64 encoded image"""
+    """Take screenshot and return as base64 encoded image, also save to screenshots folder"""
+    # Generate timestamp for filename
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    screenshots_dir = "/workspace/vibes/screenshots"
+    
+    # Ensure screenshots directory exists
+    os.makedirs(screenshots_dir, exist_ok=True)
+    
+    # Create permanent filename
+    permanent_filename = f"{screenshots_dir}/{timestamp}_vibesbox_1024x768.png"
+    
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
         try:
             # Take screenshot using ImageMagick
@@ -44,6 +55,11 @@ def take_screenshot_base64(display: str = ":1") -> str:
             
             if result.returncode != 0:
                 raise Exception(f"Screenshot failed: {result.stderr}")
+            
+            # Copy to permanent location
+            import shutil
+            shutil.copy2(tmp_file.name, permanent_filename)
+            print(f"📸 Screenshot saved to: {permanent_filename}")
             
             # Convert to base64
             with open(tmp_file.name, 'rb') as img_file:

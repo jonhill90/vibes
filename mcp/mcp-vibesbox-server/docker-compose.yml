@@ -6,6 +6,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${VIBES_PATH:-/workspace/vibes}:/workspace/vibes:rw
       - mcp-vibesbox-workspace:/workspace
     command: ["tail", "-f", "/dev/null"]
     # Future: Add port mappings for VNC access
