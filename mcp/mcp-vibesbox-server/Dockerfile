@@ -14,18 +14,20 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /
     && apt-get update && apt-get install -y docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-# Install VNC and desktop environment (for future vibesbox containers)
+# Install VNC, desktop environment, and GUI automation tools
 RUN apt-get update && apt-get install -y \
     tigervnc-standalone-server tigervnc-viewer \
     xfce4 xfce4-goodies \
     dbus-x11 \
+    imagemagick \
+    xdotool \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python MCP and VNC dependencies
 RUN pip3 install mcp pillow
 
 WORKDIR /workspace/vibes
-# Force rebuild with drag_mouse functionality - $(date)
+# Enhanced drag_mouse with timing delays - $(date)
 COPY server.py /workspace/
 
 # TODO: Add VNC startup scripts and configuration

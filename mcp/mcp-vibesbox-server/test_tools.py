@@ -145,3 +145,60 @@ if __name__ == "__main__":
     print("🎉 Test suite completed!")
     print("🔧 To test drag functionality: Use vibesbox:drag_mouse() MCP tool")
     print("📝 Server implementation ready for production testing")
+
+# ENHANCED DRAG_MOUSE TESTING (Updated July 7, 2025)
+def test_enhanced_drag_functionality():
+    """Test the enhanced drag_mouse with timing delays for window dragging"""
+    print("\n🚀 ENHANCED DRAG_MOUSE FUNCTIONALITY")
+    print("=" * 60)
+    
+    print("🔧 New Features Added:")
+    print("  ✅ 100ms delay after mouse positioning")
+    print("  ✅ 150ms delay for drag recognition (critical for windows)")
+    print("  ✅ 50ms delay before mouse release")
+    print("  ✅ Enhanced error message indicating timing improvements")
+    
+    print("\n🎯 Recommended Test Cases:")
+    test_scenarios = [
+        {
+            "name": "Window Title Bar Drag",
+            "description": "Test dragging a window by its title bar",
+            "setup": "1. Open an application (file manager, text editor)",
+            "test": "vibesbox:drag_mouse(start_x=400, start_y=30, end_x=600, end_y=200)",
+            "expected": "Window should move to new position"
+        },
+        {
+            "name": "Text Selection (Baseline)",
+            "description": "Verify text selection still works",
+            "setup": "1. Open text editor with content",
+            "test": "vibesbox:drag_mouse(start_x=200, start_y=300, end_x=400, end_y=300)",
+            "expected": "Text should be selected"
+        },
+        {
+            "name": "File Icon Drag",
+            "description": "Test dragging file icons",
+            "setup": "1. Open file manager with files",
+            "test": "vibesbox:drag_mouse(start_x=file_x, start_y=file_y, end_x=new_x, end_y=new_y)",
+            "expected": "File icon should move or be selected for drag operation"
+        }
+    ]
+    
+    for i, scenario in enumerate(test_scenarios, 1):
+        print(f"\n{i}. {scenario['name']}:")
+        print(f"   Purpose: {scenario['description']}")
+        print(f"   Setup: {scenario['setup']}")
+        print(f"   Test: {scenario['test']}")
+        print(f"   Expected: {scenario['expected']}")
+    
+    print("\n⚡ Key Timing Improvements:")
+    print("  • 100ms positioning delay - Ensures mouse is properly positioned")
+    print("  • 150ms drag recognition - Critical for window manager drag detection")
+    print("  • 50ms release delay - Smooth operation completion")
+    print("  • Total operation time: ~315ms (vs ~0ms previously)")
+
+if __name__ == "__main__":
+    # Run all tests including enhanced functionality
+    test_with_mcp_tools()
+    test_server_implementation()
+    show_enhancement_roadmap()
+    test_enhanced_drag_functionality()

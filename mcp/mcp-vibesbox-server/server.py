@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 MCP Vibesbox Server - Unified Shell + VNC GUI Automation
+import time
 
 Gives Claude the ability to run shell commands AND control GUI environments
 in containerized desktop environments with visual feedback.
@@ -343,10 +344,16 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             if result1.returncode != 0:
                 return [TextContent(type="text", text=f"❌ Mouse move to start position failed: {result1.stderr}")]
             
+            # Critical delay after positioning for drag recognition
+            time.sleep(0.1)  # 100ms delay after positioning
+            
             # Mouse down
             result2 = run_vnc_command(f"xdotool mousedown {button}", display)
             if result2.returncode != 0:
                 return [TextContent(type="text", text=f"❌ Mouse down failed: {result2.stderr}")]
+            
+            # Extended delay for drag recognition (critical for window dragging)
+            time.sleep(0.15)  # 150ms delay for drag recognition
             
             # Drag to end position
             result3 = run_vnc_command(f"xdotool mousemove {end_x} {end_y}", display)
@@ -355,12 +362,15 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
                 run_vnc_command(f"xdotool mouseup {button}", display)
                 return [TextContent(type="text", text=f"❌ Mouse drag failed: {result3.stderr}")]
             
+            # Brief delay before mouse release
+            time.sleep(0.05)  # 50ms before release
+            
             # Mouse up
             result4 = run_vnc_command(f"xdotool mouseup {button}", display)
             if result4.returncode != 0:
                 return [TextContent(type="text", text=f"❌ Mouse up failed: {result4.stderr}")]
             
-            return [TextContent(type="text", text=f"✅ Successfully dragged from ({start_x},{start_y}) to ({end_x},{end_y}) with button {button}")]
+            return [TextContent(type="text", text=f"✅ Enhanced drag completed: ({start_x},{start_y}) → ({end_x},{end_y}) with timing delays")]
             
         except Exception as e:
             # Ensure mouse button is released if something goes wrong
