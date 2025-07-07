@@ -145,6 +145,42 @@ async def handle_list_tools() -> List[Tool]:
             }
         ),
         Tool(
+            name="drag_mouse",
+            description="Drag from one coordinate to another (mouse down, move, mouse up)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "start_x": {
+                        "type": "integer",
+                        "description": "Starting X coordinate"
+                    },
+                    "start_y": {
+                        "type": "integer",
+                        "description": "Starting Y coordinate"
+                    },
+                    "end_x": {
+                        "type": "integer",
+                        "description": "Ending X coordinate"
+                    },
+                    "end_y": {
+                        "type": "integer",
+                        "description": "Ending Y coordinate"
+                    },
+                    "button": {
+                        "type": "integer",
+                        "description": "Mouse button to drag with (1=left, 2=middle, 3=right)",
+                        "default": 1
+                    },
+                    "display": {
+                        "type": "string",
+                        "description": "VNC display number",
+                        "default": ":1"
+                    }
+                },
+                "required": ["start_x", "start_y", "end_x", "end_y"]
+            }
+        ),
+        Tool(
             name="type_text",
             description="Type text into the currently focused GUI element",
             inputSchema={
@@ -293,6 +329,44 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
         except Exception as e:
             return [TextContent(type="text", text=f"❌ Click operation failed: {str(e)}")]
     
+    elif name == "drag_mouse":
+        start_x = arguments["start_x"]
+        start_y = arguments["start_y"]
+        end_x = arguments["end_x"]
+        end_y = arguments["end_y"]
+        button = arguments.get("button", 1)
+        display = arguments.get("display", ":1")
+        
+        try:
+            # Move to start position
+            result1 = run_vnc_command(f"xdotool mousemove {start_x} {start_y}", display)
+            if result1.returncode != 0:
+                return [TextContent(type="text", text=f"❌ Mouse move to start position failed: {result1.stderr}")]
+            
+            # Mouse down
+            result2 = run_vnc_command(f"xdotool mousedown {button}", display)
+            if result2.returncode != 0:
+                return [TextContent(type="text", text=f"❌ Mouse down failed: {result2.stderr}")]
+            
+            # Drag to end position
+            result3 = run_vnc_command(f"xdotool mousemove {end_x} {end_y}", display)
+            if result3.returncode != 0:
+                # If drag fails, release the mouse button before returning error
+                run_vnc_command(f"xdotool mouseup {button}", display)
+                return [TextContent(type="text", text=f"❌ Mouse drag failed: {result3.stderr}")]
+            
+            # Mouse up
+            result4 = run_vnc_command(f"xdotool mouseup {button}", display)
+            if result4.returncode != 0:
+                return [TextContent(type="text", text=f"❌ Mouse up failed: {result4.stderr}")]
+            
+            return [TextContent(type="text", text=f"✅ Successfully dragged from ({start_x},{start_y}) to ({end_x},{end_y}) with button {button}")]
+            
+        except Exception as e:
+            # Ensure mouse button is released if something goes wrong
+            run_vnc_command(f"xdotool mouseup {button}", display)
+            return [TextContent(type="text", text=f"❌ Drag operation failed: {str(e)}")]
+
     elif name == "type_text":
         text = arguments["text"]
         display = arguments.get("display", ":1")

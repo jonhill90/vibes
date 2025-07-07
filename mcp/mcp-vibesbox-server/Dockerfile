@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip3 install mcp pillow
 
 WORKDIR /workspace/vibes
+# Force rebuild with drag_mouse functionality - $(date)
 COPY server.py /workspace/
 
 # TODO: Add VNC startup scripts and configuration
