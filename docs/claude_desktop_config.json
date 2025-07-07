@@ -27,6 +27,10 @@
     "time": {
       "command": "docker",
       "args": ["exec", "-i", "mcp-time-server", "python3", "/workspace/server.py"]
+    },
+    "context7": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-context7-server", "node", "/server/dist/index.js"]
     }
   }
 }
