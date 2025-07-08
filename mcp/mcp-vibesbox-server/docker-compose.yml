@@ -5,9 +5,13 @@ services:
     container_name: mcp-vibesbox-server
     restart: unless-stopped
     privileged: true
+    security_opt:
+      - seccomp:unconfined
     cap_add:
       - SYS_ADMIN
       - SYS_RESOURCE
+      - DAC_READ_SEARCH
+    stop_signal: SIGRTMIN+3
     tmpfs:
       - /run
       - /run/lock
@@ -16,13 +20,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${VIBES_PATH:-/workspace/vibes}:/workspace/vibes:rw
       - mcp-vibesbox-workspace:/workspace
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
-    # systemd requires this
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    ports:
+      - "5901:5901"  # VNC server (now enabled since Chromium + VNC are working)
     command: ["/sbin/init"]
-    # Future: Add port mappings for VNC access
-    # ports:
-    #   - "5900:5900"  # VNC server
-    #   - "6080:6080"  # noVNC web interface
 
 networks:
   default:

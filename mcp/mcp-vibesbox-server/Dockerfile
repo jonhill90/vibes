@@ -2,24 +2,11 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install systemd and essential packages for snap support
+# Install base system packages
 RUN apt-get update && apt-get install -y \
-    systemd systemd-sysv \
     curl wget git python3 python3-pip jq vim nano \
     lsb-release gnupg ca-certificates \
-    dbus \
     && rm -rf /var/lib/apt/lists/*
-
-# Remove unnecessary systemd services for container
-RUN find /etc/systemd/system \
-    /lib/systemd/system \
-    -path '*.wants/*' \
-    \( -name '*getty*' \
-    -o -name '*systemd-logind*' \
-    -o -name '*systemd-vconsole-setup*' \
-    -o -name '*systemd-readahead*' \
-    -o -name '*udev*' \) \
-    -exec rm -v {} \;
 
 # Install Docker CLI
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
@@ -27,9 +14,9 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /
     && apt-get update && apt-get install -y docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-# Install snapd with proper systemd support
-RUN apt-get update && apt-get install -y snapd \
-    && systemctl enable snapd.socket \
+# Install Node.js 22.x (required for Playwright ARM64 Chromium)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Install VNC, desktop environment, and GUI automation tools
@@ -41,11 +28,18 @@ RUN apt-get update && apt-get install -y \
     xdotool \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Playwright and ARM64 Chromium (replaces problematic chromium-browser)
+WORKDIR /workspace
+RUN npm install playwright \
+    && npx playwright install chromium \
+    && find /root/.cache/ms-playwright -name "chrome" -type f -exec ln -sf {} /usr/bin/google-chrome \; \
+    && chmod +x /usr/bin/google-chrome
+
 # Install Python MCP and VNC dependencies
 RUN pip3 install mcp pillow
 
 WORKDIR /workspace/vibes
+# Enhanced drag_mouse with timing delays - $(date)
 COPY server.py /workspace/
 
-# Use systemd as init
-CMD ["/sbin/init"]
+# TODO: Add VNC startup scripts and configuration
