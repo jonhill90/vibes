@@ -4,8 +4,6 @@ import os
 import json
 import asyncio
 import logging
-import subprocess
-import base64
 from datetime import datetime
 from typing import List, Dict, Any
 from pathlib import Path
@@ -45,182 +43,42 @@ connected_websockets: List[WebSocket] = []
 DATA_DIR = Path("/app/data")
 DATA_DIR.mkdir(exist_ok=True)
 
-async def broadcast_to_websockets(data: dict):
-    """Broadcast data to all connected WebSocket clients"""
-    if connected_websockets:
-        disconnected = []
-        for websocket in connected_websockets:
-            try:
-                await websocket.send_json(data)
-            except Exception as e:
-                logger.error(f"Error sending to websocket: {e}")
-                disconnected.append(websocket)
-        
-        # Remove disconnected websockets
-        for ws in disconnected:
-            connected_websockets.remove(ws)
-
-def check_vibesbox_connection():
-    """Check if vibesbox server is accessible"""
-    try:
-        # Try to execute a simple command in the vibesbox container
-        result = subprocess.run(
-            ["docker", "exec", "mcp-vibesbox-server", "echo", "connection_test"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        return result.returncode == 0
-    except Exception as e:
-        logger.error(f"Vibesbox connection check failed: {e}")
-        return False
-
-def take_vibesbox_screenshot():
-    """Take a screenshot from the vibesbox server"""
-    try:
-        # Execute the screenshot command in the vibesbox container
-        # This calls the same function that the MCP server uses
-        cmd = [
-            "docker", "exec", "mcp-vibesbox-server", 
-            "python3", "-c", 
-            """
-import subprocess
-import tempfile
-import base64
-import os
-from datetime import datetime
-
-def run_vnc_command(command, display=':1'):
-    env = os.environ.copy()
-    env['DISPLAY'] = display
-    return subprocess.run(
-        command,
-        shell=True,
-        capture_output=True,
-        text=True,
-        timeout=30,
-        env=env
-    )
-
-# Generate timestamp for filename
-timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-screenshots_dir = '/workspace/vibes/screenshots'
-
-# Ensure screenshots directory exists
-os.makedirs(screenshots_dir, exist_ok=True)
-
-# Create permanent filename
-permanent_filename = f'{screenshots_dir}/{timestamp}_vibesbox_monitor_1920x1080.png'
-
-with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
-    # Take screenshot using ImageMagick
-    result = run_vnc_command(f'import -window root {tmp_file.name}', ':1')
-    
-    if result.returncode != 0:
-        raise Exception(f'Screenshot failed: {result.stderr}')
-    
-    # Copy to permanent location
-    import shutil
-    shutil.copy2(tmp_file.name, permanent_filename)
-    print(f'📸 Screenshot saved to: {permanent_filename}')
-    
-    # Convert to base64
-    with open(tmp_file.name, 'rb') as img_file:
-        image_data = img_file.read()
-        base64_string = base64.b64encode(image_data).decode('utf-8')
-        
-    print(base64_string)
-"""
-        ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        
-        if result.returncode != 0:
-            raise Exception(f"Screenshot command failed: {result.stderr}")
-        
-        # Extract base64 from stdout (last line should be the base64 string)
-        lines = result.stdout.strip().split('\n')
-        base64_image = lines[-1]  # Last line should be the base64 encoded image
-        
-        # Validate it's actually base64
-        try:
-            base64.b64decode(base64_image)
-            return base64_image
-        except Exception:
-            # If the last line isn't valid base64, look for it in the output
-            for line in reversed(lines):
-                try:
-                    base64.b64decode(line)
-                    return line
-                except:
-                    continue
-            raise Exception("No valid base64 image found in output")
-            
-    except Exception as e:
-        logger.error(f"Error taking vibesbox screenshot: {e}")
-        raise e
-
 # API Routes
 @app.get("/api/status")
 async def get_status():
     """Get system status"""
-    # Update vibesbox connection status
-    system_status.vibesbox_connected = check_vibesbox_connection()
     return system_status
 
 @app.get("/api/operations")
-async def get_operations():
-    """Get operation log history"""
-    return {"operations": operation_logs}
+async def get_operations(limit: int = 50):
+    """Get recent operations"""
+    return operation_logs[-limit:]
 
-@app.post("/api/screenshot")
-async def take_screenshot():
-    """Take a screenshot of the vibesbox"""
-    try:
-        # Check if vibesbox is connected first
-        if not check_vibesbox_connection():
-            raise HTTPException(status_code=503, detail="Vibesbox server not accessible")
-        
-        # Take the actual screenshot
-        base64_image = take_vibesbox_screenshot()
-        
-        # Create operation log entry
-        operation = OperationLog(
-            timestamp=datetime.now(),
-            operation="screenshot",
-            details={"source": "monitor_manual", "resolution": "1920x1080"},
-            screenshot_after=base64_image
-        )
-        
-        operation_logs.append(operation)
-        system_status.last_operation = operation.timestamp
-        system_status.total_operations += 1
-        
-        # Broadcast to WebSocket clients
-        await broadcast_to_websockets({
-            "type": "operation",
-            "data": {
-                "timestamp": operation.timestamp.isoformat(),
-                "operation": "screenshot",
-                "details": operation.details,
-                "screenshot": base64_image
-            }
-        })
-        
-        return {
-            "status": "success",
-            "timestamp": operation.timestamp.isoformat(),
-            "screenshot": base64_image,
-            "message": "Screenshot captured from vibesbox desktop"
-        }
-        
-    except Exception as e:
-        logger.error(f"Error taking screenshot: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/api/operations/{operation_id}")
+async def get_operation(operation_id: int):
+    """Get specific operation details"""
+    if operation_id >= len(operation_logs):
+        raise HTTPException(status_code=404, detail="Operation not found")
+    return operation_logs[operation_id]
+
+@app.post("/api/operations")
+async def add_operation(operation: OperationLog):
+    """Add new operation log (called by vibesbox server)"""
+    operation_logs.append(operation)
+    system_status.total_operations += 1
+    system_status.last_operation = operation.timestamp
+    
+    # Broadcast to connected websockets
+    await broadcast_to_websockets({
+        "type": "new_operation",
+        "operation": operation.dict()
+    })
+    
+    return {"status": "logged"}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time updates"""
+    """WebSocket for real-time updates"""
     await websocket.accept()
     connected_websockets.append(websocket)
     
@@ -228,10 +86,203 @@ async def websocket_endpoint(websocket: WebSocket):
         # Send initial status
         await websocket.send_json({
             "type": "status",
-            "data": {
-                "vibesbox_connected": check_vibesbox_connection(),
-                "total_operations": system_status.total_operations
-            }
+            "data": system_status.dict()
         })
         
-        # Keep
+        # Keep connection alive
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        connected_websockets.remove(websocket)
+
+async def broadcast_to_websockets(message: Dict[str, Any]):
+    """Broadcast message to all connected websockets"""
+    for websocket in connected_websockets.copy():
+        try:
+            await websocket.send_json(message)
+        except:
+            connected_websockets.remove(websocket)
+
+# Health check for vibesbox server
+async def check_vibesbox_connection():
+    """Periodically check connection to vibesbox server"""
+    vibesbox_host = os.getenv("VIBESBOX_SERVER_HOST", "mcp-vibesbox-server")
+    
+    while True:
+        try:
+            # Try to connect to vibesbox server (could ping MCP endpoint)
+            # For now, just check if container is reachable
+            response = requests.get(f"http://{vibesbox_host}:5901", timeout=5)
+            system_status.vibesbox_connected = True
+        except:
+            system_status.vibesbox_connected = False
+            logger.warning(f"Cannot connect to vibesbox server at {vibesbox_host}")
+        
+        await asyncio.sleep(10)  # Check every 10 seconds
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks"""
+    asyncio.create_task(check_vibesbox_connection())
+    logger.info("MCP Vibesbox Monitor started")
+
+# Serve static frontend files
+static_dir = Path("/app/static")
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.get("/")
+async def serve_frontend():
+    """Serve the frontend application"""
+    index_file = static_dir / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    else:
+        # Return simple HTML if frontend not built yet
+        return HTMLResponse("""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>MCP Vibesbox Monitor</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    max-width: 1200px; 
+                    margin: 0 auto; 
+                    padding: 20px;
+                    background: #f5f5f5;
+                }
+                .header { 
+                    background: #2c3e50; 
+                    color: white; 
+                    padding: 20px; 
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                }
+                .status-card { 
+                    background: white; 
+                    padding: 20px; 
+                    border-radius: 8px; 
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    margin-bottom: 20px;
+                }
+                .operations-list { 
+                    background: white; 
+                    border-radius: 8px; 
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .operation-item { 
+                    padding: 15px; 
+                    border-bottom: 1px solid #eee; 
+                }
+                .timestamp { 
+                    color: #666; 
+                    font-size: 0.9em; 
+                }
+                .online { color: #27ae60; }
+                .offline { color: #e74c3c; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🔍 MCP Vibesbox Monitor</h1>
+                <p>Real-time monitoring for Claude's vibesbox operations</p>
+            </div>
+            
+            <div class="status-card">
+                <h2>System Status</h2>
+                <p id="connection-status">⏳ Checking connection...</p>
+                <p id="operation-count">Operations logged: <span id="op-count">0</span></p>
+                <p id="last-operation">Last operation: <span id="last-op">None</span></p>
+            </div>
+            
+            <div class="operations-list">
+                <h2 style="padding: 20px 20px 0;">Recent Operations</h2>
+                <div id="operations-container">
+                    <div class="operation-item">
+                        <em>Operations will appear here when Claude interacts with the vibesbox...</em>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                // WebSocket connection for real-time updates
+                const ws = new WebSocket(`ws://${window.location.host}/ws`);
+                
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'status') {
+                        updateStatus(data.data);
+                    } else if (data.type === 'new_operation') {
+                        addOperation(data.operation);
+                    }
+                };
+                
+                function updateStatus(status) {
+                    const connectionEl = document.getElementById('connection-status');
+                    const countEl = document.getElementById('op-count');
+                    const lastOpEl = document.getElementById('last-op');
+                    
+                    connectionEl.innerHTML = status.vibesbox_connected 
+                        ? '<span class="online">🟢 Connected to Vibesbox</span>'
+                        : '<span class="offline">🔴 Vibesbox Offline</span>';
+                    
+                    countEl.textContent = status.total_operations;
+                    lastOpEl.textContent = status.last_operation || 'None';
+                }
+                
+                function addOperation(operation) {
+                    const container = document.getElementById('operations-container');
+                    const opDiv = document.createElement('div');
+                    opDiv.className = 'operation-item';
+                    opDiv.innerHTML = `
+                        <strong>${operation.operation}</strong>
+                        <span class="timestamp">${new Date(operation.timestamp).toLocaleString()}</span>
+                        <br>
+                        <small>${JSON.stringify(operation.details)}</small>
+                    `;
+                    container.insertBefore(opDiv, container.firstChild);
+                    
+                    // Keep only last 20 operations visible
+                    while (container.children.length > 20) {
+                        container.removeChild(container.lastChild);
+                    }
+                }
+                
+                // Fetch initial data
+                fetch('/api/status')
+                    .then(r => r.json())
+                    .then(updateStatus);
+                
+                fetch('/api/operations?limit=10')
+                    .then(r => r.json())
+                    .then(operations => {
+                        operations.reverse().forEach(addOperation);
+                    });
+            </script>
+        </body>
+        </html>
+        """)
+
+if __name__ == "__main__":
+    host = os.getenv("API_HOST", "0.0.0.0")
+    port = int(os.getenv("API_PORT", "8000"))
+    
+    uvicorn.run(app, host=host, port=port)
+
+@app.post("/api/screenshot")
+async def take_screenshot():
+    """Take a screenshot of the vibesbox"""
+    try:
+        # This would call the vibesbox server to take a screenshot
+        # For now, return a placeholder response
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "screenshot": None,  # Base64 encoded screenshot would go here
+            "message": "Screenshot functionality needs vibesbox integration"
+        }
+    except Exception as e:
+        logger.error(f"Error taking screenshot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

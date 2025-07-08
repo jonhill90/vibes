@@ -26,7 +26,6 @@ RUN apt-get update && apt-get install -y \
     dbus-x11 \
     imagemagick \
     xdotool \
-    fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Playwright and ARM64 Chromium (replaces problematic chromium-browser)
