@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import VncViewer from './VncViewer';
 import './App.css';
 
 function App() {
@@ -8,8 +7,6 @@ function App() {
   const [operations, setOperations] = useState([]);
   const [currentScreenshot, setCurrentScreenshot] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [vncStatus, setVncStatus] = useState('disconnected');
-  const [showScreenshot, setShowScreenshot] = useState(false);
   const wsRef = useRef(null);
 
   useEffect(() => {
@@ -69,14 +66,9 @@ function App() {
     try {
       const response = await axios.post('/api/screenshot');
       setCurrentScreenshot(response.data.screenshot);
-      setShowScreenshot(true);
     } catch (error) {
       console.error('Error taking screenshot:', error);
     }
-  };
-
-  const handleVncStatusChange = (status) => {
-    setVncStatus(status);
   };
 
   const formatTimestamp = (timestamp) => {
@@ -90,8 +82,6 @@ function App() {
       case 'take_screenshot': return '📸';
       case 'drag_mouse': return '🔄';
       case 'send_keys': return '🔤';
-      case 'run_command': return '💻';
-      case 'start_vnc_server': return '🖥️';
       default: return '🔧';
     }
   };
@@ -99,7 +89,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>🖥️ MCP Vibesbox Monitor - Live Desktop</h1>
+        <h1>🖥️ MCP Vibesbox Monitor</h1>
         <div className="status-bar">
           <span className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
             {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
@@ -109,53 +99,31 @@ function App() {
               Vibesbox: {status.vibesbox_connected ? '🟢 Online' : '🔴 Offline'}
             </span>
           )}
-          <span className="vnc-status-indicator">
-            VNC: {vncStatus === 'connected' ? '🟢 Live' : '🔴 Offline'}
-          </span>
         </div>
       </header>
 
       <div className="dashboard">
-        <div className="desktop-panel">
+        <div className="screenshot-panel">
           <div className="panel-header">
-            <h2>🖥️ Live Desktop View</h2>
-            <div className="desktop-controls">
-              <button 
-                onClick={() => setShowScreenshot(!showScreenshot)} 
-                className="btn-secondary"
-                style={{ marginRight: '0.5rem' }}
-              >
-                {showScreenshot ? 'Show Live VNC' : 'Show Screenshot'}
-              </button>
-              <button onClick={takeScreenshot} className="btn-primary">
-                Take Screenshot
-              </button>
-            </div>
+            <h2>📸 Current View</h2>
+            <button onClick={takeScreenshot} className="btn-primary">
+              Take Screenshot
+            </button>
           </div>
-          
-          <div className="desktop-container">
-            {showScreenshot && currentScreenshot ? (
-              <div className="screenshot-view">
-                <img 
-                  src={`data:image/png;base64,${currentScreenshot}`} 
-                  alt="Current Vibesbox State"
-                  className="screenshot"
-                />
-                <div className="screenshot-overlay">
-                  <button 
-                    onClick={() => setShowScreenshot(false)} 
-                    className="btn-secondary"
-                  >
-                    ← Back to Live VNC
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <VncViewer 
-                wsUrl="ws://172.18.0.1:8090/vnc/"
-                password="vibes123"
-                onStatusChange={handleVncStatusChange}
+          <div className="screenshot-container">
+            {currentScreenshot ? (
+              <img 
+                src={`data:image/png;base64,${currentScreenshot}`} 
+                alt="Current Vibesbox State"
+                className="screenshot"
               />
+            ) : (
+              <div className="no-screenshot">
+                <p>No screenshot available</p>
+                <button onClick={takeScreenshot} className="btn-secondary">
+                  Take First Screenshot
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -194,13 +162,8 @@ function App() {
               ))
             ) : (
               <div className="no-operations">
-                <p>🔄 Waiting for operations...</p>
+                <p>No operations recorded yet</p>
                 <p>Operations will appear here as Claude interacts with the vibesbox</p>
-                <div className="live-indicator">
-                  <span style={{ color: vncStatus === 'connected' ? '#238636' : '#8b949e' }}>
-                    {vncStatus === 'connected' ? '🟢 Live desktop monitoring active' : '⏳ Connecting to desktop...'}
-                  </span>
-                </div>
               </div>
             )}
           </div>
@@ -208,7 +171,7 @@ function App() {
       </div>
 
       <footer className="App-footer">
-        <p>MCP Vibesbox Monitor v2.0 - Live Desktop Integration | Real-time GUI automation monitoring</p>
+        <p>MCP Vibesbox Monitor v1.0 - Real-time GUI automation monitoring</p>
       </footer>
     </div>
   );
