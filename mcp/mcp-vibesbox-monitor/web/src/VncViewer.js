@@ -60,8 +60,9 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
       }
 
       // Create new RFB connection with real noVNC
+      // REMOVED credentials since VNC server has -SecurityTypes None
       rfbRef.current = new window.RFB(canvasRef.current, fullWsUrl, {
-        credentials: { password: 'vibes123' }
+        // No credentials needed for SecurityTypes None
       });
 
       // Add event listeners for real noVNC
@@ -77,11 +78,21 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
         updateStatus(`Disconnected - ${reason}`);
         setIsConnecting(false);
         rfbRef.current = null;
+        
+        // Prevent auto-reconnect loop - only reconnect if it was not a clean disconnect
+        if (!e.detail?.clean && novncReady) {
+          console.log('Connection lost unexpectedly, will retry in 5 seconds...');
+          setTimeout(() => {
+            if (!rfbRef.current && novncReady) {
+              connectToVNC();
+            }
+          }, 5000);
+        }
       });
 
       rfbRef.current.addEventListener('credentialsrequired', () => {
-        console.log('VNC credentials required');
-        updateStatus('Authentication required');
+        console.log('VNC credentials required - this should not happen with SecurityTypes None');
+        updateStatus('Authentication required (unexpected)');
         setIsConnecting(false);
       });
 

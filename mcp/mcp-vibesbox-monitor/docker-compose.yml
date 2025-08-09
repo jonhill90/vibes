@@ -1,3 +1,4 @@
+
 services:
   mcp-vibesbox-monitor:
     build: .
@@ -6,6 +7,8 @@ services:
     restart: unless-stopped
     ports:
       - "8090:8000"
+    networks:
+      - vibes-network
     volumes:
       - monitor-data:/app/data
     environment:
@@ -15,8 +18,7 @@ services:
       - API_PORT=8000
 
 networks:
-  default:
-    name: vibes-network
+  vibes-network:
     external: true
 
 volumes:

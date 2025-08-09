@@ -6,9 +6,18 @@ COPY web/package*.json ./
 RUN npm install
 COPY web/ ./
 
-# Download noVNC library locally during build
+# Download complete noVNC library during build
 RUN mkdir -p public/novnc
-RUN wget -O public/novnc/rfb.js https://unpkg.com/@novnc/novnc@1.4.0/core/rfb.js
+RUN wget -O novnc.tar.gz https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz
+RUN tar -xzf novnc.tar.gz -C public/novnc --strip-components=1
+RUN rm novnc.tar.gz
+# Copy necessary files to expected locations
+RUN cp public/novnc/core/rfb.js public/novnc/
+RUN cp public/novnc/core/util/logging.js public/novnc/
+RUN cp public/novnc/core/util/strings.js public/novnc/
+RUN cp public/novnc/core/util/events.js public/novnc/
+# Ensure all core modules are available
+RUN ls -la public/novnc/core/
 
 RUN npm run build
 
