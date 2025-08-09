@@ -13,7 +13,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
-import requests
+import socket
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -107,16 +107,24 @@ async def broadcast_to_websockets(message: Dict[str, Any]):
 async def check_vibesbox_connection():
     """Periodically check connection to vibesbox server"""
     vibesbox_host = os.getenv("VIBESBOX_SERVER_HOST", "mcp-vibesbox-server")
+    vibesbox_port = int(os.getenv("VIBESBOX_SERVER_PORT", "5901"))
     
     while True:
         try:
-            # Try to connect to vibesbox server (could ping MCP endpoint)
-            # For now, just check if container is reachable
-            response = requests.get(f"http://{vibesbox_host}:5901", timeout=5)
-            system_status.vibesbox_connected = True
-        except:
+            # Test socket connection to VNC server
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            result = sock.connect_ex((vibesbox_host, vibesbox_port))
+            sock.close()
+            
+            if result == 0:
+                system_status.vibesbox_connected = True
+            else:
+                system_status.vibesbox_connected = False
+                logger.warning(f"Cannot connect to vibesbox server at {vibesbox_host}:{vibesbox_port}")
+        except Exception as e:
             system_status.vibesbox_connected = False
-            logger.warning(f"Cannot connect to vibesbox server at {vibesbox_host}")
+            logger.warning(f"Cannot connect to vibesbox server at {vibesbox_host}: {e}")
         
         await asyncio.sleep(10)  # Check every 10 seconds
 

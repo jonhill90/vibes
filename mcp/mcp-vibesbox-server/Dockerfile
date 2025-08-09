@@ -83,7 +83,7 @@ RUN echo '#!/bin/bash' > /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'fi' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'vncserver -kill :1 2>/dev/null || true' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'sleep 1' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
-    echo 'vncserver :1 -geometry 1920x1080 -depth 24 -SecurityTypes None' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
+    echo 'vncserver :1 -geometry 1920x1080 -depth 24 -SecurityTypes None -localhost=0 --I-KNOW-THIS-IS-INSECURE' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'sleep 3' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'export DISPLAY=:1' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'xset s off' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
