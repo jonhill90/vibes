@@ -18,7 +18,11 @@ function App() {
     fetchOperations();
     
     // Setup WebSocket for real-time updates
-    const ws = new WebSocket('ws://localhost:8000/ws');
+    // Setup WebSocket for real-time updates (build dynamic URL)
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws`;
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
     
     ws.onopen = () => {
@@ -152,7 +156,7 @@ function App() {
               </div>
             ) : (
               <VncViewer 
-                wsUrl="ws://172.18.0.1:8090/vnc/"
+                wsUrl="/vnc/"
                 password="vibes123"
                 onStatusChange={handleVncStatusChange}
               />

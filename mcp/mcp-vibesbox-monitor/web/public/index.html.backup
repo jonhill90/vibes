@@ -20,17 +20,7 @@
 <body>
     <div id="root"></div>
     
-    <!-- Load real noVNC ES6 modules -->
-    <script type="module">
-        import RFB from '/novnc/core/rfb.js';
-        
-        // Make RFB available globally for React components
-        window.RFB = RFB;
-        
-        // Dispatch event to notify React app that noVNC is ready
-        window.dispatchEvent(new CustomEvent('novnc-ready'));
-        
-        console.log('noVNC loaded successfully:', RFB);
-    </script>
+    <!-- Load noVNC wrapper -->
+    <script src="/js/novnc-wrapper.js"></script>
 </body>
 </html>
