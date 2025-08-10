@@ -94,7 +94,7 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'nginx' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo '# Start websockify to bridge VNC to WebSocket' >> /app/start.sh && \
-    echo 'websockify --verbose --heartbeat=30 --wrap-mode=ignore --timeout=0 6080 mcp-vibesbox-server:5901 &' >> /app/start.sh && \
+    echo 'websockify --verbose --timeout=300 --idle-timeout=300 6080 mcp-vibesbox-server:5901 &' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo '# Start FastAPI on port 8001 (internal)' >> /app/start.sh && \
     echo 'exec python -c "' >> /app/start.sh && \

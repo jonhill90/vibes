@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VNC Test - Direct noVNC</title>
+    <script type="module">
+        // Import noVNC directly using ES6 modules (like the working solution)
+        import RFB from './novnc/core/rfb.js';
+        
+        window.addEventListener('load', () => {
+            console.log('Testing direct noVNC connection...');
+            
+            const screen = document.getElementById('screen');
+            const status = document.getElementById('status');
+            
+            // Build WebSocket URL  
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const wsUrl = `${protocol}//${host}/vnc/`;
+            
+            status.textContent = 'Connecting to: ' + wsUrl;
+            
+            try {
+                // Create RFB connection (like the working temp HTML)
+                const rfb = new RFB(screen, wsUrl, {
+                    credentials: { password: '' }
+                });
+                
+                rfb.addEventListener('connect', () => {
+                    console.log('✅ VNC connected successfully!');
+                    status.textContent = '✅ Connected to VNC server!';
+                    status.style.color = 'green';
+                });
+                
+                rfb.addEventListener('disconnect', (e) => {
+                    console.log('❌ VNC disconnected:', e.detail);
+                    status.textContent = '❌ Disconnected: ' + (e.detail?.clean ? 'Clean' : 'Error');
+                    status.style.color = 'red';
+                });
+                
+            } catch (error) {
+                console.error('❌ Failed to create VNC connection:', error);
+                status.textContent = '❌ Error: ' + error.message;
+                status.style.color = 'red';
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>🧪 VNC Infrastructure Test</h1>
+    <div id="status">Loading...</div>
+    <div id="screen" style="width: 800px; height: 600px; border: 1px solid #ccc; margin: 20px 0;"></div>
+</body>
+</html>

@@ -9,7 +9,7 @@ nginx
 
 # Start websockify with verbose logging and connection timeout settings
 echo "🌐 Starting websockify with debug logging..."
-websockify --verbose --timeout=300 --idle-timeout=300 6080 mcp-vibesbox-server:5901 &
+websockify --verbose --heartbeat=30 --wrap-mode=ignore --timeout=0 6080 mcp-vibesbox-server:5901 &
 
 # Wait a moment for websockify to initialize
 sleep 3
