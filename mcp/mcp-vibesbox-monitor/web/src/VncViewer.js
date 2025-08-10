@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const VncViewer = ({ onStatusChange, wsUrl }) => {
-  const containerRef = useRef(null);  // Changed from canvasRef to containerRef
+  const containerRef = useRef(null);
   const rfbRef = useRef(null);
   const [status, setStatus] = useState('Initializing...');
   const [isConnecting, setIsConnecting] = useState(false);
@@ -11,13 +11,11 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
   const updateStatus = (newStatus) => {
     setStatus(newStatus);
     if (onStatusChange) {
-      // Map internal statuses to external ones
       const externalStatus = newStatus.toLowerCase().includes('connected') ? 'connected' : 'disconnected';
       onStatusChange(externalStatus);
     }
   };
 
-  // Build proper WebSocket URL from relative path
   const buildWebSocketUrl = (relativePath) => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
@@ -25,28 +23,75 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
     return `${protocol}//${host}${cleanPath}`;
   };
 
+  // Force noVNC to apply scaling and remove overflow
+  const forceVncScaling = () => {
+    if (!rfbRef.current) return;
+    
+    console.log('🎯 Forcing VNC scaling...');
+    
+    // Force noVNC to recalculate viewport scaling
+    try {
+      rfbRef.current.scaleViewport = true;
+      rfbRef.current.clipViewport = true;
+      
+      // Remove overflow: auto from noVNC's internal containers
+      const vncContainer = containerRef.current;
+      if (vncContainer) {
+        const overflowDivs = vncContainer.querySelectorAll('div[style*="overflow: auto"]');
+        overflowDivs.forEach(div => {
+          console.log('🚫 Removing overflow: auto from noVNC container');
+          div.style.overflow = 'hidden';
+        });
+        
+        // Force canvas to fit container size
+        const canvas = vncContainer.querySelector('canvas');
+        if (canvas) {
+          console.log('📐 Canvas current size:', canvas.style.width, 'x', canvas.style.height);
+          console.log('📐 Container size:', vncContainer.offsetWidth, 'x', vncContainer.offsetHeight);
+          
+          // Calculate proper scaling
+          const containerWidth = vncContainer.offsetWidth;
+          const containerHeight = vncContainer.offsetHeight;
+          const canvasRatio = 1920 / 1080; // VNC aspect ratio
+          const containerRatio = containerWidth / containerHeight;
+          
+          let scaledWidth, scaledHeight;
+          if (containerRatio > canvasRatio) {
+            // Container is wider - fit to height
+            scaledHeight = containerHeight;
+            scaledWidth = scaledHeight * canvasRatio;
+          } else {
+            // Container is taller - fit to width  
+            scaledWidth = containerWidth;
+            scaledHeight = scaledWidth / canvasRatio;
+          }
+          
+          console.log('🎯 Scaling canvas to:', scaledWidth, 'x', scaledHeight);
+          canvas.style.width = `${scaledWidth}px`;
+          canvas.style.height = `${scaledHeight}px`;
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error forcing VNC scaling:', error);
+    }
+  };
+
+  const handleResize = () => {
+    console.log('🔄 Window resized, re-applying VNC scaling...');
+    setTimeout(forceVncScaling, 100);
+  };
+
   const connectToVNC = () => {
     console.log('VNC Connect attempt started...');
     
-    if (isConnecting) {
-      console.log('Already connecting, ignoring request');
+    if (isConnecting || rfbRef.current) {
+      console.log('Already connecting/connected, ignoring request');
       return;
     }
 
-    if (rfbRef.current) {
-      console.log('Already connected, ignoring request');
-      return;
-    }
-
-    if (!novncReady || !window.RFB) {
+    if (!novncReady || !window.RFB || !containerRef.current) {
       updateStatus('noVNC library not ready');
-      console.error('window.RFB not available or noVNC not ready');
-      return;
-    }
-
-    if (!containerRef.current) {  // Changed from canvasRef to containerRef
-      updateStatus('Container element not found');
-      console.error('Container element not found');
+      console.error('Prerequisites not met for VNC connection');
       return;
     }
 
@@ -54,20 +99,27 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
     updateStatus('Connecting to VNC...');
 
     try {
-      // Build full WebSocket URL
       const fullWsUrl = buildWebSocketUrl(wsUrl);
       console.log('Creating RFB instance with URL:', fullWsUrl);
 
-      // Create new RFB connection using container div (like working test HTML)
+      // Create RFB with scaling options
       rfbRef.current = new window.RFB(containerRef.current, fullWsUrl, {
-        credentials: { password: '' }
+        credentials: { password: '' },
+        scaleViewport: true,
+        clipViewport: true,
+        resizeSession: false
       });
 
-      // Add event listeners
       rfbRef.current.addEventListener('connect', () => {
         console.log('✅ VNC connected successfully');
         updateStatus('Connected');
         setIsConnecting(false);
+        
+        // CRITICAL: Force scaling after connection established
+        setTimeout(() => {
+          forceVncScaling();
+          window.addEventListener('resize', handleResize);
+        }, 1000);
       });
 
       rfbRef.current.addEventListener('disconnect', (e) => {
@@ -76,8 +128,8 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
         updateStatus(`Disconnected - ${reason}`);
         setIsConnecting(false);
         rfbRef.current = null;
+        window.removeEventListener('resize', handleResize);
         
-        // Only auto-reconnect if it was NOT a clean disconnect (connection lost unexpectedly)
         if (!e.detail?.clean && novncReady) {
           console.log('Connection lost unexpectedly, will retry in 5 seconds...');
           setTimeout(() => {
@@ -89,8 +141,8 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
       });
 
       rfbRef.current.addEventListener('credentialsrequired', () => {
-        console.log('VNC credentials required - this should not happen with SecurityTypes None');
-        updateStatus('Authentication required (unexpected)');
+        console.log('VNC credentials required');
+        updateStatus('Authentication required');
         setIsConnecting(false);
       });
 
@@ -117,9 +169,9 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
     }
     setIsConnecting(false);
     updateStatus('Disconnected');
+    window.removeEventListener('resize', handleResize);
   };
 
-  // Listen for noVNC ready event
   useEffect(() => {
     const handleNovncReady = () => {
       console.log('noVNC ready event received');
@@ -127,29 +179,31 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
       updateStatus('noVNC loaded, ready to connect');
     };
 
-    // Check if already available
     if (window.RFB) {
       handleNovncReady();
     } else {
-      // Listen for ready event
       window.addEventListener('novnc-ready', handleNovncReady);
       return () => window.removeEventListener('novnc-ready', handleNovncReady);
     }
   }, []);
 
-  // Auto-connect ONCE when everything is ready
   useEffect(() => {
-    console.log('VncViewer mount effect - novncReady:', novncReady, 'hasAutoConnected:', hasAutoConnected);
     if (novncReady && containerRef.current && !hasAutoConnected && !rfbRef.current) {
-      console.log('Conditions met, starting auto-connect (once only)');
+      console.log('Conditions met, starting auto-connect');
       setHasAutoConnected(true);
-      const timer = setTimeout(() => {
-        connectToVNC();
-      }, 1000); // Give UI time to stabilize
-      
+      const timer = setTimeout(connectToVNC, 1000);
       return () => clearTimeout(timer);
     }
-  }, [novncReady]); // Only depend on novncReady
+  }, [novncReady]);
+
+  useEffect(() => {
+    return () => {
+      if (rfbRef.current) {
+        rfbRef.current.disconnect();
+      }
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   return (
     <div style={{ 
@@ -158,7 +212,8 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
       display: 'flex', 
       flexDirection: 'column',
       backgroundColor: '#1a1a1a',
-      border: '1px solid #444'
+      border: '1px solid #444',
+      overflow: 'hidden'
     }}>
       <div style={{ 
         padding: '10px', 
@@ -166,7 +221,8 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
         color: '#fff',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexShrink: 0
       }}>
         <span>VNC Connection: {status}</span>
         <div>
@@ -198,6 +254,22 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
           >
             Disconnect
           </button>
+          {rfbRef.current && (
+            <button 
+              onClick={forceVncScaling}
+              style={{ 
+                marginLeft: '10px',
+                padding: '5px 10px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '3px',
+                cursor: 'pointer'
+              }}
+            >
+              Force Scale
+            </button>
+          )}
         </div>
       </div>
       
@@ -207,16 +279,17 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
         overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        minHeight: 0
       }}>
-        {/* Changed from <canvas> to <div> container like working test HTML */}
         <div 
           ref={containerRef}
           style={{ 
             width: '100%',
             height: '100%',
             backgroundColor: '#000',
-            border: 'none'
+            border: 'none',
+            overflow: 'hidden'
           }}
         />
         {!rfbRef.current && (
@@ -230,7 +303,7 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
             {isConnecting ? (
               <>🔄 Connecting to VNC...<br/>Please wait...</>
             ) : novncReady ? (
-              <>📺 Click Connect to view desktop<br/>URL: {wsUrl}</>
+              <>📺 Click Connect to view desktop<br/>🎯 Fixed scaling enabled</>
             ) : (
               <>⏳ Loading noVNC library...</>
             )}
