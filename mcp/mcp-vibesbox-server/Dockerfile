@@ -83,7 +83,7 @@ RUN echo '#!/bin/bash' > /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'fi' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'vncserver -kill :1 2>/dev/null || true' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'sleep 1' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
-    echo 'vncserver :1 -geometry 1920x1080 -depth 24 -SecurityTypes None -localhost=0 --I-KNOW-THIS-IS-INSECURE' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
+    echo 'vncserver :1 -geometry 1920x1080 -depth 24 -SecurityTypes None -AlwaysShared -DisconnectClients=0 -localhost=0 --I-KNOW-THIS-IS-INSECURE' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'sleep 3' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'export DISPLAY=:1' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
     echo 'xset s off' >> /usr/local/bin/start-vnc-no-screensaver.sh && \
@@ -133,3 +133,29 @@ COPY server.py /workspace/
 
 # Use systemd init (works with docker-compose.yml)
 CMD ["/sbin/init"]
+
+# ===== PERMANENT VNC BLACKLIST DISABLE =====
+# Create VNC config to permanently disable blacklisting
+RUN mkdir -p /root/.vnc && \
+    echo 'SecurityTypes=None' > /root/.vnc/config && \
+    echo 'AlwaysShared=1' >> /root/.vnc/config && \
+    echo 'NeverShared=0' >> /root/.vnc/config && \
+    echo 'DisconnectClients=0' >> /root/.vnc/config && \
+    echo 'MaxConnectionTime=0' >> /root/.vnc/config && \
+    echo 'MaxIdleTime=0' >> /root/.vnc/config && \
+    echo 'BlacklistThreshold=0' >> /root/.vnc/config && \
+    echo 'BlacklistTimeout=0' >> /root/.vnc/config
+
+# Modify TigerVNC system config to disable blacklisting permanently
+RUN echo '' >> /etc/tigervnc/vncserver-config-mandatory && \
+    echo '# PERMANENT FIX: Disable VNC security blacklisting forever' >> /etc/tigervnc/vncserver-config-mandatory && \
+    echo '$SecurityTypes = "None";' >> /etc/tigervnc/vncserver-config-mandatory && \
+    echo '$localhost = "no";' >> /etc/tigervnc/vncserver-config-mandatory && \
+    echo '$AlwaysShared = "yes";' >> /etc/tigervnc/vncserver-config-mandatory && \
+    echo '$NeverShared = "no";' >> /etc/tigervnc/vncserver-config-mandatory && \
+    echo '$MaxConnectionTime = 0;' >> /etc/tigervnc/vncserver-config-mandatory && \
+    echo '$MaxIdleTime = 0;' >> /etc/tigervnc/vncserver-config-mandatory && \
+    echo '$BlacklistThreshold = 0;' >> /etc/tigervnc/vncserver-config-mandatory && \
+    echo '$BlacklistTimeout = 0;' >> /etc/tigervnc/vncserver-config-mandatory
+# ===== END BLACKLIST DISABLE =====
+
