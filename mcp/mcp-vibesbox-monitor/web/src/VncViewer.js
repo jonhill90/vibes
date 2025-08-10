@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const VncViewer = ({ onStatusChange, wsUrl }) => {
-  const canvasRef = useRef(null);
+  const containerRef = useRef(null);  // Changed from canvasRef to containerRef
   const rfbRef = useRef(null);
   const [status, setStatus] = useState('Initializing...');
   const [isConnecting, setIsConnecting] = useState(false);
   const [novncReady, setNovncReady] = useState(false);
+  const [hasAutoConnected, setHasAutoConnected] = useState(false);
 
   const updateStatus = (newStatus) => {
     setStatus(newStatus);
@@ -32,15 +33,20 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
       return;
     }
 
+    if (rfbRef.current) {
+      console.log('Already connected, ignoring request');
+      return;
+    }
+
     if (!novncReady || !window.RFB) {
       updateStatus('noVNC library not ready');
       console.error('window.RFB not available or noVNC not ready');
       return;
     }
 
-    if (!canvasRef.current) {
-      updateStatus('Canvas element not found');
-      console.error('Canvas element not found');
+    if (!containerRef.current) {  // Changed from canvasRef to containerRef
+      updateStatus('Container element not found');
+      console.error('Container element not found');
       return;
     }
 
@@ -51,35 +57,27 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
       // Build full WebSocket URL
       const fullWsUrl = buildWebSocketUrl(wsUrl);
       console.log('Creating RFB instance with URL:', fullWsUrl);
-      
-      // Clean up existing connection
-      if (rfbRef.current) {
-        console.log('Cleaning up existing RFB connection');
-        rfbRef.current.disconnect();
-        rfbRef.current = null;
-      }
 
-      // Create new RFB connection with real noVNC
-      // REMOVED credentials since VNC server has -SecurityTypes None
-      rfbRef.current = new window.RFB(canvasRef.current, fullWsUrl, {
-        // No credentials needed for SecurityTypes None
+      // Create new RFB connection using container div (like working test HTML)
+      rfbRef.current = new window.RFB(containerRef.current, fullWsUrl, {
+        credentials: { password: '' }
       });
 
-      // Add event listeners for real noVNC
+      // Add event listeners
       rfbRef.current.addEventListener('connect', () => {
-        console.log('VNC connected successfully');
+        console.log('✅ VNC connected successfully');
         updateStatus('Connected');
         setIsConnecting(false);
       });
 
       rfbRef.current.addEventListener('disconnect', (e) => {
-        console.log('VNC disconnected:', e.detail);
+        console.log('❌ VNC disconnected:', e.detail);
         const reason = e.detail?.clean ? 'Clean disconnect' : 'Connection lost';
         updateStatus(`Disconnected - ${reason}`);
         setIsConnecting(false);
         rfbRef.current = null;
         
-        // Prevent auto-reconnect loop - only reconnect if it was not a clean disconnect
+        // Only auto-reconnect if it was NOT a clean disconnect (connection lost unexpectedly)
         if (!e.detail?.clean && novncReady) {
           console.log('Connection lost unexpectedly, will retry in 5 seconds...');
           setTimeout(() => {
@@ -139,18 +137,19 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
     }
   }, []);
 
-  // Auto-connect when everything is ready
+  // Auto-connect ONCE when everything is ready
   useEffect(() => {
-    console.log('VncViewer useEffect triggered - novncReady:', novncReady, 'isConnecting:', isConnecting);
-    if (novncReady && canvasRef.current && !isConnecting && !rfbRef.current) {
-      console.log('Conditions met, starting auto-connect');
+    console.log('VncViewer mount effect - novncReady:', novncReady, 'hasAutoConnected:', hasAutoConnected);
+    if (novncReady && containerRef.current && !hasAutoConnected && !rfbRef.current) {
+      console.log('Conditions met, starting auto-connect (once only)');
+      setHasAutoConnected(true);
       const timer = setTimeout(() => {
         connectToVNC();
       }, 1000); // Give UI time to stabilize
       
       return () => clearTimeout(timer);
     }
-  }, [wsUrl, novncReady, isConnecting]);
+  }, [novncReady]); // Only depend on novncReady
 
   return (
     <div style={{ 
@@ -173,15 +172,15 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
         <div>
           <button 
             onClick={connectToVNC} 
-            disabled={isConnecting || !novncReady}
+            disabled={isConnecting || !novncReady || rfbRef.current}
             style={{ 
               marginRight: '10px',
               padding: '5px 10px',
-              backgroundColor: (isConnecting || !novncReady) ? '#666' : '#007ACC',
+              backgroundColor: (isConnecting || !novncReady || rfbRef.current) ? '#666' : '#007ACC',
               color: 'white',
               border: 'none',
               borderRadius: '3px',
-              cursor: (isConnecting || !novncReady) ? 'not-allowed' : 'pointer'
+              cursor: (isConnecting || !novncReady || rfbRef.current) ? 'not-allowed' : 'pointer'
             }}
           >
             {isConnecting ? 'Connecting...' : 'Connect'}
@@ -210,12 +209,12 @@ const VncViewer = ({ onStatusChange, wsUrl }) => {
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <canvas 
-          ref={canvasRef}
+        {/* Changed from <canvas> to <div> container like working test HTML */}
+        <div 
+          ref={containerRef}
           style={{ 
-            display: 'block',
-            maxWidth: '100%',
-            maxHeight: '100%',
+            width: '100%',
+            height: '100%',
             backgroundColor: '#000',
             border: 'none'
           }}
