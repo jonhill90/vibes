@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  mcp-itglue-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-itglue-server
+    restart: unless-stopped
+    environment:
+      - ITGLUE_API_KEY=${ITGLUE_API_KEY}
+      - ITGLUE_BASE_URL=${ITGLUE_BASE_URL:-https://api.itglue.com}
+      - DEBUG=${DEBUG:-false}
+      - SERVER_NAME=mcp-itglue-server
+    volumes:
+      - /workspace/vibes:/workspace/vibes
+    networks:
+      - vibes-network
+    stdin_open: true
+    tty: true
+
+networks:
+  vibes-network:
+    external: true
