@@ -1,0 +1,58 @@
+services:
+  litellm-db:
+    image: postgres:15-alpine
+    container_name: litellm-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${LITELLM_DB_PORT}:5432"
+    volumes:
+      - litellm-postgres-data:/var/lib/postgresql/data
+    networks:
+      - vibes-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  litellm-proxy:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm-proxy
+    environment:
+      # Core configuration
+      DATABASE_URL: ${DATABASE_URL}
+      STORE_MODEL_IN_DB: ${STORE_MODEL_IN_DB}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      
+      # UI configuration
+      UI_BASE_URL: ${UI_BASE_URL}
+    ports:
+      - "${LITELLM_PROXY_PORT}:4000"
+    networks:
+      - vibes-network
+    restart: unless-stopped
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    stdin_open: true
+    tty: true
+
+networks:
+  vibes-network:
+    external: true
+
+volumes:
+  litellm-postgres-data:
+    driver: local
