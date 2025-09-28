@@ -1,6 +1,7 @@
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV BROWSER=/usr/bin/x-www-browser
 
 # Install base system packages
 RUN apt-get update && apt-get install -y \
@@ -124,11 +125,41 @@ RUN npm install playwright \
     && find /root/.cache/ms-playwright -name "chrome" -type f -exec ln -sf {} /usr/bin/google-chrome \; \
     && chmod +x /usr/bin/google-chrome
 
+# ===== CHROMIUM DEFAULT BROWSER CONFIGURATION =====
+
+# Create Chrome wrapper script with optimized flags
+RUN echo '#!/bin/bash' > /usr/local/bin/chrome-wrapper.sh && \
+    echo 'exec /usr/bin/google-chrome --no-sandbox --disable-dev-shm-usage --disable-background-networking --disable-default-apps --disable-infobars --disable-notifications --user-data-dir=/tmp/chrome-data --disable-features=VizDisplayCompositor --disable-extensions --disable-plugins --disable-popup-blocking "$@"' >> /usr/local/bin/chrome-wrapper.sh && \
+    chmod +x /usr/local/bin/chrome-wrapper.sh
+
+# Create proper .desktop file for Chromium
+RUN mkdir -p /usr/share/applications && \
+    echo '[Desktop Entry]' > /usr/share/applications/google-chrome.desktop && \
+    echo 'Name=Google Chrome' >> /usr/share/applications/google-chrome.desktop && \
+    echo 'Exec=/usr/local/bin/chrome-wrapper.sh %U' >> /usr/share/applications/google-chrome.desktop && \
+    echo 'Icon=google-chrome' >> /usr/share/applications/google-chrome.desktop && \
+    echo 'Type=Application' >> /usr/share/applications/google-chrome.desktop && \
+    echo 'Categories=Network;WebBrowser;' >> /usr/share/applications/google-chrome.desktop && \
+    echo 'MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;' >> /usr/share/applications/google-chrome.desktop
+
+# Configure XDG default applications
+RUN mkdir -p /etc/xdg && \
+    echo '[Default Applications]' > /etc/xdg/mimeapps.list && \
+    echo 'text/html=google-chrome.desktop' >> /etc/xdg/mimeapps.list && \
+    echo 'x-scheme-handler/http=google-chrome.desktop' >> /etc/xdg/mimeapps.list && \
+    echo 'x-scheme-handler/https=google-chrome.desktop' >> /etc/xdg/mimeapps.list
+
+# Set Chrome wrapper as system default browser
+RUN update-alternatives --install /usr/bin/x-www-browser x-www-browser /usr/local/bin/chrome-wrapper.sh 200 && \
+    update-alternatives --set x-www-browser /usr/local/bin/chrome-wrapper.sh
+
+# ===== END CHROMIUM DEFAULT BROWSER CONFIGURATION =====
+
 # Install Python MCP and VNC dependencies
 RUN pip3 install mcp pillow
 
 WORKDIR /workspace/vibes
-# Enhanced with comprehensive screensaver disabling - $(date)
+# Enhanced with comprehensive screensaver disabling and default browser configuration with wrapper script - $(date)
 COPY server.py /workspace/
 
 # Use systemd init (works with docker-compose.yml)
@@ -158,4 +189,3 @@ RUN echo '' >> /etc/tigervnc/vncserver-config-mandatory && \
     echo '$BlacklistThreshold = 0;' >> /etc/tigervnc/vncserver-config-mandatory && \
     echo '$BlacklistTimeout = 0;' >> /etc/tigervnc/vncserver-config-mandatory
 # ===== END BLACKLIST DISABLE =====
-
