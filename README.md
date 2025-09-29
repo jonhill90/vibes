@@ -17,13 +17,6 @@ Vibes runs as a distributed system of specialized MCP servers, each handling spe
 | Server | Purpose | Status | Connection |
 |--------|---------|--------|------------|
 | `mcp-vibes-server` | Shell access, container management | ✅ Active | Docker exec |
-| `mcp-openmemory-server` | Persistent conversation memory | ✅ Active | HTTP (port 8765) |
-| `mcp-basic-memory-server` | Knowledge management system | ✅ Active | Docker exec |
-| `mcp-github-server` | Repository integration | ✅ Active | Docker exec |
-| `mcp-azure-server` | Cloud operations | ✅ Active | Docker exec |
-| `mcp-terraform-server` | Infrastructure as code | ✅ Active | Docker exec |
-| `mcp-browserless-server` | Browser automation, screenshots | 🔧 Available | Docker exec |
-| `mcp-time-server` | Time and timezone functionality | 🔧 Available | Docker exec |
 | `mcp-vibesbox-server` | Unified shell + VNC GUI (planned) | 🚧 Development | Docker exec |
 
 ## Quick Start
