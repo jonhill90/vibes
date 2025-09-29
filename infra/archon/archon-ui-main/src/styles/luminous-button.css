@@ -1,0 +1,13 @@
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1) translateY(-30%);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05) translateY(-30%);
+  }
+}
+.luminous-button-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}

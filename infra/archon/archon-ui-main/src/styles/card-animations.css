@@ -1,0 +1,98 @@
+/* Card tilt and 3D effects */
+.card-3d {
+  transform-style: preserve-3d;
+  transform: perspective(1000px);
+}
+.card-3d-content {
+  transform: translateZ(20px);
+}
+.card-3d-layer-1 {
+  transform: translateZ(10px);
+}
+.card-3d-layer-2 {
+  transform: translateZ(20px);
+}
+.card-3d-layer-3 {
+  transform: translateZ(30px);
+}
+/* Card reflection effect */
+.card-reflection {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+  border-radius: inherit;
+}
+/* Card neon line */
+.card-neon-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transition: all 0.3s ease;
+  transform: translateZ(40px);
+}
+.card-neon-line-pulse {
+  animation: neon-pulse 2s infinite ease-in-out;
+}
+@keyframes neon-pulse {
+  0%, 100% { opacity: 0.7; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.3); }
+}
+/* Card bounce animation */
+@keyframes card-bounce {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.97); }
+  80% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+/* Card removal animation */
+@keyframes card-remove {
+  0% { 
+    transform: translateX(0) rotate(0);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateX(100px) rotate(5deg); 
+    opacity: 0;
+  }
+}
+.card-removing {
+  animation: card-remove 0.5s forwards ease-in-out;
+  pointer-events: none;
+}
+/* Card shuffle animations - refined for top to bottom motion */
+@keyframes card-shuffle-out {
+  0% {
+    transform: translateZ(0) translateY(0) scale(1);
+    opacity: 1;
+    z-index: 10;
+  }
+  100% {
+    transform: translateZ(-30px) translateY(-16px) translateX(-8px) scale(0.98);
+    opacity: 0.6;
+    z-index: 5;
+  }
+}
+@keyframes card-shuffle-in {
+  0% {
+    transform: translateZ(60px) translateY(20px) scale(1.02);
+    opacity: 0;
+    z-index: 5;
+  }
+  100% {
+    transform: translateZ(0) translateY(0) scale(1);
+    opacity: 1;
+    z-index: 10;
+  }
+}
+.animate-card-shuffle-out {
+  animation: card-shuffle-out 300ms forwards ease-in-out;
+}
+.animate-card-shuffle-in {
+  animation: card-shuffle-in 300ms forwards ease-in-out;
+}
