@@ -1,0 +1,37 @@
+version: '3.8'
+
+networks:
+  vibes-infrastructure:
+    name: vibes-infrastructure
+    driver: bridge
+    external: false
+
+services:
+  qdrant:
+    image: qdrant/qdrant:${QDRANT_VERSION:-latest}
+    container_name: vibes-qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - vibes-infrastructure
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: ${QDRANT_MEMORY_LIMIT:-2G}
+          cpus: ${QDRANT_CPU_LIMIT:-1.5}
+
+volumes:
+  qdrant_data:
+    name: vibes-qdrant-data

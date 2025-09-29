@@ -1,0 +1,39 @@
+version: '3.8'
+
+networks:
+  vibes-infrastructure:
+    name: vibes-infrastructure
+    driver: bridge
+    external: false
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: vibes-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vibes}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vibes123}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES:-archon,rag_agent,litellm,knowledge_base}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - vibes-infrastructure
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEMORY_LIMIT:-2G}
+          cpus: ${POSTGRES_CPU_LIMIT:-1.5}
+
+volumes:
+  postgres_data:
+    name: vibes-postgres-data

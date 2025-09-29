@@ -1,0 +1,35 @@
+version: '3.8'
+
+networks:
+  vibes-infrastructure:
+    name: vibes-infrastructure
+    driver: bridge
+    external: false
+
+services:
+  redis:
+    image: redis:${REDIS_VERSION:-7-alpine}
+    container_name: vibes-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - vibes-infrastructure
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: ${REDIS_MEMORY_LIMIT:-1G}
+          cpus: ${REDIS_CPU_LIMIT:-1}
+
+volumes:
+  redis_data:
+    name: vibes-redis-data

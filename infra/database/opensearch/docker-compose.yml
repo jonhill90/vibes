@@ -1,0 +1,38 @@
+version: '3.8'
+
+networks:
+  vibes-infrastructure:
+    name: vibes-infrastructure
+    driver: bridge
+    external: false
+
+services:
+  opensearch:
+    image: opensearchproject/opensearch:${OPENSEARCH_VERSION:-2.11.0}
+    container_name: vibes-opensearch
+    restart: unless-stopped
+    ports:
+      - "${OPENSEARCH_PORT:-9200}:9200"
+      - "${OPENSEARCH_PERF_PORT:-9600}:9600"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    networks:
+      - vibes-infrastructure
+    environment:
+      discovery.type: single-node
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${OPENSEARCH_PASSWORD:-vibes123}
+      DISABLE_SECURITY_PLUGIN: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: ${OPENSEARCH_MEMORY_LIMIT:-4G}
+          cpus: ${OPENSEARCH_CPU_LIMIT:-2}
+
+volumes:
+  opensearch_data:
+    name: vibes-opensearch-data

@@ -1,0 +1,49 @@
+version: '3.8'
+
+networks:
+  vibes-infrastructure:
+    name: vibes-infrastructure
+    driver: bridge
+    external: false
+
+services:
+  neo4j:
+    image: neo4j:${NEO4J_VERSION:-5.15-community}
+    container_name: vibes-neo4j
+    restart: unless-stopped
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    networks:
+      - vibes-infrastructure
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-vibes123}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_initial__size: ${NEO4J_HEAP_INITIAL:-512m}
+      NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP_MAX:-2G}
+      NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE:-1G}
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD:-vibes123}", "MATCH () RETURN count(*) limit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: ${NEO4J_MEMORY_LIMIT:-4G}
+          cpus: ${NEO4J_CPU_LIMIT:-2}
+
+volumes:
+  neo4j_data:
+    name: vibes-neo4j-data
+  neo4j_logs:
+    name: vibes-neo4j-logs
+  neo4j_import:
+    name: vibes-neo4j-import
+  neo4j_plugins:
+    name: vibes-neo4j-plugins

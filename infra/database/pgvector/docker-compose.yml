@@ -1,0 +1,51 @@
+version: '3.8'
+
+networks:
+  vibes-infrastructure:
+    name: vibes-infrastructure
+    driver: bridge
+    external: false
+
+services:
+  pgvector:
+    image: pgvector/pgvector:${PGVECTOR_VERSION:-pg15}
+    container_name: vibes-pgvector
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vectors}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vibes123}
+      # Optimize for vector operations
+      POSTGRES_SHARED_PRELOAD_LIBRARIES: vector
+      POSTGRES_MAX_CONNECTIONS: ${POSTGRES_MAX_CONNECTIONS:-200}
+      POSTGRES_WORK_MEM: ${POSTGRES_WORK_MEM:-256MB}
+      POSTGRES_MAINTENANCE_WORK_MEM: ${POSTGRES_MAINTENANCE_WORK_MEM:-1GB}
+    ports:
+      - "${PGVECTOR_PORT:-5435}:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - vibes-infrastructure
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: ${PGVECTOR_MEMORY_LIMIT:-3G}
+          cpus: ${PGVECTOR_CPU_LIMIT:-2}
+    command: |
+      postgres
+      -c shared_preload_libraries=vector
+      -c work_mem=${POSTGRES_WORK_MEM:-256MB}
+      -c maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-1GB}
+      -c max_connections=${POSTGRES_MAX_CONNECTIONS:-200}
+      -c random_page_cost=1.1
+      -c effective_cache_size=2GB
+
+volumes:
+  pgvector_data:
+    name: vibes-pgvector-data
