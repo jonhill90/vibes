@@ -58,7 +58,7 @@ services:
       - ${KONG_HTTPS_PORT}:8443/tcp
     volumes:
       # https://github.com/supabase/supabase/issues/12661
-      - /Users/jon/source/vibes/infra/supabase/volumes/api/kong.yml:/home/kong/temp.yml:ro,z
+      - ${SUPABASE_HOST_PATH}/volumes/api/kong.yml:/home/kong/temp.yml:ro,z
     depends_on:
       analytics:
         condition: service_healthy
@@ -234,7 +234,7 @@ services:
     image: supabase/storage-api:v1.25.7
     restart: unless-stopped
     volumes:
-      - /Users/jon/source/vibes/infra/supabase/volumes/storage:/var/lib/storage:z
+      - ${SUPABASE_HOST_PATH}/volumes/storage:/var/lib/storage:z
     healthcheck:
       test:
         [
@@ -277,7 +277,7 @@ services:
     image: darthsim/imgproxy:v3.8.0
     restart: unless-stopped
     volumes:
-      - /Users/jon/source/vibes/infra/supabase/volumes/storage:/var/lib/storage:z
+      - ${SUPABASE_HOST_PATH}/volumes/storage:/var/lib/storage:z
     healthcheck:
       test:
         [
@@ -317,7 +317,7 @@ services:
     image: supabase/edge-runtime:v1.69.6
     restart: unless-stopped
     volumes:
-      - /Users/jon/source/vibes/infra/supabase/volumes/functions:/home/deno/functions:Z
+      - ${SUPABASE_HOST_PATH}/volumes/functions:/home/deno/functions:Z
     depends_on:
       analytics:
         condition: service_healthy
@@ -390,21 +390,21 @@ services:
     image: supabase/postgres:15.8.1.060
     restart: unless-stopped
     volumes:
-      - /Users/jon/source/vibes/infra/supabase/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
+      - ${SUPABASE_HOST_PATH}/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
       # Must be superuser to create event trigger
-      - /Users/jon/source/vibes/infra/supabase/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
+      - ${SUPABASE_HOST_PATH}/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
       # Must be superuser to alter reserved role
-      - /Users/jon/source/vibes/infra/supabase/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
+      - ${SUPABASE_HOST_PATH}/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
       # Initialize the database settings with JWT_SECRET and JWT_EXP
-      - /Users/jon/source/vibes/infra/supabase/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+      - ${SUPABASE_HOST_PATH}/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
       # PGDATA directory is persisted between restarts
-      - /Users/jon/source/vibes/infra/supabase/volumes/db/data:/var/lib/postgresql/data:Z
+      - ${SUPABASE_HOST_PATH}/volumes/db/data:/var/lib/postgresql/data:Z
       # Changes required for internal supabase data such as _analytics
-      - /Users/jon/source/vibes/infra/supabase/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
+      - ${SUPABASE_HOST_PATH}/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
       # Changes required for Analytics support
-      - /Users/jon/source/vibes/infra/supabase/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
+      - ${SUPABASE_HOST_PATH}/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
       # Changes required for Pooler support
-      - /Users/jon/source/vibes/infra/supabase/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
+      - ${SUPABASE_HOST_PATH}/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
       # Use named volume to persist pgsodium decryption key between restarts
       - db-config:/etc/postgresql-custom
     healthcheck:
@@ -447,7 +447,7 @@ services:
     image: timberio/vector:0.28.1-alpine
     restart: unless-stopped
     volumes:
-      - /Users/jon/source/vibes/infra/supabase/volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
+      - ${SUPABASE_HOST_PATH}/volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
       - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
     healthcheck:
       test:
@@ -481,7 +481,7 @@ services:
       - ${POSTGRES_PORT}:5432
       - ${POOLER_PROXY_PORT_TRANSACTION}:6543
     volumes:
-      - /Users/jon/source/vibes/infra/supabase/volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
+      - ${SUPABASE_HOST_PATH}/volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
     healthcheck:
       test:
         [
