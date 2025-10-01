@@ -1,40 +1,20 @@
 {
   "mcpServers": {
-    "vibes": {
-      "command": "docker",
-      "args": ["exec", "-i", "mcp-vibes-server", "python3", "/workspace/server.py"]
-    },
     "vibesbox": {
       "command": "docker",
       "args": ["exec", "-i", "mcp-vibesbox-server", "python3", "/workspace/server.py"]
-    },
-    "openmemory": {
-      "command": "npx",
-      "args": ["mcp-remote", "http://localhost:8765/mcp/claude/sse/vibes-user"]
     },
     "basic-memory": {
       "command": "docker",
       "args": ["exec", "-i", "basic-memory-mcp", "/app/start.sh"]
     },
-    "github": {
+    "MCP_DOCKER": {
       "command": "docker",
-      "args": ["exec", "-i", "github-mcp-server", "/server/github-mcp-server", "stdio"]
+      "args": ["mcp", "gateway", "run"]
     },
-    "azure": {
-      "command": "docker",
-      "args": ["exec", "-i", "azure-mcp-server", "dotnet", "azmcp.dll", "server", "start"]
-    },
-    "terraform": {
-      "command": "docker",
-      "args": ["exec", "-i", "terraform-mcp-server", "/server/terraform-mcp-server", "stdio"]
-    },
-    "time": {
-      "command": "docker",
-      "args": ["exec", "-i", "mcp-time-server", "python3", "/workspace/server.py"]
-    },
-    "context7": {
-      "command": "docker",
-      "args": ["exec", "-i", "mcp-context7-server", "node", "/server/dist/index.js"]
+    "archon": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8051/mcp"]
     }
   }
 }

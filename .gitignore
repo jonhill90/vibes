@@ -2,6 +2,10 @@
 .env
 .vibes/
 
+# Examples
+/examples/*
+!/examples/README.md
+
 # Repos
 /repos/*
 !/repos/
