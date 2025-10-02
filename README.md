@@ -70,6 +70,79 @@ After updating the configuration, restart Claude Desktop to load the MCP servers
 - **Browser automation** and screenshot capture (optional)
 - **Learn through conversation** rather than documentation
 
+## Context Engineering & PRPs
+
+Vibes uses **Context Engineering** to transform AI coding from generic code generation to production-ready implementation. Instead of prompting in the dark, we engineer comprehensive context that enables first-pass success.
+
+### What are PRPs?
+
+**PRP** (Product Requirements Prompt) = **PRD** + **Curated Codebase Intelligence** + **Agent Runbook**
+
+A PRP is a context engineering artifact that treats Claude like a competent junior developer who needs a comprehensive briefing. It includes:
+
+- **PRD**: Clear goals, business value, success criteria
+- **Curated Context**: Documentation URLs, file references, existing patterns, known gotchas
+- **Agent Runbook**: Implementation blueprint, pseudocode, task list, validation gates
+
+### PRP Workflow
+
+```
+1. Create INITIAL.md      → Describe your feature
+2. /generate-prp          → Research and create comprehensive PRP
+3. /execute-prp           → Implement with validation loops
+4. Validation             → Tests pass, code quality verified
+5. Done                   → Production-ready code
+```
+
+### Directory Structure
+
+```
+vibes/
+├── prps/
+│   ├── templates/        # PRP templates for different types
+│   │   ├── prp_base.md          # Comprehensive base template
+│   │   ├── feature_template.md  # Standard features
+│   │   ├── tool_template.md     # API integrations
+│   │   └── documentation_template.md  # Documentation
+│   ├── active/           # In-progress PRPs
+│   ├── completed/        # Finished PRPs
+│   └── archived/         # Old reference PRPs
+└── examples/             # Reference patterns and examples
+    ├── prp-workflow/     # Example PRPs
+    ├── tools/            # Code patterns (API, files, etc.)
+    └── documentation/    # Doc templates
+```
+
+### Core Principles
+
+1. **Context is King**: Include ALL necessary documentation, examples, and gotchas
+2. **Validation Loops**: Provide executable tests the AI can run and fix iteratively
+3. **Information Dense**: Use keywords and patterns from your codebase
+4. **Progressive Success**: Start simple, validate, then enhance
+5. **One-Pass Implementation**: Comprehensive context enables getting it right the first time
+
+### Available Commands
+
+- `/generate-prp <file>` - Research codebase and create comprehensive PRP
+- `/execute-prp <prp>` - Execute PRP with iterative validation
+- `/list-prps [status]` - List PRPs by status (active/completed/archived)
+
+### Example Templates
+
+Choose the right template for your task:
+
+- **Feature Template**: Standard feature development
+- **Tool Template**: API integrations and external tools
+- **Documentation Template**: READMEs, API docs, guides
+
+### Learn More
+
+- [PRP Base Template](prps/templates/prp_base.md) - Comprehensive template with all sections
+- [Examples Directory](examples/README.md) - Reference patterns for common tasks
+- [Context Engineering Intro](https://github.com/coleam00/context-engineering-intro) - Original philosophy
+
+**Philosophy**: Context engineering is 10x better than prompt engineering and 100x better than vibe coding. Give Claude the context it needs to succeed.
+
 ## Future Vision
 
 **Phase 1: Observable Agent Execution** (In Development)

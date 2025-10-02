@@ -2,9 +2,15 @@
 .env
 .vibes/
 
-# Examples
+# Examples - Allow reference patterns, ignore user content
 /examples/*
 !/examples/README.md
+!/examples/prp-workflow/
+!/examples/prp-workflow/*.md
+!/examples/tools/
+!/examples/tools/*.py
+!/examples/documentation/
+!/examples/documentation/*.md
 
 # Repos
 /repos/*
