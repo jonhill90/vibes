@@ -17,7 +17,7 @@ Vibes runs as a distributed system of specialized MCP servers, each handling spe
 | Server | Purpose | Status | Connection |
 |--------|---------|--------|------------|
 | `mcp-vibes-server` | Shell access, container management | ✅ Active | Docker exec |
-| `mcp-vibesbox-server` | Unified shell + VNC GUI (planned) | 🚧 Development | Docker exec |
+| `mcp-vibesbox-server` | Unified shell + VNC GUI | ✅ Active | Docker exec |
 
 ## Quick Start
 
