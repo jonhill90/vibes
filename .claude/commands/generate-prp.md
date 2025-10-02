@@ -8,21 +8,62 @@ The AI agent only gets the context you are appending to the PRP and training dat
 
 ## Research Process
 
-1. **Codebase Analysis**
-   - Search for similar features/patterns in the codebase
-   - Identify files to reference in PRP
-   - Note existing conventions to follow
-   - Check test patterns for validation approach
+### 0. Check Knowledge Sources (FIRST)
+```bash
+# CRITICAL: Check if Archon MCP is available
+mcp__archon__health_check()
+```
 
-2. **External Research**
-   - Search for similar features/patterns online
-   - Library documentation (include specific URLs)
-   - Implementation examples (GitHub/StackOverflow/blogs)
-   - Best practices and common pitfalls
+**If Archon Available:**
+- Use Archon RAG as PRIMARY research source
+- Benefits: Faster, more accurate, curated documentation
+- Web search only for gaps in Archon knowledge
 
-3. **User Clarification** (if needed)
-   - Specific patterns to mirror and where to find them?
-   - Integration requirements and where to find them?
+**If Archon Not Available:**
+- Use web_search as primary source
+- Document URLs for future Archon ingestion
+
+### 1. Knowledge Research (Archon-First Approach)
+
+**When Archon is Available:**
+1. Search knowledge base for relevant documentation:
+   ```
+   mcp__archon__rag_search_knowledge_base(query="<topic>")
+   ```
+   Examples:
+   - "Pydantic AI agent patterns"
+   - "FastAPI best practices"
+   - "React component architecture"
+
+2. Search for code examples and implementations:
+   ```
+   mcp__archon__rag_search_code_examples(query="<pattern>")
+   ```
+   Examples:
+   - "async tool implementation"
+   - "API integration pattern"
+   - "test fixture setup"
+
+3. Use web_search ONLY for:
+   - Topics not in Archon knowledge base
+   - Very recent changes/updates
+   - Specific version documentation
+
+**When Archon is Not Available:**
+- Use web_search extensively
+- Search for library documentation (include specific URLs)
+- Implementation examples (GitHub/StackOverflow/blogs)
+- Best practices and common pitfalls
+
+### 2. Codebase Analysis
+- Search for similar features/patterns in the codebase
+- Identify files to reference in PRP
+- Note existing conventions to follow
+- Check test patterns for validation approach
+
+### 3. User Clarification (if needed)
+- Specific patterns to mirror and where to find them?
+- Integration requirements and where to find them?
 
 ## PRP Generation
 
