@@ -2,7 +2,7 @@
 .env
 .vibes/
 
-# Examples - Allow reference patterns, ignore user content
+# Examples
 /examples/*
 !/examples/README.md
 !/examples/prp-workflow/
@@ -11,6 +11,14 @@
 !/examples/tools/*.py
 !/examples/documentation/
 !/examples/documentation/*.md
+!/examples/agent-factory/
+!/examples/agent-factory/*.md
+!/examples/agents/
+!/examples/agents/*/
+!/examples/agents/**
+!/examples/workflows/
+!/examples/workflows/*/
+!/examples/workflows/**
 
 # Repos
 /repos/*
