@@ -54,26 +54,106 @@ vibes/
 - Use `.claude/commands/execute-prp.md` to implement with iterative validation
 
 **Claude Agents**
+
+*General Purpose*:
 - `documentation-manager`: Proactively updates docs when code changes (tools: Read, Write, Edit, MultiEdit, Grep, Glob, ls)
 - `validation-gates`: Runs tests, validates changes, iterates on fixes until passing (tools: Bash, Read, Edit, MultiEdit, Grep, Glob, TodoWrite)
 
+*PRP Generation Subagents* (used by `/generate-prp`):
+- `prp-gen-feature-analyzer`: Analyzes INITIAL.md, extracts requirements, searches Archon for similar PRPs
+- `prp-gen-codebase-researcher`: Searches codebase for patterns, naming conventions, architectural approaches
+- `prp-gen-documentation-hunter`: Finds official docs, searches Archon knowledge base first
+- `prp-gen-example-curator`: **EXTRACTS actual code** to examples/ directory (not just references)
+- `prp-gen-gotcha-detective`: Identifies security/performance pitfalls, documents solutions
+- `prp-gen-assembler`: Synthesizes all research into final PRP, scores quality (8+/10)
+
+*PRP Execution Subagents* (used by `/execute-prp`):
+- `prp-exec-task-analyzer`: Analyzes task dependencies, creates parallel execution groups
+- `prp-exec-implementer`: Implements single task (can run in parallel with other implementers)
+- `prp-exec-test-generator`: Generates comprehensive tests (70%+ coverage goal)
+- `prp-exec-validator`: Runs validation gates, iterates on failures until pass
+
 ## Common Development Workflows
 
-### Working with PRPs
+### Working with PRPs (Enhanced Multi-Subagent Workflow)
 
-**Create a new PRP:**
+**PRP Generation Pipeline**:
+1. Create INITIAL.md → 2. Generate PRP → 3. Execute PRP
+
+#### Create a new PRP from INITIAL.md:
 ```bash
-# Use the generate-prp command in Claude Code
-/generate-prp <feature-description>
+# Enhanced 5-phase multi-subagent approach
+/generate-prp prps/INITIAL_<feature-name>.md
 ```
-This researches the codebase, gathers context, and creates a comprehensive PRP in `prps/<feature-name>.md`
 
-**Execute a PRP:**
+**What happens** (in <10 minutes):
+- **Phase 0**: Setup (directories, Archon project)
+- **Phase 1**: Feature analysis (requirements extraction)
+- **Phase 2**: **Parallel research** (codebase, docs, examples - 3 subagents simultaneously)
+  - Extracts actual code files to `examples/<feature>/`
+  - Searches Archon knowledge base first
+  - Creates comprehensive research documents
+- **Phase 3**: Gotcha detection (security, performance, pitfalls)
+- **Phase 4**: PRP assembly (synthesizes all research)
+- **Phase 5**: Quality check (requires 8+/10 score)
+
+**Output**: `prps/<feature-name>.md` with:
+- 8+/10 quality score
+- 5+ official documentation sources
+- 2-4 extracted code examples
+- 5-10 documented gotchas with solutions
+- Logical task breakdown
+- Executable validation gates
+
+**Time**: <10 minutes (vs 15-20 minutes sequential)
+**Speedup**: 3x faster research via parallel Phase 2
+
+#### Execute a PRP:
 ```bash
-# Use the execute-prp command
+# Enhanced parallel task execution
 /execute-prp prps/<feature-name>.md
 ```
-This implements the feature following the PRP's validation loops and quality gates.
+
+**What happens** (30-50% faster than sequential):
+- **Phase 0**: Load PRP, create Archon tasks
+- **Phase 1**: Dependency analysis (groups independent tasks)
+- **Phase 2**: **Parallel implementation** (multiple implementers simultaneously)
+  - Group 1: Independent tasks (parallel)
+  - Group 2: Dependent tasks (parallel within group)
+  - Group 3+: Continue until all done
+- **Phase 3**: Automated test generation (70%+ coverage)
+- **Phase 4**: Systematic validation (iterates on failures until pass)
+- **Phase 5**: Completion report
+
+**Output**:
+- All tasks implemented
+- Tests generated and passing
+- All validation gates passed
+- Comprehensive reports
+
+**Time savings**: 30-50% faster via intelligent parallelization
+
+#### Key Features:
+
+**generate-prp enhancements**:
+- ✅ Parallel research (3x faster)
+- ✅ Physical code extraction (not just references)
+- ✅ Quality scoring (8+/10 minimum)
+- ✅ Archon integration (project tracking)
+- ✅ Systematic gotcha detection
+
+**execute-prp enhancements**:
+- ✅ Parallel task execution (30-50% faster)
+- ✅ Archon task management (no TodoWrite)
+- ✅ Automated test generation
+- ✅ Validation iteration loops
+- ✅ Time tracking and metrics
+
+#### When to use each:
+
+**generate-prp**: When you have an INITIAL.md and want a comprehensive PRP
+**execute-prp**: When you have a PRP and want to implement it
+**create-initial**: When you need to create requirements from scratch
 
 ### Working with MCP Servers
 
