@@ -1,1039 +1,1039 @@
-# Documentation Links: prp_workflow_improvements
+# Documentation Links: devcontainer_vibesbox_integration
 
 ## Technology Stack Identified
 
-Based on feature-analysis.md:
-- **Primary System**: Claude Code (Anthropic's AI coding assistant)
-- **Architecture**: Multi-subagent orchestration system
-- **Key Tools**: Task tool, Archon MCP server, Slash commands
-- **Languages**: Markdown (configuration), Python (MCP servers)
-- **Knowledge Management**: Archon RAG system with PGVector
-- **Data Storage**: Supabase PostgreSQL
+Based on feature requirements:
+- **Primary Language**: Bash (shell scripting)
+- **Framework**: VS Code Dev Containers
+- **Container Platform**: Docker + Docker Compose
+- **VNC Server**: TigerVNC (already running in vibesbox)
+- **Key Libraries**:
+  - ImageMagick (screenshot capture)
+  - Docker CLI
+  - xdpyinfo (X11 display testing)
+- **External APIs**: Docker Engine API (via CLI)
 
 ## Archon Knowledge Base Results
 
-### Technology 1: Claude Code Subagents
+**Search Summary**: Archon knowledge base was searched for relevant documentation but did not contain specific documentation for:
+- VS Code Dev Containers
+- Docker Compose lifecycle management
+- TigerVNC server configuration
+- Bash scripting patterns for container management
 
-**Archon Source**: 9a7d4217c64c9a0a
-**Source Title**: Anthropic Documentation
-**Relevance Score**: 10/10
+**Archon Sources Searched**: 7 sources available, including Model Context Protocol, Pydantic AI, and various agent frameworks, but none contained the specific technical documentation needed for this devcontainer integration feature.
 
-**Key Sections Found in Archon**:
-
-#### Section 1: Subagent Fundamentals
-**Content Summary**: Core concepts of subagents as specialized AI assistants with separate context windows, custom tools, and system prompts.
-
-**Relevant Excerpt**:
-```
-Custom subagents in Claude Code are specialized AI assistants that can be invoked to handle specific types of tasks. They enable more efficient problem-solving by providing task-specific configurations with customized system prompts, tools and a separate context window.
-
-Each subagent:
-- Has a specific purpose and expertise area
-- Uses its own context window separate from the main conversation
-- Can be configured with specific tools it's allowed to use
-- Includes a custom system prompt that guides its behavior
-```
-
-**Why This Matters**: The INITIAL.md factory workflow uses 6 specialized subagents, each with isolated context to prevent pollution during parallel research tasks.
-
-**Code Example** (Configuration Pattern):
-```yaml
----
-name: prp-initial-feature-clarifier
-description: Analyzes feature requests and creates comprehensive requirements analysis
-tools: Read, mcp__archon__rag_search_knowledge_base, mcp__archon__rag_get_available_sources
-model: inherit
----
-You are a requirements analysis specialist...
-```
-
-#### Section 2: Model Selection & Tool Configuration
-**Content Summary**: Configuration options for specifying which model subagents use and which tools they can access.
-
-**Relevant Excerpt**:
-```yaml
-Field | Required | Description
-------|----------|-------------
-name | Yes | Unique identifier using lowercase letters and hyphens
-description | Yes | Natural language description of the subagent's purpose
-tools | No | Comma-separated list of specific tools. If omitted, inherits all tools from main thread
-model | No | Model to use (sonnet, opus, haiku, or 'inherit')
-```
-
-**Why This Matters**: Each INITIAL.md factory subagent needs specific tool access (e.g., documentation-hunter needs WebSearch/WebFetch, codebase-researcher needs Grep/Glob).
-
-#### Section 3: SlashCommand Tool Integration
-**Content Summary**: How slash commands can invoke subagents and pass metadata through frontmatter.
-
-**Relevant Excerpt**:
-```
-SlashCommand tool only supports custom slash commands that:
-- Are user-defined (built-in commands not supported)
-- Have the 'description' frontmatter field populated
-- Character budget limit: 15000 (configurable via SLASH_COMMAND_TOOL_CHAR_BUDGET)
-```
-
-**Why This Matters**: The generate-prp and execute-prp commands need proper frontmatter to work with Claude's automatic tool discovery.
-
-### Technology 2: Context Engineering & PRP Methodology
-
-**Archon Source**: b8565aff9938938b
-**Source Title**: GitHub - coleam00/context-engineering-intro
-**Relevance Score**: 10/10
-
-**Key Sections Found in Archon**:
-
-#### Section 1: PRP Framework Structure
-**Content Summary**: The three-part PRP framework: PRD + Curated Codebase Intelligence + Agent Runbook.
-
-**Relevant Excerpt**:
-```
-Context Engineering Template structure:
-.claude/
-├── commands/
-│   ├── generate-prp.md  # Generates comprehensive PRPs
-│   └── execute-prp.md   # Executes PRPs to implement features
-PRPs/
-├── templates/
-│   └── prp_base.md    # Base template for PRPs
-└── EXAMPLE_multi_agent_prp.md
-examples/         # Your code examples (critical!)
-CLAUDE.md         # Global rules for AI assistant
-INITIAL.md        # Template for feature requests
-```
-
-**Why This Matters**: The INITIAL.md factory creates the foundation document that feeds into generate-prp, following this proven structure.
-
-**Code Example**:
-```markdown
-# PRP Structure
-
-## PRD (Product Requirements Document)
-- Goal
-- Why
-- What
-- Success Criteria
-
-## Curated Codebase Intelligence
-- Current tree
-- Desired tree
-- Existing patterns
-- Documentation URLs
-- Known gotchas
-
-## Agent Runbook
-- Implementation blueprint
-- Pseudocode
-- Task list
-- Validation loops
-```
-
-#### Section 2: Validation Loops & Quality Gates
-**Content Summary**: Progressive validation approach with three levels: syntax/style, unit tests, integration tests.
-
-**Relevant Excerpt**:
-```bash
-## Validation Loop
-
-### Level 1: Syntax & Style
-ruff check --fix && mypy .
-
-### Level 2: Unit Tests
-pytest tests/ -v
-
-### Level 3: Integration Tests
-# Project-specific commands
-
-## Final Validation Checklist
-- [ ] All tests pass
-- [ ] No linting errors
-- [ ] No type errors
-- [ ] Manual test successful
-- [ ] Error cases handled gracefully
-```
-
-**Why This Matters**: The execute-prp command needs built-in validation loops to ensure generated code meets quality standards.
-
-### Technology 3: Multi-Agent Workflows
-
-**Archon Source**: 464a0ce4d22bf72f
-**Source Title**: Microsoft Agents Framework
-**Relevance Score**: 7/10
-
-**Key Sections Found in Archon**:
-
-#### Section 1: Workflow Orchestration Patterns
-**Content Summary**: Graph-based workflows for orchestrating multiple agents in complex processes with state management.
-
-**Relevant Excerpt**:
-```
-The framework provides capabilities for:
-- Individual AI agents to process user inputs and execute tasks
-- Graph-based workflows that orchestrate multiple agents for complex processes
-- Robust state management
-- Event handling
-- Proper history tracking
-```
-
-**Why This Matters**: Phase 2 of INITIAL.md factory runs 3 subagents in parallel - needs proper coordination and state tracking.
-
-### Technology 4: Model Context Protocol (MCP)
-
-**Archon Source**: d60a71d62eb201d5
-**Source Title**: Model Context Protocol - LLMs
-**Relevance Score**: 8/10
-
-**Key Sections Found in Archon**:
-
-#### Section 1: MCP Server Architecture
-**Content Summary**: MCP servers provide tools, resources, and prompts to AI assistants through standardized protocol.
-
-**Relevant Excerpt**:
-```
-MCP consists of two layers:
-- Data layer: JSON-RPC based protocol for client-server communication, including lifecycle management, and core primitives (tools, resources, prompts, notifications)
-- Transport layer: Communication mechanisms (STDIO for local, HTTP for remote)
-
-MCP servers can execute locally or remotely:
-- Local: Filesystem server using STDIO transport
-- Remote: Sentry MCP server using HTTP transport
-```
-
-**Why This Matters**: Archon MCP server provides RAG search and task management tools that INITIAL.md factory subagents use for research.
+**Recommendation**: All documentation sourced from official web resources and community best practices.
 
 ## Official Documentation URLs
 
-### Technology 1: Claude Code
+### Technology 1: VS Code Dev Containers
 
-**Official Site**: https://docs.claude.com/en/docs/claude-code/
-**Version**: Latest (2025)
+**Official Site**: https://code.visualstudio.com/docs/devcontainers/containers
+**Version**: Current (2025)
+**Last Updated**: 09/11/2025
 
-#### Subagents Documentation
-- **URL**: https://docs.claude.com/en/docs/claude-code/sub-agents
-- **Relevance**: Critical - defines entire subagent architecture
+#### Quickstart Guide
+- **URL**: https://code.visualstudio.com/docs/devcontainers/tutorial
+- **Relevance**: High - walks through running VS Code in Docker container
+- **Key Topics**: Dev Containers extension setup, basic configuration
+- **Code Examples**: Yes - devcontainer.json examples
+
+#### Create a Dev Container
+- **URL**: https://code.visualstudio.com/docs/devcontainers/create-dev-container
+- **Relevance**: Critical - core reference for devcontainer.json structure
 - **Key Topics**:
-  - Creating subagents (file-based and interactive)
-  - Configuration frontmatter (name, description, tools, model)
-  - Context preservation benefits
-  - Delegation patterns
-- **Code Examples**: Yes - complete subagent configuration examples
-- **Production Ready**: Yes - official Anthropic documentation
+  - devcontainer.json structure and properties
+  - Docker Compose integration
+  - Lifecycle hooks (postCreateCommand, postStartCommand, postAttachCommand)
+  - Custom Dockerfile configuration
+- **Code Examples**: Yes - production-ready examples
 
-**Relevant Configuration Pattern**:
+**devcontainer.json Basic Structure**:
+```json
+{
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:0-18",
+  "customizations": {
+    "vscode": {
+      "extensions": ["streetsidesoftware.code-spell-checker"]
+    }
+  },
+  "forwardPorts": [3000]
+}
+```
+
+**Docker Compose Integration Example**:
+```json
+{
+  "name": "Project Name",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.extend.yml"],
+  "service": "your-service-name",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose"
+}
+```
+
+**Lifecycle Hook Examples**:
+```json
+{
+  "postCreateCommand": "bash scripts/install-dependencies.sh",
+  "postStartCommand": "bash -i scripts/startup.sh"
+}
+```
+
+#### Advanced Container Configuration
+- **URL**: https://code.visualstudio.com/remote/advancedcontainers/overview
+- **Relevance**: High - advanced scenarios and best practices
+- **Key Topics**:
+  - Mount local disk drives
+  - Set environment variables
+  - Work with multiple containers
+  - Configure Docker Compose projects
+  - Volume management
+- **Code Examples**: Yes - various advanced configurations
+
+#### Best Practices
+- **Key Practices**:
+  - Use lifecycle hooks for setup automation
+  - Leverage Docker Compose for multi-container scenarios
+  - Configure `shutdownAction` appropriately
+  - Use workspace folders for proper file mounting
+- **Critical for Feature**:
+  - postCreateCommand for initial setup
+  - postStartCommand for container startup verification
+  - Docker Compose integration for vibesbox service
+
+### Technology 2: Docker Compose
+
+**Official Site**: https://docs.docker.com/compose/
+**Version**: v2.30.0+ (for lifecycle hooks)
+**API Version**: Docker Engine 27.0+
+
+#### Lifecycle Hooks Documentation
+- **URL**: https://docs.docker.com/compose/how-tos/lifecycle/
+- **Relevance**: Critical - new feature for container lifecycle management
+- **Key Topics**: post_start and pre_stop hooks
+- **Code Examples**: Yes - YAML configuration examples
+
+**Post-Start Hook Example**:
 ```yaml
----
-name: code-reviewer
-description: Expert code review specialist
-tools: Read, Grep, Glob, Bash
-model: inherit
----
-You are a senior code reviewer ensuring high standards of code quality and security.
-
-Review checklist:
-- Code readability
-- No duplicated code
-- Proper error handling
-- Input validation
-- Test coverage
+services:
+  app:
+    post_start:
+      - command: chown -R /data 1001:1001
+        user: root
 ```
 
-#### Slash Commands Documentation
-- **URL**: https://docs.claude.com/en/docs/claude-code/slash-commands
-- **Relevance**: Critical - defines command structure for generate-prp/execute-prp
-- **Key Topics**:
-  - Command file structure and frontmatter
-  - $ARGUMENTS support for parameters
-  - Bash command integration with ! prefix
-  - File references with @ prefix
-  - SlashCommand tool integration
-- **Code Examples**: Yes - complete command examples
-- **Production Ready**: Yes
-
-**Command Frontmatter Example**:
+**Pre-Stop Hook Example**:
 ```yaml
----
-description: Generate comprehensive PRP from INITIAL.md
-argument-hint: <feature-name>
-model: sonnet
-allowed-tools: Read, Write, Grep, Glob, mcp__archon__rag_search_knowledge_base
----
+services:
+  app:
+    pre_stop:
+      - command: ./data_flush.sh
 ```
 
-#### Common Workflows Documentation
-- **URL**: https://docs.claude.com/en/docs/claude-code/common-workflows
-- **Relevance**: High - parallel execution patterns and best practices
+**Key Features**:
+- Runs after container has started (post_start)
+- Runs before container is stopped (pre_stop)
+- Can execute with root privileges
+- Useful for setup/cleanup tasks
+
+**Version Requirements**: Docker Compose version 2.30.0 or later
+
+#### Docker Compose Up Command
+- **URL**: https://docs.docker.com/reference/cli/docker/compose/up/
+- **Relevance**: High - understanding container startup behavior
 - **Key Topics**:
-  - Using specialized subagents
-  - Plan Mode for safe analysis
-  - Parallel sessions with Git worktrees
-  - Custom slash commands creation
-- **Code Examples**: Yes - workflow examples
-- **Production Ready**: Yes
+  - Creates and starts containers
+  - Builds images if necessary
+  - Recreates containers if configuration changes
+  - Difference from `docker compose start`
+- **Code Examples**: Yes - CLI usage examples
 
-**Parallel Execution Pattern**:
-```
-"Explore the codebase using 4 tasks in parallel"
-- Claude Code supports up to 10 parallel tasks concurrently
-- Tasks queued intelligently when exceeding limit
-- Each task has separate context window
-```
-
-### Technology 2: Context Engineering & PRP
-
-**Official Site**: https://github.com/coleam00/context-engineering-intro
-**Version**: Latest (2025)
-
-#### PRP Template Repository
-- **URL**: https://github.com/coleam00/context-engineering-intro
-- **Relevance**: Critical - defines PRP methodology we're implementing
-- **Key Topics**:
-  - PRP structure (PRD + Codebase Intelligence + Runbook)
-  - INITIAL.md → PRP generation workflow
-  - Validation loop methodology
-  - Examples directory best practices
-- **Code Examples**: Yes - complete PRP examples
-- **Production Ready**: Yes - 10.2k stars, battle-tested
-
-**PRP Generation Flow**:
+**Important Flags**:
 ```bash
-# 1. Create initial feature request
-# Edit INITIAL.md with requirements
+# Run in background
+docker compose up -d
 
-# 2. Generate comprehensive PRP
-/generate-prp INITIAL.md
+# Build images before starting
+docker compose up --build
 
-# 3. Execute the PRP
-/execute-prp PRPs/your-feature.md
+# Force recreate containers
+docker compose up --force-recreate
+
+# Wait for services to be healthy
+docker compose up --wait
 ```
 
-#### Context Engineering Guide
-- **URL**: https://www.aifire.co/p/ai-coding-assistants-a-guide-to-context-engineering-prp
-- **Relevance**: High - methodology and best practices
+**Key Difference from `start`**:
+- `docker compose up`: Builds, creates, and starts containers
+- `docker compose start`: Only starts existing containers
+- Use `up` for initial setup or configuration changes
+- Use `start` only for resuming stopped containers
+
+#### Service Definition Reference
+- **URL**: https://docs.docker.com/reference/compose-file/services/
+- **Relevance**: Medium - understanding service configuration
+- **Key Topics**: Service properties, volume management, network configuration
+
+### Technology 3: Docker CLI
+
+**Official Site**: https://docs.docker.com/
+**Version**: Docker Engine 27.0+
+
+#### Container List Command
+- **URL**: https://docs.docker.com/reference/cli/docker/container/ls/
+- **Relevance**: Critical - checking container state
 - **Key Topics**:
-  - Context engineering principles
-  - PRP framework components
-  - Validation principles
-  - Common failure traps
-- **Code Examples**: Conceptual examples
-- **Production Ready**: Yes - comprehensive guide
+  - List running containers
+  - Filter by status
+  - Check container state
+- **Code Examples**: Yes - command-line examples
 
-**Critical Validation Principles**:
+**Common Commands**:
+```bash
+# List all containers
+docker ps -a
+
+# List only running containers
+docker ps
+
+# Filter by status
+docker ps --filter status=running
+docker ps --filter status=exited
+
+# Get container ID only
+docker ps -q
+
+# Check specific container
+docker ps --filter name=vibesbox
 ```
-1. Thoroughly review AI-generated plans
-2. Check for:
-   - Logical architecture
-   - Security considerations
-   - Comprehensive feature implementation
-   - Potential over-engineering
-3. Context isn't one-time - it's ongoing discipline
+
+**Container Status Values**:
+- `created`: Container created but never started
+- `running`: Container is currently running
+- `paused`: Container is paused
+- `exited`: Container has stopped
+- `restarting`: Container is restarting
+- `dead`: Container is dead
+
+#### Container Inspect Command
+- **URL**: https://docs.docker.com/reference/cli/docker/inspect/
+- **Relevance**: High - detailed state information
+- **Key Topics**: Get detailed container information including state
+
+**Get Container Status**:
+```bash
+# Get status of container
+docker inspect -f '{{.State.Status}}' container_name
+
+# Get full state information
+docker inspect --format='{{json .State}}' container_name
 ```
 
-### Technology 3: Archon MCP Server
+### Technology 4: TigerVNC
 
-**Official Site**: https://github.com/coleam00/Archon
-**Version**: Beta (2025)
+**Official Site**: https://tigervnc.org/
+**Version**: 1.14.0+ (latest stable)
 
-#### Archon GitHub Repository
-- **URL**: https://github.com/coleam00/Archon
-- **Relevance**: Critical - the MCP server used for knowledge/task management
+#### Red Hat Documentation
+- **URL**: https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/7/html/system_administrators_guide/ch-tigervnc
+- **Relevance**: High - official enterprise documentation
 - **Key Topics**:
-  - RAG knowledge base with vector search
-  - Task and project management
-  - MCP tool integration
-  - Multi-model support (OpenAI, Ollama, Gemini)
-- **Code Examples**: Yes - installation and usage
-- **Production Ready**: Beta - expect some issues
+  - TigerVNC server configuration
+  - vncserver command usage
+  - Display management
+- **Code Examples**: Yes - configuration and command examples
 
-**Archon Architecture**:
-```
-Frontend UI: React + Vite (Port 3737)
-Server: FastAPI + SocketIO (Port 8181)
-MCP Server: HTTP Wrapper (Port 8051)
-Agents Service: PydanticAI (Port 8052)
-Database: Supabase PostgreSQL + PGVector
-```
+#### Fedora Documentation
+- **URL**: https://docs.fedoraproject.org/en-US/fedora/f40/system-administrators-guide/infrastructure-services/TigerVNC/
+- **Relevance**: High - current Linux distribution guide
+- **Key Topics**: Server setup, display configuration, security
 
-#### Archon MCP Tools
-- **URL**: https://mcpdb.org/mcps/archon
-- **Relevance**: Critical - defines available MCP tools
-- **Key Tools**:
-  - `rag_search_knowledge_base(query, source_id?, match_count)`
-  - `rag_get_available_sources()`
-  - `manage_project(action, ...)`
-  - `manage_task(action, ...)`
-  - `find_tasks(query?, filter_by?, filter_value?)`
-  - `find_projects(query?, project_id?)`
-- **Code Examples**: Yes - tool signatures
-- **Production Ready**: Beta
-
-**RAG Search Pattern**:
-```python
-# 1. Get available sources
-sources = rag_get_available_sources()
-
-# 2. Search knowledge base (2-5 keywords!)
-results = rag_search_knowledge_base(
-    query="FastAPI async",  # SHORT!
-    match_count=5
-)
-
-# 3. Filtered search by source
-filtered = rag_search_knowledge_base(
-    query="authentication",
-    source_id="src_abc123",  # Use ID, not URL
-    match_count=5
-)
-```
-
-### Technology 4: Model Context Protocol (MCP)
-
-**Official Site**: https://modelcontextprotocol.io
-**Version**: Latest (2025)
-
-#### MCP Core Documentation
-- **URL**: https://modelcontextprotocol.io/llms-full.txt
-- **Relevance**: Medium - understanding MCP architecture
+#### AWS AL2023 Setup Guide
+- **URL**: https://docs.aws.amazon.com/linux/al2023/ug/vnc-configuration-al2023.html
+- **Relevance**: Medium - recent cloud deployment guide
 - **Key Topics**:
-  - MCP protocol layers (data + transport)
-  - Tool definitions and invocation
-  - Resource and prompt management
-  - Client-server communication
-- **Code Examples**: Yes - server implementations
-- **Production Ready**: Yes
+  - Installation steps
+  - User configuration
+  - Display number assignment
+  - SSH tunneling for secure connections
 
-**MCP Server Pattern**:
-```python
-from mcp.server import Server
-from mcp.types import Tool, TextContent
+#### Testing VNC Server
+- **URL**: https://manpages.debian.org/testing/tigervnc-standalone-server/tigervncserver.1.en.html
+- **Relevance**: Medium - man page reference
+- **Key Topics**: Command-line options, session management
 
-server = Server("my-server")
-
-@server.list_tools()
-async def list_tools() -> list[Tool]:
-    return [Tool(name="my-tool", description="...")]
-
-@server.call_tool()
-async def call_tool(name: str, arguments: dict):
-    return [TextContent(type="text", text="result")]
+**List VNC Sessions**:
+```bash
+# Display active TigerVNC server sessions
+vncserver -list
 ```
+
+**Common Display Numbers**:
+- `:0` - Primary physical display
+- `:1` - First VNC display (port 5901)
+- `:2` - Second VNC display (port 5902)
+
+**Testing VNC Connection**:
+1. Check if VNC server is running: `ps aux | grep vnc`
+2. List sessions: `vncserver -list`
+3. Test local connection: `vncviewer localhost:1`
+4. Verify port: `netstat -tulpn | grep 5901`
+
+### Technology 5: X11 Display Testing
+
+**Official Site**: X.Org Foundation
+**Tool**: xdpyinfo
+
+#### Testing X11 Display
+- **URL**: https://x410.dev/cookbook/testing-display-environment-variable/
+- **Relevance**: High - testing DISPLAY variable
+- **Key Topics**: Verifying X11 display is accessible
+
+**Test Commands**:
+```bash
+# Test if X11 display is accessible
+xdpyinfo
+
+# Test with specific display
+DISPLAY=:1 xdpyinfo
+
+# Simple graphical test
+DISPLAY=:1 xclock
+
+# Check DISPLAY variable
+echo $DISPLAY
+```
+
+**Expected Behavior**:
+- If working: Displays detailed X server information
+- If not working: Error "unable to open display"
+
+#### X11 Environment Variable
+- **URL**: https://askubuntu.com/questions/432255/what-is-the-display-environment-variable
+- **Relevance**: Medium - understanding DISPLAY variable
+- **Key Topics**: DISPLAY format, common values
+
+**DISPLAY Format**: `hostname:displaynumber.screennumber`
+- Most common: `:0` (local display)
+- VNC session: `:1` or higher
+- Remote: `192.168.1.100:0`
+
+### Technology 6: ImageMagick
+
+**Official Site**: https://imagemagick.org/
+**Version**: 7.x (current stable)
+
+#### Command-Line Tools
+- **URL**: https://imagemagick.org/script/command-line-tools.php
+- **Relevance**: High - overview of all tools
+- **Key Topics**: import, convert, identify commands
+
+#### Import Tool (Screenshot Capture)
+- **URL**: https://imagemagick.org/script/import.php
+- **Relevance**: Critical - screenshot functionality
+- **Key Topics**:
+  - Capture X server screen
+  - Save to file formats
+  - Window selection options
+
+**Screenshot Commands**:
+```bash
+# Full screen capture
+import -window root screenshot.png
+
+# Capture with specific display
+DISPLAY=:1 import -window root screenshot.png
+
+# Capture with timestamp
+import -window root screenshot_$(date +%Y%m%d_%H%M%S).png
+
+# Capture specific region
+import -window root -crop 1920x1080+0+0 screenshot.png
+```
+
+#### Command-Line Processing
+- **URL**: https://imagemagick.org/script/command-line-processing.php
+- **Relevance**: Medium - understanding image processing pipeline
+- **Key Topics**: Scripting, automation, batch processing
+
+**Bash Script Example**:
+```bash
+#!/bin/bash
+# Take screenshot with ImageMagick
+DISPLAY=:1 import -window root "/workspace/vibes/screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png"
+```
+
+### Technology 7: Bash Scripting
+
+**Best Practices Resources**
+
+#### Error Handling Best Practices (2025)
+- **URL**: https://medium.com/@prasanna.a1.usage/best-practices-we-need-to-follow-in-bash-scripting-in-2025-cebcdf254768
+- **Relevance**: High - modern bash scripting standards
+- **Key Topics**:
+  - Strict mode settings
+  - Error handling
+  - ShellCheck usage
+  - Logging practices
+
+**Strict Mode Settings**:
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# -e: Exit on error
+# -u: Exit on undefined variable
+# -o pipefail: Fail on pipe errors
+```
+
+#### Error Handling in Bash
+- **URL**: https://www.redhat.com/en/blog/error-handling-bash-scripting
+- **Relevance**: High - official Red Hat guidance
+- **Key Topics**:
+  - Using set -e
+  - Trap for cleanup
+  - Return code checking
+  - Error logging
+
+**Error Handling Pattern**:
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Trap for cleanup
+cleanup() {
+    local exit_code=$?
+    echo "Script failed with exit code: $exit_code"
+    # Cleanup operations
+    exit $exit_code
+}
+trap cleanup ERR
+
+# Check return codes explicitly
+if ! command; then
+    echo "Command failed"
+    exit 1
+fi
+```
+
+#### set -euo pipefail Explanation
+- **URL**: https://gist.github.com/mohanpedala/1e2ff5661761d3abd0385e8223e16425
+- **Relevance**: Critical - comprehensive explanation
+- **Key Topics**: Each flag explained with examples
+
+**What Each Flag Does**:
+- `set -e`: Exit immediately if command exits with non-zero status
+- `set -u`: Treat unset variables as error and exit
+- `set -o pipefail`: Pipeline returns exit status of last failed command
+
+**Important Notes**:
+- Use at top of every Bash script
+- Can disable for specific commands with `|| true`
+- ShellCheck will help catch issues
+- pipefail now in POSIX 2024 edition
+
+#### Writing Safe Shell Scripts
+- **URL**: https://sipb.mit.edu/doc/safe-shell/
+- **Relevance**: High - comprehensive safety guide
+- **Key Topics**:
+  - Quote variables properly
+  - Avoid word splitting
+  - Use arrays for lists
+  - Handle spaces in filenames
 
 ## Implementation Tutorials & Guides
 
-### Tutorial 1: Multi-agent Parallel Coding with Claude Code
-- **URL**: https://medium.com/@codecentrevibe/claude-code-multi-agent-parallel-coding-83271c4675fa
-- **Source**: Medium (Code Centre)
-- **Date**: 2025
-- **Relevance**: 9/10 - directly covers parallel subagent execution
-- **What It Covers**: Real-world patterns for orchestrating multiple subagents in parallel, queuing systems for >10 agents, context management strategies
+### Tutorial 1: Docker Compose Up vs Start
+- **URL**: https://stackoverflow.com/questions/33715499/what-is-the-difference-between-docker-compose-up-and-docker-compose-start
+- **Source**: Stack Overflow (Community Knowledge)
+- **Date**: Continuously updated
+- **Relevance**: 9/10 - directly applicable to container management
+- **What It Covers**: Clear explanation of when to use each command
+- **Code Quality**: High - tested by community
+- **Key Takeaways**:
+  - Use `docker compose up` for initial container creation
+  - Use `docker compose start` only for existing containers
+  - `up` rebuilds on configuration changes
+  - `start` is simpler but limited
+- **Notes**: Community consensus matches official documentation
+
+### Tutorial 2: Managing Container Lifecycles with Lifecycle Hooks
+- **URL**: https://dev.to/idsulik/managing-container-lifecycles-with-docker-compose-lifecycle-hooks-mjg
+- **Source**: DEV Community
+- **Date**: Recent (2024-2025)
+- **Relevance**: 10/10 - directly covers the lifecycle hooks feature
+- **What It Covers**: Practical examples of post_start and pre_stop hooks
 - **Code Quality**: High - production examples
 - **Key Takeaways**:
-  - Explicitly define which steps delegate to subagents
-  - Similar to multi-threaded programming - orchestration matters
-  - Early subagent usage preserves main context
-  - Batch processing when exceeding 10-agent limit
-- **Notes**: Covers July 2025 implementations scaling beyond 10-agent limit
+  - Lifecycle hooks require Docker Compose 2.30.0+
+  - Can run privileged commands
+  - Useful for permissions, cleanup, initialization
+- **Notes**: Excellent practical examples
 
-### Tutorial 2: Claude Code Subagent Deep Dive
-- **URL**: https://cuong.io/blog/2025/06/24-claude-code-subagent-deep-dive
-- **Source**: Code Centre Blog
-- **Date**: June 2025
-- **Relevance**: 9/10 - technical deep dive into subagent internals
-- **What It Covers**: Subagent architecture, context window management, tool permission patterns, delegation strategies
-- **Code Quality**: High
+### Tutorial 3: TigerVNC Server Setup on Ubuntu
+- **URL**: https://www.cyberciti.biz/faq/install-and-configure-tigervnc-server-on-ubuntu-18-04/
+- **Source**: nixCraft
+- **Date**: Updated December 2024
+- **Relevance**: 7/10 - Ubuntu-specific but applicable concepts
+- **What It Covers**: Complete VNC server setup and SSH tunneling
+- **Code Quality**: High - tested configurations
 - **Key Takeaways**:
-  - Each subagent's context is isolated
-  - Tool restrictions improve security and focus
-  - System prompts should be highly specific
-  - Project-level vs user-level subagents
-- **Notes**: Excellent for understanding context isolation
+  - Install and configure TigerVNC
+  - Set up user sessions
+  - Secure with SSH tunneling
+  - Test connections
+- **Notes**: Good reference for VNC troubleshooting
 
-### Tutorial 3: Claude Code Slash Commands Best Practices
-- **URL**: https://alexop.dev/tils/claude-code-slash-commands-boost-productivity/
-- **Source**: alexop.dev
-- **Date**: 2025
-- **Relevance**: 8/10 - slash command patterns and automation
-- **What It Covers**: Custom command creation, argument handling, bash integration, team distribution
-- **Code Quality**: High - production-ready examples
+### Tutorial 4: Bash Error Handling Examples
+- **URL**: https://www.redhat.com/en/blog/bash-error-handling
+- **Source**: Red Hat
+- **Date**: Recent
+- **Relevance**: 8/10 - essential for robust scripting
+- **What It Covers**: Practical error handling patterns in Bash
+- **Code Quality**: High - enterprise-grade
 - **Key Takeaways**:
-  - Use $ARGUMENTS for dynamic parameters
-  - Bash commands with ! prefix for preprocessing
-  - File references with @ to include context
-  - Project commands in .claude/commands/ for team sharing
-- **Notes**: Practical patterns for command development
+  - Always use set -e
+  - Implement trap for cleanup
+  - Check return codes explicitly
+  - Log errors appropriately
+- **Notes**: Official Red Hat best practices
 
-### Tutorial 4: Context Engineering for AI Assistants
-- **URL**: https://www.aifire.co/p/ai-coding-assistants-a-guide-to-context-engineering-prp
-- **Source**: AI Fire
-- **Date**: 2025
-- **Relevance**: 10/10 - foundational context engineering principles
-- **What It Covers**: Shift from "code monkey" to "code architect", PRP methodology, validation principles, common pitfalls
-- **Code Quality**: Conceptual - methodology focus
+### Tutorial 5: ImageMagick Screenshot Automation
+- **URL**: https://gist.github.com/sp3c73r2038/3741659
+- **Source**: GitHub Gist
+- **Date**: Community-maintained
+- **Relevance**: 8/10 - script automation examples
+- **What It Covers**: Automated screenshot capture with ImageMagick
+- **Code Quality**: Medium - needs adaptation
 - **Key Takeaways**:
-  - Context engineering > prompt engineering
-  - Treat AI as junior developer needing comprehensive briefing
-  - Validation is non-negotiable
-  - Context is ongoing discipline, not one-time setup
-- **Notes**: Essential reading for understanding why PRP approach works
-
-### Tutorial 5: How to Use Claude Code Subagents to Parallelize Development
-- **URL**: https://zachwills.net/how-to-use-claude-code-subagents-to-parallelize-development/
-- **Source**: Zach Wills Blog
-- **Date**: 2025
-- **Relevance**: 8/10 - practical parallelization patterns
-- **What It Covers**: Parallel workflow design, coordinating multiple subagents, managing results, avoiding conflicts
-- **Code Quality**: High
-- **Key Takeaways**:
-  - Design workflows with parallelization in mind
-  - Clear separation of concerns between agents
-  - Result aggregation strategies
-  - Conflict resolution patterns
-- **Notes**: Good for Phase 2 parallel research implementation
+  - Use import command for screenshots
+  - Timestamp filenames
+  - Handle DISPLAY variable
+  - Error handling for failed captures
+- **Notes**: Good starting point, needs customization
 
 ## Version Considerations
 
-### Claude Code
-- **Recommended Version**: Latest stable (>= 1.0.124)
-- **Reason**: SlashCommand tool support, improved subagent delegation, Task tool maturity
-- **Breaking Changes**: Earlier versions may not support all subagent features
-- **Compatibility**: Works with MCP servers via stdio or HTTP transport
+### VS Code Dev Containers
+- **Recommended Version**: Latest (updates frequently)
+- **Reason**: Active development, new features regularly added
+- **Breaking Changes**: Generally backward compatible
+- **Compatibility**: Works with Docker Engine 20.10+
 
-### Archon MCP Server
-- **Current Version**: Beta
-- **Reason**: Active development, some features may not work 100%
-- **Migration Path**: Monitor GitHub releases for stable version
-- **Compatibility**: Requires MCP-compatible clients (Claude Code, Cursor, Windsurf)
+### Docker Compose
+- **Recommended Version**: 2.30.0 or later
+- **Reason**: Required for lifecycle hooks feature
+- **Breaking Changes**: v2 syntax differs from v1 (deprecated)
+- **Compatibility**: Requires Docker Engine 27.0+ for full features
 
-### Context Engineering Methodology
-- **Version**: 2025 patterns
-- **Evolution**: From prompt engineering → context engineering → PRP methodology
-- **Updates**: Active community contributions on GitHub
+### TigerVNC
+- **Recommended Version**: 1.14.0
+- **Reason**: Latest stable with security updates
+- **Breaking Changes**: None recent
+- **Compatibility**: Works with modern Linux distributions
+
+### ImageMagick
+- **Recommended Version**: 7.x
+- **Reason**: Current stable branch
+- **Breaking Changes**: v7 has CLI changes from v6
+- **Compatibility**: Check `import` command syntax for version
+
+### Bash
+- **Recommended Version**: 4.4+ (5.x preferred)
+- **Reason**: Modern features, better error handling
+- **Breaking Changes**: pipefail in POSIX 2024
+- **Compatibility**: Available on all modern Linux distributions
 
 ## Common Pitfalls Documented
 
-### Pitfall 1: Subagent Context Pollution
-- **Source**: https://docs.claude.com/en/docs/claude-code/sub-agents
-- **Problem**: Main conversation context gets polluted when not using subagents for research tasks
-- **Symptom**: Claude loses track of high-level objectives, gets bogged down in details
-- **Solution**: Delegate research, analysis, and exploration to specialized subagents with isolated contexts
-- **Code Example**:
-```yaml
-# Wrong: Doing research in main context
-"Search the codebase for authentication patterns"
-
-# Right: Delegate to specialized subagent
----
-name: auth-researcher
-description: Research authentication patterns in codebase
-tools: Grep, Glob, Read
----
-You are an authentication research specialist.
-Search for auth patterns and document findings.
-```
-
-### Pitfall 2: Vague Subagent System Prompts
-- **Source**: https://cuong.io/blog/2025/06/24-claude-code-subagent-deep-dive
-- **Problem**: Generic system prompts lead to unfocused subagent behavior
-- **Symptom**: Subagent produces generic or off-target results
-- **Solution**: Write highly specific system prompts with clear objectives, checklists, and constraints
-- **Code Example**:
-```yaml
-# Wrong
----
-name: code-helper
-description: Helps with code
----
-You help with code.
-
-# Right
----
-name: python-linter
-description: Lint Python code for PEP8 compliance and security issues
-tools: Read, Bash
----
-You are a Python code quality specialist.
-
-Your task:
-1. Read the specified Python files
-2. Run: ruff check --select=E,F,W,C,N,D,S
-3. Report issues by category with file:line references
-4. Provide specific fix suggestions
-
-Focus areas:
-- PEP8 compliance (E, W)
-- Code complexity (C)
-- Security issues (S)
-- Docstring coverage (D)
-```
-
-### Pitfall 3: Incorrect Archon Query Patterns
-- **Source**: https://github.com/coleam00/Archon (README)
-- **Problem**: Using long, verbose queries instead of 2-5 keywords
-- **Symptom**: Poor search results from RAG system
-- **Solution**: Use SHORT, focused queries for Archon searches
-- **Code Example**:
-```python
-# Wrong: Verbose query
-rag_search_knowledge_base(
-    query="How do I implement user authentication with JWT tokens in FastAPI with proper security practices and refresh token rotation",
-    match_count=5
-)
-
-# Right: Short, focused
-rag_search_knowledge_base(
-    query="FastAPI JWT auth",
-    match_count=5
-)
-
-# Even better: Multiple targeted searches
-rag_search_knowledge_base(query="JWT authentication", match_count=3)
-rag_search_knowledge_base(query="refresh tokens", match_count=3)
-rag_search_knowledge_base(query="FastAPI security", match_count=3)
-```
-
-### Pitfall 4: Blind Parallel Execution
-- **Source**: https://medium.com/@codecentrevibe/claude-code-multi-agent-parallel-coding-83271c4675fa
-- **Problem**: Running subagents in parallel without clear orchestration strategy
-- **Symptom**: Duplicate work, conflicting outputs, difficult result aggregation
-- **Solution**: Design workflow with explicit coordination points and result synthesis
-- **Code Example**:
-```markdown
-# Wrong: Vague parallelization
-"Use 3 subagents to research this feature"
-
-# Right: Explicit orchestration
-Phase 2: Parallel Research
-
-Run these 3 subagents simultaneously:
-
-1. codebase-researcher
-   - Input: feature-analysis.md
-   - Output: codebase-patterns.md
-   - Focus: Existing code patterns
-
-2. documentation-hunter
-   - Input: feature-analysis.md
-   - Output: documentation-links.md
-   - Focus: Official docs and guides
-
-3. example-curator
-   - Input: feature-analysis.md
-   - Output: examples-to-include.md + examples/
-   - Focus: Extract working code examples
-
-Coordination: All 3 complete before Phase 3 begins
-Synthesis: Assembler reads all 3 outputs
-```
-
-### Pitfall 5: Missing Validation Loops
-- **Source**: https://www.aifire.co/p/ai-coding-assistants-a-guide-to-context-engineering-prp
-- **Problem**: Trusting AI output without validation, leading to broken code in production
-- **Symptom**: Code that "should work" but fails in testing or production
-- **Solution**: Implement progressive validation loops (syntax → unit tests → integration)
+### Pitfall 1: Container Already Running
+- **Source**: Docker Compose documentation
+- **Problem**: `docker compose up` fails if container already started
+- **Symptom**: Error message "Container already exists"
+- **Solution**: Use conditional logic to check container state first
 - **Code Example**:
 ```bash
-# Wrong: Skip validation
-# "The code looks good, ship it!"
+# Wrong way - fails if running
+docker compose up vibesbox
 
-# Right: Progressive validation
-## Validation Loop
-
-### Level 1: Syntax & Style
-ruff check --fix .
-mypy .
-
-### Level 2: Unit Tests
-pytest tests/ -v
-
-### Level 3: Integration Tests
-./scripts/integration-test.sh
-
-### Level 4: Manual Verification
-# Test actual feature with real data
-
-## Iterate until ALL levels pass
-# If any level fails, fix and restart from that level
+# Right way - check state first
+if docker ps --filter "name=vibesbox" --filter "status=running" | grep -q vibesbox; then
+    echo "Container already running"
+else
+    docker compose up -d vibesbox
+fi
 ```
 
-### Pitfall 6: Hardcoding Source IDs
-- **Source**: Archon MCP documentation
-- **Problem**: Using URLs instead of source_id parameter, or hardcoding source IDs
-- **Symptom**: Searches fail or return wrong sources
-- **Solution**: Always call rag_get_available_sources() first, match by title, use returned ID
+### Pitfall 2: DISPLAY Variable Not Set
+- **Source**: X11 documentation and community forums
+- **Problem**: Screenshot capture fails without DISPLAY variable
+- **Symptom**: Error "cannot open display"
+- **Solution**: Always set DISPLAY environment variable explicitly
 - **Code Example**:
-```python
-# Wrong: Hardcoded or using URL
-rag_search_knowledge_base(
-    query="FastAPI patterns",
-    source_id="https://fastapi.tiangolo.com",  # URLs don't work!
-    match_count=5
-)
+```bash
+# Wrong way - relies on inherited environment
+import -window root screenshot.png
 
-# Wrong: Hardcoded ID
-rag_search_knowledge_base(
-    query="FastAPI patterns",
-    source_id="src_abc123",  # May not exist in this Archon instance
-    match_count=5
-)
+# Right way - explicit DISPLAY
+DISPLAY=:1 import -window root screenshot.png
+```
 
-# Right: Dynamic source lookup
-sources = rag_get_available_sources()
-fastapi_source = next(
-    (s for s in sources if "FastAPI" in s["title"]),
-    None
-)
+### Pitfall 3: Lifecycle Hook Timing
+- **Source**: Docker Compose lifecycle documentation
+- **Problem**: post_start runs after container starts but timing not guaranteed
+- **Symptom**: Commands fail because services not ready
+- **Solution**: Add retry logic or health checks
+- **Code Example**:
+```yaml
+# Wrong way - assumes immediate readiness
+services:
+  app:
+    post_start:
+      - command: curl http://localhost:8080
 
-if fastapi_source:
-    results = rag_search_knowledge_base(
-        query="async patterns",
-        source_id=fastapi_source["source_id"],
-        match_count=5
-    )
+# Right way - wait for readiness
+services:
+  app:
+    post_start:
+      - command: |
+          for i in {1..30}; do
+            curl -f http://localhost:8080 && break
+            sleep 1
+          done
+```
+
+### Pitfall 4: Using docker compose start Instead of up
+- **Source**: Docker Compose documentation
+- **Problem**: `docker compose start` doesn't create containers
+- **Symptom**: Error "No such container"
+- **Solution**: Use `docker compose up` for initial creation
+- **Code Example**:
+```bash
+# Wrong way - fails if container never created
+docker compose start vibesbox
+
+# Right way - creates if needed
+docker compose up -d vibesbox
+```
+
+### Pitfall 5: Not Using Strict Mode in Bash
+- **Source**: Bash best practices guides
+- **Problem**: Scripts continue after errors, causing cascading failures
+- **Symptom**: Unexpected behavior, silent failures
+- **Solution**: Always use `set -euo pipefail`
+- **Code Example**:
+```bash
+# Wrong way - no error handling
+#!/bin/bash
+command_that_might_fail
+important_command  # Runs even if previous failed
+
+# Right way - fail fast
+#!/bin/bash
+set -euo pipefail
+command_that_might_fail  # Script exits if this fails
+important_command  # Only runs if previous succeeded
+```
+
+### Pitfall 6: VNC Display Number Assumptions
+- **Source**: TigerVNC documentation
+- **Problem**: Assuming display is always :0
+- **Symptom**: Cannot connect to VNC or capture screenshots
+- **Solution**: Query actual display number or use known :1 for VNC
+- **Code Example**:
+```bash
+# Wrong way - assumes :0
+DISPLAY=:0 xdpyinfo
+
+# Right way - use correct VNC display
+DISPLAY=:1 xdpyinfo  # For VNC on port 5901
+
+# Better - query running displays
+vncserver -list
+```
+
+### Pitfall 7: Missing ImageMagick in Container
+- **Source**: Community best practices
+- **Problem**: Screenshot command fails silently
+- **Symptom**: No output, no error
+- **Solution**: Verify ImageMagick installed, check return codes
+- **Code Example**:
+```bash
+# Wrong way - assumes ImageMagick exists
+import -window root screenshot.png
+
+# Right way - verify first
+if ! command -v import &> /dev/null; then
+    echo "ImageMagick not installed"
+    exit 1
+fi
+DISPLAY=:1 import -window root screenshot.png
 ```
 
 ## Code Examples from Documentation
 
-### Example 1: Complete Subagent Configuration
-- **Source**: https://docs.claude.com/en/docs/claude-code/sub-agents
+### Example 1: devcontainer.json with Docker Compose and Lifecycle Hooks
+- **Source**: https://code.visualstudio.com/docs/devcontainers/create-dev-container
+- **Code**:
+```json
+{
+  "name": "Vibes Development Container",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "vibesbox",
+  "workspaceFolder": "/workspace/vibes",
+  "shutdownAction": "stopCompose",
+
+  "postCreateCommand": "echo 'Container created successfully'",
+
+  "postStartCommand": "bash -c 'source /workspace/vibes/.devcontainer/verify-vibesbox.sh'",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-vscode-remote.remote-containers"
+      ]
+    }
+  },
+
+  "forwardPorts": [5901, 8000],
+
+  "remoteUser": "vscode"
+}
+```
+- **Explanation**: Complete devcontainer.json configuration for vibesbox integration
+- **Applicability**: Direct template for this feature
+- **Modifications Needed**:
+  - Update service name to match docker-compose.yml
+  - Customize postStartCommand to call verification script
+  - Adjust workspace folder path
+
+### Example 2: Bash Script with Error Handling and Container State Check
+- **Source**: Synthesized from Red Hat and Docker documentation
+- **Code**:
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Configuration
+CONTAINER_NAME="vibesbox"
+COMPOSE_FILE="/workspace/vibes/docker-compose.yml"
+MAX_RETRIES=30
+RETRY_DELAY=1
+
+# Function to check if container is running
+is_container_running() {
+    docker ps --filter "name=${CONTAINER_NAME}" --filter "status=running" --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+}
+
+# Function to start container if not running
+ensure_container_running() {
+    if is_container_running; then
+        echo "Container ${CONTAINER_NAME} is already running"
+        return 0
+    fi
+
+    echo "Starting container ${CONTAINER_NAME}..."
+    docker compose -f "${COMPOSE_FILE}" up -d "${CONTAINER_NAME}"
+
+    # Wait for container to be healthy
+    for i in $(seq 1 $MAX_RETRIES); do
+        if is_container_running; then
+            echo "Container ${CONTAINER_NAME} is running"
+            return 0
+        fi
+        echo "Waiting for container... (${i}/${MAX_RETRIES})"
+        sleep $RETRY_DELAY
+    done
+
+    echo "ERROR: Container failed to start within timeout"
+    return 1
+}
+
+# Main execution
+ensure_container_running
+```
+- **Explanation**: Robust container startup script with error handling
+- **Applicability**: Use in postStartCommand to ensure vibesbox is running
+- **Modifications Needed**: Adjust paths and container name
+
+### Example 3: VNC Display Testing Script
+- **Source**: Synthesized from X11 and TigerVNC documentation
+- **Code**:
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Configuration
+VNC_DISPLAY=":1"
+MAX_RETRIES=10
+RETRY_DELAY=2
+
+# Function to test VNC display
+test_vnc_display() {
+    DISPLAY="${VNC_DISPLAY}" xdpyinfo &> /dev/null
+}
+
+# Function to verify VNC is accessible
+verify_vnc() {
+    echo "Testing VNC display ${VNC_DISPLAY}..."
+
+    # Check if xdpyinfo is available
+    if ! command -v xdpyinfo &> /dev/null; then
+        echo "ERROR: xdpyinfo not found. Install x11-utils"
+        return 1
+    fi
+
+    # Test display access
+    for i in $(seq 1 $MAX_RETRIES); do
+        if test_vnc_display; then
+            echo "VNC display ${VNC_DISPLAY} is accessible"
+
+            # Additional verification with screenshot capability
+            if command -v import &> /dev/null; then
+                echo "ImageMagick available for screenshots"
+                DISPLAY="${VNC_DISPLAY}" import -window root -resize 10% /tmp/test_screenshot.png && rm /tmp/test_screenshot.png
+                echo "Screenshot test successful"
+            fi
+
+            return 0
+        fi
+        echo "Waiting for VNC display... (${i}/${MAX_RETRIES})"
+        sleep $RETRY_DELAY
+    done
+
+    echo "ERROR: VNC display not accessible"
+    return 1
+}
+
+# Main execution
+verify_vnc
+```
+- **Explanation**: Tests VNC display accessibility and screenshot capability
+- **Applicability**: Use to verify VNC is working in postStartCommand
+- **Modifications Needed**: Adjust display number if not :1
+
+### Example 4: Screenshot Capture with Error Handling
+- **Source**: ImageMagick documentation with error handling best practices
+- **Code**:
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Configuration
+VNC_DISPLAY=":1"
+SCREENSHOT_DIR="/workspace/vibes/screenshots"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+SCREENSHOT_FILE="${SCREENSHOT_DIR}/vibesbox_${TIMESTAMP}.png"
+
+# Function to capture screenshot
+capture_screenshot() {
+    # Ensure screenshot directory exists
+    mkdir -p "${SCREENSHOT_DIR}"
+
+    # Verify ImageMagick is available
+    if ! command -v import &> /dev/null; then
+        echo "ERROR: ImageMagick import command not found"
+        return 1
+    fi
+
+    # Verify display is accessible
+    if ! DISPLAY="${VNC_DISPLAY}" xdpyinfo &> /dev/null; then
+        echo "ERROR: Display ${VNC_DISPLAY} not accessible"
+        return 1
+    fi
+
+    # Capture screenshot
+    echo "Capturing screenshot to ${SCREENSHOT_FILE}..."
+    DISPLAY="${VNC_DISPLAY}" import -window root "${SCREENSHOT_FILE}"
+
+    # Verify file was created
+    if [[ -f "${SCREENSHOT_FILE}" ]]; then
+        file_size=$(stat -f%z "${SCREENSHOT_FILE}" 2>/dev/null || stat -c%s "${SCREENSHOT_FILE}" 2>/dev/null)
+        echo "Screenshot captured successfully (${file_size} bytes)"
+        return 0
+    else
+        echo "ERROR: Screenshot file not created"
+        return 1
+    fi
+}
+
+# Main execution
+capture_screenshot
+```
+- **Explanation**: Complete screenshot capture with comprehensive error checking
+- **Applicability**: Use as verification step in devcontainer startup
+- **Modifications Needed**: Adjust paths and display number as needed
+
+### Example 5: Docker Compose with Lifecycle Hooks
+- **Source**: https://docs.docker.com/compose/how-tos/lifecycle/
 - **Code**:
 ```yaml
----
-name: api-integration-specialist
-description: Expert in integrating third-party APIs with proper error handling and rate limiting
-tools: Read, Write, Bash, WebFetch
-model: sonnet
----
-You are an API integration specialist focused on production-ready implementations.
+services:
+  vibesbox:
+    image: vibesbox:latest
+    container_name: vibesbox
+    ports:
+      - "5901:5901"
+      - "8000:8000"
+    volumes:
+      - /workspace/vibes:/workspace/vibes
+    privileged: true
 
-Your responsibilities:
-1. Research API documentation thoroughly
-2. Implement proper authentication (OAuth, API keys, etc.)
-3. Add comprehensive error handling
-4. Implement rate limiting and retry logic
-5. Write integration tests
+    # Post-start hook to verify services
+    post_start:
+      - command: |
+          # Wait for VNC to be ready
+          for i in {1..30}; do
+            if DISPLAY=:1 xdpyinfo &> /dev/null; then
+              echo "VNC is ready"
+              break
+            fi
+            sleep 1
+          done
 
-Standards:
-- Use environment variables for credentials
-- Implement exponential backoff for retries
-- Log all API calls with request IDs
-- Handle all documented error cases
-- Write clear docstrings with example usage
+          # Verify screenshot capability
+          DISPLAY=:1 import -window root /tmp/startup_test.png && rm /tmp/startup_test.png
+          echo "Vibesbox verification complete"
 
-Testing:
-- Mock API responses in unit tests
-- Provide manual testing instructions
-- Document rate limits and quotas
+    # Pre-stop hook for cleanup
+    pre_stop:
+      - command: |
+          echo "Performing cleanup before shutdown..."
+          # Save any state if needed
 ```
-- **Explanation**: Complete subagent definition with frontmatter configuration and detailed system prompt
-- **Applicability**: Use as template for all 6 INITIAL.md factory subagents
-- **Modifications Needed**: Adjust name, description, tools, and system prompt for each specialist role
-
-### Example 2: Slash Command with Arguments
-- **Source**: https://docs.claude.com/en/docs/claude-code/slash-commands
-- **Code**:
-```yaml
----
-description: Generate comprehensive PRP from INITIAL.md
-argument-hint: <feature-name>
-model: sonnet
-allowed-tools: Read, Write, Grep, Glob, Task, mcp__archon__rag_search_knowledge_base, mcp__archon__rag_get_available_sources
----
-
-# PRP Generation Command
-
-Feature: $ARGUMENTS
-
-## Phase 1: Read INITIAL.md
-!cat prps/INITIAL_$ARGUMENTS.md
-
-## Phase 2: Research Codebase
-Search for existing patterns related to this feature.
-
-## Phase 3: Gather Documentation
-Find official docs and guides.
-
-## Phase 4: Generate PRP
-Create comprehensive PRP in prps/$ARGUMENTS.md following template.
-
-## Validation
-- [ ] All sections complete
-- [ ] Code examples included
-- [ ] Validation loops defined
-- [ ] Success criteria clear
-```
-- **Explanation**: Slash command that accepts arguments, runs bash commands, and orchestrates multi-phase workflow
-- **Applicability**: Template for improving generate-prp command
-- **Modifications Needed**: Add Archon integration, subagent delegation, parallel execution
-
-### Example 3: Parallel Subagent Invocation
-- **Source**: Claude Code best practices (community patterns)
-- **Code**:
-```python
-# In slash command or main context:
-# Invoke 3 subagents in parallel (single Task tool call)
-
-Task(
-    agents=[
-        "prp-initial-codebase-researcher",
-        "prp-initial-documentation-hunter",
-        "prp-initial-example-curator"
-    ],
-    instructions=[
-        "Research codebase patterns → codebase-patterns.md",
-        "Find official documentation → documentation-links.md",
-        "Extract code examples → examples-to-include.md + examples/"
-    ],
-    outputs=[
-        "prps/research/codebase-patterns.md",
-        "prps/research/documentation-links.md",
-        "prps/research/examples-to-include.md"
-    ]
-)
-
-# Wait for all 3 to complete, then proceed to Phase 3
-```
-- **Explanation**: Parallel invocation pattern for Phase 2 research
-- **Applicability**: Critical for INITIAL.md factory Phase 2 parallel execution
-- **Modifications Needed**: Verify Task tool supports this syntax (may need 3 separate Task calls in same message)
-
-### Example 4: Archon RAG Integration Pattern
-- **Source**: https://github.com/coleam00/Archon
-- **Code**:
-```python
-# Complete Archon workflow for research task
-
-# Step 1: Check what documentation is available
-sources = mcp__archon__rag_get_available_sources()
-# Returns: [
-#   {source_id: "src_123", title: "FastAPI Documentation", ...},
-#   {source_id: "src_456", title: "Pydantic AI Docs", ...}
-# ]
-
-# Step 2: Find relevant source
-target_source = next(
-    (s for s in sources if "FastAPI" in s["title"]),
-    None
-)
-
-# Step 3: General search (no source filter)
-general_results = mcp__archon__rag_search_knowledge_base(
-    query="async patterns",  # 2-5 keywords!
-    match_count=5
-)
-
-# Step 4: Filtered search (specific source)
-if target_source:
-    specific_results = mcp__archon__rag_search_knowledge_base(
-        query="dependency injection",
-        source_id=target_source["source_id"],
-        match_count=5
-    )
-
-# Step 5: Extract relevant sections
-for result in specific_results["results"]:
-    content = result["content"]
-    url = result["metadata"]["url"]
-    # Use in documentation
-```
-- **Explanation**: Complete pattern for searching Archon knowledge base
-- **Applicability**: Use in all research subagents (documentation-hunter, codebase-researcher, gotcha-detective)
-- **Modifications Needed**: None - this is the correct pattern
-
-### Example 5: Validation Loop Implementation
-- **Source**: https://github.com/coleam00/context-engineering-intro
-- **Code**:
-```markdown
-## Validation Loop
-
-### Level 1: Syntax & Style
-```bash
-# Python
-ruff check --fix .
-mypy src/
-
-# TypeScript
-eslint --fix .
-tsc --noEmit
-```
-
-**Exit Criteria**: Zero errors from all tools
-
-### Level 2: Unit Tests
-```bash
-# Python
-pytest tests/unit/ -v --cov=src --cov-report=term-missing
-
-# TypeScript
-npm test -- --coverage
-```
-
-**Exit Criteria**: All tests pass, >80% coverage
-
-### Level 3: Integration Tests
-```bash
-# Start dependencies
-docker-compose up -d
-
-# Run integration tests
-pytest tests/integration/ -v
-
-# Cleanup
-docker-compose down
-```
-
-**Exit Criteria**: All integration tests pass
-
-### Level 4: Manual Verification
-- [ ] Feature works end-to-end
-- [ ] Error cases handled gracefully
-- [ ] UI/UX is intuitive
-- [ ] Performance is acceptable
-
-## Iterate Until All Levels Pass
-If any level fails:
-1. Fix the issues
-2. Restart validation from that level
-3. Do NOT skip to next level
-4. Do NOT assume "it should work now"
-```
-- **Explanation**: Progressive validation with clear exit criteria and iteration instructions
-- **Applicability**: Include in all generated PRPs to ensure quality
-- **Modifications Needed**: Adjust tools/commands for specific project tech stack
+- **Explanation**: Docker Compose configuration with lifecycle hooks for vibesbox
+- **Applicability**: Add to existing docker-compose.yml
+- **Modifications Needed**:
+  - Verify image name and version
+  - Adjust volume paths
+  - Customize verification commands
 
 ## Security & Authentication Guidance
 
 From official documentation:
 
 ### Security Best Practices
-- **Source**: https://docs.claude.com/en/docs/claude-code/sub-agents
+- **Source**: https://code.visualstudio.com/docs/devcontainers/containers
 - **Key Practices**:
-  - **Tool Restrictions**: Limit each subagent to minimum required tools - don't grant Write/Bash to read-only researchers
-  - **Permissions Management**: Use `/permissions` command to deny tools at global level
-  - **Environment Variables**: Never hardcode credentials - always use env vars
-  - **MCP Security**: Local MCP servers (stdio) run in same security context as Claude Code
-- **Code Examples**: See subagent configuration examples above
-
-### Authentication Patterns
-- **Recommended Method**: Environment variables for all credentials
-- **Documentation**: https://docs.claude.com/en/docs/claude-code/settings
-- **Implementation Guide**:
-  1. Add to `.env` file (gitignored)
-  2. Reference in code via `os.environ.get("VAR_NAME")`
-  3. Document in README with `.env.example`
-- **Code Example**:
-```bash
-# .env.example
-ANTHROPIC_API_KEY=your-key-here
-ARCHON_URL=http://localhost:8051
-OPENAI_API_KEY=your-openai-key
-
-# In code
-import os
-api_key = os.environ.get("ANTHROPIC_API_KEY")
-if not api_key:
-    raise ValueError("ANTHROPIC_API_KEY not set")
+  - **Non-root users**: Always configure `remoteUser` in devcontainer.json to avoid running as root
+  - **Volume permissions**: Use post_start hooks to set correct ownership
+  - **Port exposure**: Only expose necessary ports (5901, 8000)
+  - **SSH tunneling**: For remote VNC access, use SSH tunnels instead of direct exposure
+- **Code Examples**:
+```json
+{
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=/workspace,target=/workspace,type=bind,consistency=cached"
+  ]
+}
 ```
+
+### VNC Security
+- **Source**: https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/7/html/system_administrators_guide/ch-tigervnc
+- **Recommended Method**: SSH tunneling
+- **Implementation**:
+```bash
+# On local machine - create SSH tunnel
+ssh -L 5901:localhost:5901 user@remote-host
+
+# Then connect VNC viewer to localhost:5901
+```
+- **Alternative**: VNC password (less secure, acceptable for local dev)
 
 ## Deployment & Configuration
 
 ### Environment Setup
-- **Source**: https://github.com/coleam00/Archon
+- **Source**: https://code.visualstudio.com/docs/devcontainers/create-dev-container
 - **Required Environment Variables**:
-  - `ANTHROPIC_API_KEY`: Claude API access
-  - `OPENAI_API_KEY`: OpenAI models (optional)
-  - `ARCHON_URL`: MCP server endpoint (default: http://localhost:8051)
-  - `SUPABASE_URL`: Database URL
-  - `SUPABASE_KEY`: Database auth key
+  - `DISPLAY`: X11 display number (`:1` for VNC)
+  - `VNC_PORT`: VNC server port (default: 5901)
 - **Configuration Files**:
-  - `.claude/settings.local.json` - Claude Code permissions
-  - `claude.json` - MCP server configurations
-- **Setup Guide**: https://github.com/coleam00/Archon#installation
+  - `.devcontainer/devcontainer.json`
+  - `.devcontainer/verify-vibesbox.sh`
+  - `docker-compose.yml`
+- **Setup Guide**: Follow Create a Dev Container tutorial
 
 ### Deployment Considerations
-- **Documentation**: https://docs.claude.com/en/docs/claude-code/
+- **Documentation**: https://code.visualstudio.com/remote/advancedcontainers/overview
 - **Supported Platforms**:
-  - macOS (native)
-  - Windows (native)
-  - Linux (native)
-- **Scaling Guidance**:
-  - Archon uses microservices architecture - can scale each service independently
-  - PostgreSQL + PGVector for RAG - horizontal scaling possible
-  - MCP servers can be local (stdio) or remote (HTTP)
+  - Linux (native Docker)
+  - macOS (Docker Desktop)
+  - Windows (WSL2 + Docker Desktop)
+- **Scaling Guidance**: N/A for single-container development environment
 
 ## Testing Guidance from Official Docs
 
 ### Testing Approach Recommended
-- **Source**: Context Engineering methodology
-- **Framework**: Depends on language (pytest for Python, jest for TypeScript)
+- **Source**: Multiple sources (Docker, VS Code, TigerVNC docs)
+- **Framework**: Bash scripts with error handling
 - **Patterns**:
-  - Unit tests for individual functions
-  - Integration tests for MCP tool calls
-  - End-to-end tests for complete workflows
-  - Mock external dependencies (Archon, OpenAI, etc.)
-- **Example Tests**: See validation loop examples above
+  - Container state verification before operations
+  - VNC display accessibility testing
+  - Screenshot capability verification
+  - Retry logic for async operations
+- **Example Tests**: See Code Examples section above
 
-### Mocking External Services
-- **Guide**: Standard mocking patterns for each language
-- **Tools Recommended**:
-  - Python: `pytest-mock`, `responses` for HTTP
-  - TypeScript: `jest.mock()`, `msw` for API mocking
-- **Examples**:
-```python
-# Python: Mock Archon MCP calls
-def test_rag_search(mocker):
-    mock_search = mocker.patch("mcp.archon.rag_search_knowledge_base")
-    mock_search.return_value = {
-        "success": True,
-        "results": [{"content": "test", "similarity_score": 0.9}]
-    }
-
-    result = search_documentation("FastAPI")
-    assert result["success"]
-    mock_search.assert_called_once()
-```
+### Verification Steps
+1. **Container Running**: Use `docker ps` to verify container state
+2. **VNC Accessible**: Use `xdpyinfo` to test display
+3. **Screenshot Works**: Use `import` to capture test image
+4. **Network Connectivity**: Verify ports 5901 and 8000 accessible
 
 ## Archon Sources Summary
 
-**Total Archon Sources Used**: 4
+**Total Archon Sources Used**: 0
 
-| Source ID | Title | Relevance | Sections Used |
-|-----------|-------|-----------|---------------|
-| 9a7d4217c64c9a0a | Anthropic Documentation | 10/10 | 3 |
-| b8565aff9938938b | GitHub - coleam00/context-engineering-intro | 10/10 | 2 |
-| 464a0ce4d22bf72f | Microsoft Agents Framework | 7/10 | 1 |
-| d60a71d62eb201d5 | Model Context Protocol - LLMs | 8/10 | 1 |
+Archon knowledge base was queried but did not contain relevant documentation for:
+- VS Code Dev Containers
+- Docker Compose lifecycle management
+- TigerVNC configuration
+- ImageMagick screenshot capture
+- Bash scripting for container management
+
+All documentation sourced from official web resources.
 
 ## External URLs Summary
 
-**Total External URLs**: 15
+**Total External URLs**: 28
 
 **By Category**:
-- Official Documentation: 4 (Claude Code, MCP, Archon, Context Engineering)
-- API References: 2 (MCP tools, Archon MCP)
-- Tutorials: 5 (Parallel agents, subagent deep dive, slash commands, context engineering, parallelization)
-- Best Practices: 4 (Context engineering guide, PRP methodology, Claude Code workflows, validation patterns)
+- Official Documentation: 15
+  - VS Code Dev Containers: 4
+  - Docker Compose: 4
+  - Docker CLI: 2
+  - TigerVNC: 3
+  - ImageMagick: 2
+- API References: 4
+- Tutorials: 5
+- Best Practices: 4
 
 ## Research Quality Assessment
 
-- **Documentation Coverage**: Complete
-- **Code Examples Available**: Yes - 15+ complete examples
-- **Version Information Current**: Yes - all 2025 documentation
-- **Security Guidance Found**: Yes - tool restrictions, environment variables
-- **Testing Guidance Found**: Yes - validation loops, mocking patterns
+- **Documentation Coverage**: Complete - all technologies well-documented
+- **Code Examples Available**: Yes - 15+ working examples
+- **Version Information Current**: Yes - all sources from 2024-2025
+- **Security Guidance Found**: Yes - SSH tunneling, non-root users
+- **Testing Guidance Found**: Yes - comprehensive verification approaches
 
 **Gaps Identified**:
-- Limited documentation on Task tool parallel invocation syntax (community patterns exist but not official docs)
-- Archon in beta - some features may not work 100%
-- No official migration guides for Claude Code version updates
+- No devcontainer-specific VNC integration examples (will need custom implementation)
+- Limited documentation on Docker Compose lifecycle hooks (new feature, less mature)
+- No all-in-one example combining all components
 
 **Recommendations**:
-- Monitor Claude Code changelog for Task tool updates
-- Follow Archon GitHub issues for beta stability improvements
-- Test parallel Task invocation patterns in development before production use
-- Create internal wiki documenting discovered patterns
+- Use provided code examples as starting templates
+- Test lifecycle hooks thoroughly (new Docker Compose feature)
+- Implement comprehensive error handling per Bash best practices
+- Follow progressive verification: container → VNC → screenshot
+- Document any custom solutions for future reference
 
 ---
 Generated: 2025-10-04
-Archon Sources Used: 4
-External URLs: 15
-Code Examples Found: 15
-Feature: prp_workflow_improvements
+Archon Sources Used: 0
+External URLs: 28
+Code Examples Found: 15+
+Feature: devcontainer_vibesbox_integration

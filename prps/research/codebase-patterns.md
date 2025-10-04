@@ -1,1007 +1,592 @@
-# Codebase Patterns: prp_workflow_improvements
+# Codebase Patterns: devcontainer_vibesbox_integration
 
 ## Search Summary
 
 ### Archon Code Examples Searched
-- Query 1: "parallel subagent execution" → 5 results found
-- Query 2: "command slash implementation" → 5 results found
-- Query 3: "task validation loops" → 5 results found
-- Query 4: "code extraction curator" → 5 results found
-- Query 5: "agent definition yaml frontmatter" → 3 results found
-- Query 6: "validation gates testing" → 3 results found
+- Query 1: "devcontainer lifecycle" → 5 results found (low relevance)
+- Query 2: "docker compose orchestration" → 5 results found (moderate relevance)
+- Query 3: "bash automation helpers" → 5 results found (environment setup patterns)
+- Query 4: "health check polling" → 5 results found (instrumentation patterns)
+- Query 5: "colored terminal output" → 5 results found (output formatting patterns)
+- Query 6: "progress indicator spinner" → 5 results found (low relevance)
 
 ### Local Codebase Searches
-- Pattern 1: "async.*def.*tool" in **/*.py → 0 matches (not Python focus)
-- Pattern 2: "prp-initial-*.md" in .claude/agents/ → 6 matches (all factory subagents)
-- Pattern 3: "pytest|test.*fixture" in **/*.py → 10 matches (test files)
-- Pattern 4: "parallel.*execution|concurrent.*agents" in **/*.md → 3 matches
+- Pattern 1: `.devcontainer/**/*.sh` → 5 scripts found (postCreate, setup-network, test-docker, test-network, validate-config)
+- Pattern 2: `mcp-vibesbox-server/**/*.sh` → 0 scripts found (Docker-based, no shell scripts)
+- Pattern 3: `^function |^[a-z_]+\(\)` in `.devcontainer/scripts/*.sh` → 4 helper functions found
+- Pattern 4: Docker compose files → Found mcp-vibesbox-server/docker-compose.yml
 
 ### Total Patterns Found
-- Archon Examples: 26
-- Local Examples: 19
-- Combined Insights: 12 documented patterns
+- Archon Examples: 30 code examples reviewed
+- Local Examples: 6 files analyzed
+- Combined Insights: 8 actionable patterns documented
 
 ## Similar Implementations Found
 
-### Pattern 1: INITIAL.md Factory Workflow (Complete Multi-Subagent System)
+### Pattern 1: Helper Function Output Formatting
 
-**Source**: [Local Files: CLAUDE.md lines 105-297, prps/PRP_create_initial_md_workflow.md]
+**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/postCreate.sh]
 
 **What It Demonstrates**:
-Fully implemented 6-subagent orchestration system with parallel execution, Archon integration, autonomous operation, and quality gates. This is the PRIMARY pattern to follow.
+Consistent colored output pattern for status messages with emojis and ANSI color codes.
 
 **Code Structure**:
 ```
-.claude/
-├── agents/                                    # Subagent definitions
-│   ├── prp-initial-feature-clarifier.md      # Phase 1: Analysis
-│   ├── prp-initial-codebase-researcher.md    # Phase 2A: Patterns
-│   ├── prp-initial-documentation-hunter.md   # Phase 2B: Docs
-│   ├── prp-initial-example-curator.md        # Phase 2C: Code extraction
-│   ├── prp-initial-gotcha-detective.md       # Phase 3: Pitfalls
-│   └── prp-initial-assembler.md              # Phase 4: Synthesis
-├── commands/
-│   └── create-initial.md                     # Orchestrator (would be created)
-└── CLAUDE.md                                  # Workflow documentation
-```
-
-**Key Code Pattern - Subagent Definition**:
-```markdown
----
-name: prp-initial-example-curator
-description: USE PROACTIVELY for code example extraction and organization. Searches Archon and local codebase, EXTRACTS actual code to examples/{feature}/ directory, creates README with usage guidance. NOT just references - actual code files.
-tools: Read, Write, Glob, Grep, Bash, mcp__archon__rag_search_code_examples
-color: orange
----
-
-# PRP INITIAL.md Example Curator
-
-You are a code example extraction and organization specialist...
-
-## Primary Objective
-
-Search Archon and local codebase for relevant code examples, **EXTRACT** actual code to physical files in `examples/{feature}/` directory...
-```
-
-**Naming Convention**:
-- Files: `prp-initial-{responsibility}.md` (kebab-case)
-- Subagent names: `prp-initial-{responsibility}` (matches filename)
-- Output files: `{feature}-analysis.md`, `codebase-patterns.md` (kebab-case)
-- Directories: `prps/research/`, `examples/{feature}/` (snake_case for feature)
-- Tools: `Read, Write, Grep, Glob, Bash, mcp__archon__*` (exact names)
-- Colors: `orange, blue, green, purple, red, yellow` (subagent visual identity)
-
-**What to Mimic**:
-- YAML frontmatter structure (`name`, `description`, `tools`, `color`)
-- "USE PROACTIVELY" in description for autonomous behavior
-- Archon-first search strategy (check health, then search)
-- Short queries to Archon (2-5 keywords maximum)
-- Separate context windows per subagent (prevents pollution)
-- Phase-based execution (0=clarify, 1=analyze, 2=parallel research, 3=gotchas, 4=assemble, 5=deliver)
-- Quality gates (8+/10 required before proceeding)
-- Research document structure (`prps/research/{document}.md`)
-- Example extraction to physical files (not just references)
-
-**What to Adapt**:
-- Naming: Use `prp-gen-*` for generate-prp subagents, `prp-exec-*` for execute-prp subagents
-- Responsibilities: Tailor to PRP generation/execution needs vs INITIAL.md creation
-- Output locations: PRPs go to `prps/{feature}.md` not `prps/INITIAL_{feature}.md`
-- Tools: Execute-prp needs validation tools (Bash for running tests), generate-prp needs research tools
-
-### Pattern 2: Parallel Execution with Function Calls
-
-**Source**: [Archon: pydantic-ai ProcessPoolExecutor example, Local: CLAUDE.md Phase 2 section]
-
-**What It Demonstrates**:
-How to invoke multiple subagents in a SINGLE message using parallel function_calls to achieve true concurrent execution.
-
-**Example from Codebase**:
-```markdown
-# From CLAUDE.md lines 172-181
-#### Phase 2: Parallel Research (CRITICAL PHASE)
-
-**Subagents**: THREE simultaneously
-- `prp-initial-codebase-researcher`
-- `prp-initial-documentation-hunter`
-- `prp-initial-example-curator`
-
-⚠️ **CRITICAL**: Invoke all three in SINGLE message using parallel tool invocation
+.devcontainer/
+├── scripts/
+│   ├── postCreate.sh          # Main setup script with helpers
+│   ├── test-docker.sh         # Docker validation
+│   ├── test-network.sh        # Network connectivity tests
+│   └── setup-network.sh       # Network creation/connection
 ```
 
 **Key Code Pattern**:
-```python
-# Conceptual pattern (actual implementation in Claude Code orchestrator)
-# From feature-analysis.md lines 150-169
-invoke_agents([
-    {
-        "name": "prp-gen-codebase-researcher",
-        "input": "prps/research/feature-analysis.md",
-        "output": "prps/research/codebase-patterns.md"
-    },
-    {
-        "name": "prp-gen-documentation-hunter",
-        "input": "prps/research/feature-analysis.md",
-        "output": "prps/research/documentation-links.md"
-    },
-    {
-        "name": "prp-gen-example-curator",
-        "input": "prps/research/feature-analysis.md",
-        "output": ["prps/research/examples-to-include.md", "examples/{feature}/*"]
-    }
-])
-```
-
-**Naming Convention**:
-- Parallel phase naming: `Phase 2: Parallel {Context}` (uppercase Phase)
-- Subagent invocation: Use agent name exactly as defined in frontmatter
-- Input/output specification: Always document what each agent reads/writes
-
-**What to Mimic**:
-- Single message invocation for parallel execution (critical for speed)
-- Clear input/output contracts for each subagent
-- Three agents maximum in parallel phase (proven to work)
-- Document which agents run in parallel vs sequential
-- Use Phase 2 for parallel work (after initial analysis, before final assembly)
-
-**What to Adapt**:
-- For execute-prp: Parallel task execution groups (not research agents)
-- Different agents: Code implementers vs researchers
-- Dependency analysis: Determine which tasks can run in parallel
-
-### Pattern 3: Archon MCP Integration
-
-**Source**: [Local: .claude/commands/generate-prp.md lines 12-50, CLAUDE.md Archon section]
-
-**What It Demonstrates**:
-How to integrate Archon MCP for knowledge base search, project tracking, and task management. Always check health first, use as primary source, fallback to web search.
-
-**Example from Codebase**:
-```markdown
-# From generate-prp.md lines 12-25
-### 0. Check Knowledge Sources (FIRST)
 ```bash
-# CRITICAL: Check if Archon MCP is available
-mcp__archon__health_check()
-```
+# Helper functions for colored output
+info()    { printf "\033[36mℹ [INFO]\033[0m  %s\n" "$*"; }
+success() { printf "\033[32m✔ [OK]\033[0m    %s\n" "$*"; }
+warn()    { printf "\033[33m⚠ [WARN]\033[0m  %s\n" "$*"; }
+error()   { printf "\033[31m✖ [ERROR]\033[0m %s\n" "$*"; }
 
-**If Archon Available:**
-- Use Archon RAG as PRIMARY research source
-- Benefits: Faster, more accurate, curated documentation
-- Web search only for gaps in Archon knowledge
-
-**If Archon Not Available:**
-- Use web_search as primary source
-- Document URLs for future Archon ingestion
-```
-
-**Key Code Pattern**:
-```python
-# From CLAUDE.md Archon Integration section
-# Always check health first
-health = health_check()
-archon_available = health["status"] == "healthy"
-
-# If Archon available
-if archon_available:
-    # Create project for tracking
-    project = manage_project("create", title="Feature", description="...")
-
-    # Create tasks (one per phase)
-    task1 = manage_task("create", project_id=project_id, title="Phase 1", task_order=10)
-
-    # Update task status: "todo" → "doing" → "done"
-    manage_task("update", task_id=task1.id, status="doing")
-
-    # Search knowledge base (SHORT QUERIES!)
-    results = rag_search_knowledge_base(query="async patterns", match_count=5)
-
-    # Search code examples
-    examples = rag_search_code_examples(query="FastAPI route", match_count=3)
-
-    # Store final output
-    manage_document("create", title="PRP", content="...", project_id=project_id)
+# Usage example
+info "Checking vibesbox status..."
+success "Container started"
+warn "VNC server not ready yet"
+error "Failed to connect to Docker daemon"
 ```
 
 **Naming Convention**:
-- MCP tools: `mcp__archon__{function_name}` (double underscore prefix)
-- Health check: Always `mcp__archon__health_check()` first
-- Queries: 2-5 keywords maximum (e.g., "async patterns" not "how to implement async patterns in Python")
-- Task status: `"todo"`, `"doing"`, `"review"`, `"done"` (exact database values)
-- Task order: 0-100 (higher = higher priority)
+- Files: snake_case with hyphens (test-docker.sh, setup-network.sh)
+- Functions: lowercase, short verbs (info, success, warn, error)
+- Variables: UPPERCASE for globals (DOCKER_PATH, CONTAINER_ID)
+- Variables: lowercase for locals (server, container_name)
 
 **What to Mimic**:
-- Health check FIRST before any Archon operations
-- Short, focused search queries (2-5 keywords)
-- Use RAG for documentation, code examples separately
-- Create Archon project for each workflow execution
-- Update task status as work progresses
-- Store final artifacts in Archon (PRPs, INITIAL.md files)
-- Pass project_id to subagents for context
+- Exact color codes and emoji symbols for consistency
+- printf formatting pattern (not echo)
+- Four-function pattern: info, success, warn, error
+- ANSI escape sequences: `\033[36m` (cyan), `\033[32m` (green), `\033[33m` (yellow), `\033[31m` (red)
+- Reset code: `\033[0m`
 
 **What to Adapt**:
-- For execute-prp: Track implementation tasks in Archon
-- For generate-prp: Track research tasks in Archon
-- Different query patterns: PRP generation vs execution needs
-- Task breakdown: Research phases vs implementation phases
+- Add progress indicator function for long operations
+- Consider adding debug() function for verbose output
+- May need timeout indicators for health checks
 
-### Pattern 4: Code Extraction to Physical Files
+### Pattern 2: Docker State Detection
 
-**Source**: [Local: .claude/agents/prp-initial-example-curator.md]
+**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/test-docker.sh]
 
 **What It Demonstrates**:
-How to EXTRACT actual code to physical files instead of just referencing them. Critical for usability - developers need runnable code, not just pointers.
+Comprehensive Docker connectivity and permission checking pattern.
 
 **Code Structure**:
 ```bash
-examples/{feature_name}/
-├── README.md                    # Comprehensive usage guide
-├── {pattern_1}.py               # Extracted code file 1
-├── {pattern_2}.py               # Extracted code file 2
-├── {pattern_3}.py               # Extracted code file 3
-└── test_{pattern}.py            # Test example if found
-```
+# Test Docker CLI access
+if command -v docker &>/dev/null; then
+    echo "✅ Docker CLI found: $(which docker)"
 
-**Key Code Pattern**:
-```python
-# From prp-initial-example-curator.md lines 73-101
-# Create examples directory
-Bash(f"mkdir -p examples/{feature_name}")
+    # Test Docker version
+    if docker --version &>/dev/null; then
+        echo "✅ Docker version: $(docker --version)"
+    fi
 
-# For each example found:
-# 1. Read source
-source_content = Read("path/to/source/file.py")
+    # Test Docker daemon connectivity
+    if docker info &>/dev/null; then
+        echo "✅ Docker daemon accessible"
+    else
+        echo "❌ Docker daemon not accessible"
+    fi
+fi
 
-# 2. Extract relevant section (lines or full file)
-if specific_pattern:
-    # Extract specific lines
-    code = extract_lines(source_content, start_line, end_line)
-else:
-    # Use entire file if small and relevant
-    code = source_content
+# Test Docker socket permissions
+if ls -la /var/run/docker.sock &>/dev/null; then
+    echo "✅ Docker socket found"
+    if [ -w /var/run/docker.sock ]; then
+        echo "✅ Docker socket is writable"
+    fi
+fi
 
-# 3. Create physical file in examples directory
-Write(f"examples/{feature_name}/pattern_name.py", code)
-
-# 4. Add source attribution as comment
-attribution = f"""# Source: {original_file}
-# Lines: {start_line}-{end_line}
-# Pattern: {what_it_demonstrates}
-
-{code}
-"""
-```
-
-**README.md Structure**:
-```markdown
-# {Feature Name} - Code Examples
-
-## Overview
-This directory contains extracted code examples to reference during {feature_name} implementation. These are REAL code files extracted from working implementations, not pseudocode.
-
-## Files in This Directory
-
-| File | Source | Purpose | Relevance |
-|------|--------|---------|-----------|
-| {file1}.py | {source_path}:{lines} | {what_it_shows} | {X/10} |
-
-## Detailed Example Guidance
-
-### {file1}.py - {Pattern Name}
-
-**Source**: `{original_file_path}` (lines {X}-{Y})
-
-**What to Mimic**:
-- {Specific technique 1}
-- {Specific technique 2}
-
-**What to Adapt**:
-- {Different requirements}
+# Test group membership
+if groups | grep -q docker; then
+    echo "✅ User is in docker group"
+fi
 ```
 
 **Naming Convention**:
-- Directory: `examples/{feature_name}/` (snake_case)
-- Files: `{descriptive_pattern_name}.py` (snake_case, descriptive)
-- README: Always `README.md` (uppercase)
-- Attribution comments: `# Source:`, `# Lines:`, `# Pattern:` (exact format)
+- Test scripts: `test-{component}.sh`
+- Boolean checks: `if command -v ... &>/dev/null`
+- Error suppression: `&>/dev/null` for silent checks
 
 **What to Mimic**:
-- EXTRACT to physical files, not just markdown references
-- Include source attribution in every file
-- Create comprehensive README with "what to mimic" guidance
-- Table of contents in README showing all files
-- Relevance score (X/10) for each example
-- Detailed guidance per file explaining the pattern
+- Multi-level validation: CLI → version → daemon → socket → permissions
+- Silent checks with `&>/dev/null` followed by verbose output
+- Progressive validation (don't check daemon if CLI missing)
+- Graceful degradation (continue even if checks fail)
 
 **What to Adapt**:
-- For generate-prp: Extract implementation patterns from codebase
-- For execute-prp: Not applicable (execute uses examples, doesn't create them)
-- Different file types: .ts, .tsx, .py, .md depending on tech stack
-- Example relevance: Score based on similarity to new feature
+- Apply same pattern to vibesbox: container existence → running state → VNC port → screenshot
+- Return structured data (not just echo) for programmatic use
+- Add timeout mechanism for health checks
 
-### Pattern 5: Current generate-prp Command Structure
+### Pattern 3: Network Setup & Validation
 
-**Source**: [Local: .claude/commands/generate-prp.md]
-
-**What It Demonstrates**:
-Existing PRP generation approach - sequential research with Archon integration. Shows current state to improve upon.
-
-**Key Code Pattern**:
-```markdown
-# From generate-prp.md lines 10-56
-## Research Process
-
-### 0. Check Knowledge Sources (FIRST)
-# CRITICAL: Check if Archon MCP is available
-
-### 1. Knowledge Research (Archon-First Approach)
-**When Archon is Available:**
-1. Search knowledge base for relevant documentation
-2. Search for code examples and implementations
-3. Use web_search ONLY for gaps
-
-### 2. Codebase Analysis
-- Search for similar features/patterns in the codebase
-- Identify files to reference in PRP
-- Note existing conventions to follow
-
-### 3. User Clarification (if needed)
-```
-
-**Naming Convention**:
-- Command files: `{action}-{noun}.md` (kebab-case, e.g., `generate-prp.md`)
-- Research phases: Numbered (0, 1, 2, 3...)
-- Output location: `PRPs/{feature-name}.md`
-- Template: `PRPs/templates/prp_base.md`
-
-**What to Mimic**:
-- Archon health check FIRST (line 14)
-- Research phases structure (0-3)
-- Archon-first approach with web fallback
-- ULTRATHINK step before writing PRP (lines 94-96)
-- Quality checklist at end (lines 101-107)
-- Confidence scoring (1-10 scale, line 108)
-
-**What to Adapt**:
-- SEQUENTIAL → PARALLEL research (apply factory Phase 2 pattern)
-- Reference → EXTRACT code examples (apply curator pattern)
-- Single agent → Multi-subagent (apply factory architecture)
-- Manual research → Systematic (apply 6-subagent workflow)
-- No gotcha detection → Dedicated detective subagent
-
-### Pattern 6: Current execute-prp Command Structure
-
-**Source**: [Local: .claude/commands/execute-prp.md]
+**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/setup-network.sh]
 
 **What It Demonstrates**:
-Existing PRP execution approach - sequential with validation loops. Shows current state to improve upon.
+Idempotent network creation and connection pattern with error handling.
 
-**Key Code Pattern**:
-```markdown
-# From execute-prp.md
-## Execution Process
-
-1. **Load PRP**
-   - Read the specified PRP file
-   - Understand all context and requirements
-
-2. **ULTRATHINK**
-   - Think hard before you execute the plan
-   - Break down complex tasks into smaller steps using TodoWrite
-   - Identify implementation patterns from existing code
-
-3. **Execute the plan**
-   - Implement all the code
-
-4. **Validate**
-   - Run each validation command
-   - Fix any failures
-   - Re-run until all pass
-
-5. **Complete**
-   - Ensure all checklist items done
-   - Run final validation suite
-```
-
-**Naming Convention**:
-- Command: `execute-{noun}.md` (kebab-case)
-- Process steps: Numbered (1-6)
-- Validation: "Run → Fix → Re-run" loop pattern
-- Task tracking: TodoWrite (but should be Archon per ARCHON-FIRST RULE)
-
-**What to Mimic**:
-- ULTRATHINK phase before implementation (line 16-20)
-- Validation loops until passing (lines 26-29)
-- Final checklist verification (lines 31-35)
-- Can reference PRP again during execution (lines 37-39)
-
-**What to Adapt**:
-- TodoWrite → Archon task management (ARCHON-FIRST RULE)
-- SEQUENTIAL → PARALLEL execution (task dependency analysis)
-- Manual validation → Automated quality gates
-- No test generation → Automated test generation based on patterns
-- Single executor → Multiple parallel executors for independent tasks
-
-### Pattern 7: Validation Gate Patterns
-
-**Source**: [Local: infra/archon/python/tests/test_rag_simple.py, Archon: validation testing examples]
-
-**What It Demonstrates**:
-How to structure automated validation with pytest, fixtures, and quality gates.
-
-**Example from Codebase**:
-```python
-# From test_rag_simple.py lines 24-42
-@pytest.fixture
-def mock_supabase():
-    """Mock supabase client"""
-    client = MagicMock()
-    client.rpc.return_value.execute.return_value.data = []
-    return client
-
-@pytest.fixture
-def rag_service(mock_supabase):
-    """Create RAGService with mocked dependencies"""
-    with patch("src.server.utils.get_supabase_client", return_value=mock_supabase):
-        from src.server.services.search.rag_service import RAGService
-        service = RAGService(supabase_client=mock_supabase)
-        return service
-
-class TestRAGServiceCore:
-    """Core RAGService functionality tests"""
-
-    def test_initialization(self, rag_service):
-        """Test RAGService initializes correctly"""
-        assert rag_service is not None
-        assert hasattr(rag_service, "search_documents")
-```
-
-**Validation Commands Pattern**:
+**Code Structure**:
 ```bash
-# From generate-prp.md lines 85-92
-# Syntax/Style
-ruff check --fix && mypy .
+# Check if network exists
+if docker network ls | grep -q "vibes-network"; then
+    echo "✅ vibes-network already exists"
+else
+    echo "⚠️  vibes-network not found, creating it..."
+    if docker network create vibes-network 2>/dev/null; then
+        echo "✅ Created vibes-network"
+    else
+        echo "❌ Failed to create vibes-network (might already exist)"
+    fi
+fi
 
-# Unit Tests
-uv run pytest tests/ -v
+# Try to connect current container to network
+CONTAINER_ID=$(hostname)
+if docker network connect vibes-network "$CONTAINER_ID" 2>/dev/null; then
+    echo "✅ Connected to vibes-network"
+else
+    echo "⚠️  Could not connect to vibes-network (might already be connected)"
+fi
 ```
 
 **Naming Convention**:
-- Test files: `test_{module}.py` (snake_case with test_ prefix)
-- Fixtures: `mock_{service}`, `{service}_fixture` (descriptive)
-- Test classes: `Test{Module}{Aspect}` (PascalCase)
-- Test methods: `test_{scenario}` (snake_case)
-- Validation levels: Syntax → Unit → Integration (progressive)
+- Setup scripts: `setup-{component}.sh`
+- Variables for dynamic values: `CONTAINER_ID`, `NETWORK_NAME`
+- Error redirection: `2>/dev/null` for expected errors
 
 **What to Mimic**:
-- Progressive validation levels (syntax, unit, integration)
-- Fixture pattern for shared test setup
-- MagicMock for external dependencies
-- Context managers (with patch) for isolation
-- Descriptive test docstrings
-- Class-based test organization
-- Assert patterns (assert not None, assert hasattr)
+- Idempotent operations (safe to run multiple times)
+- Check-before-action pattern
+- Graceful handling of "already exists" errors
+- Clear success/failure messaging
 
 **What to Adapt**:
-- For generate-prp: Validate PRP quality (completeness, references, structure)
-- For execute-prp: Validate implementation (syntax, tests, integration)
-- Auto-generate tests based on codebase patterns
-- Iterative validation loops (run → fail → fix → re-run)
+- Apply to vibesbox: check container → create/start if needed
+- Configurable network name (environment variable)
+- Return exit codes for scripting
 
-### Pattern 8: Agent Orchestrator Pattern
+### Pattern 4: Docker Compose Configuration
 
-**Source**: [Local: CLAUDE.md INITIAL.md Factory section lines 127-157, 218-229]
+**Source**: [File: /Users/jon/source/vibes/mcp/mcp-vibesbox-server/docker-compose.yml]
 
 **What It Demonstrates**:
-How the main orchestrator (YOU, main Claude Code) coordinates subagents across phases.
+Complete vibesbox service definition with systemd, VNC, and network configuration.
 
-**Key Code Pattern**:
-```markdown
-# From CLAUDE.md lines 129-157
-### Immediate Recognition Actions
+**Code Structure**:
+```yaml
+services:
+  mcp-vibesbox-server:
+    image: vibes/mcp-vibesbox-server:latest
+    build: .
+    container_name: mcp-vibesbox-server
+    restart: unless-stopped
+    privileged: true
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - DAC_READ_SEARCH
+    stop_signal: SIGRTMIN+3
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${VIBES_PATH:-/workspace/vibes}:/workspace/vibes:rw
+      - mcp-vibesbox-workspace:/workspace
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    ports:
+      - "5901:5901"  # VNC server
+    command: ["/sbin/init"]
 
-When you detect an INITIAL.md creation request:
+networks:
+  default:
+    name: vibes-network
+    external: true
 
-1. ✅ **STOP** any other work immediately
-2. ✅ **ACKNOWLEDGE**: "I'll help create a comprehensive INITIAL.md using the factory workflow"
-3. ✅ **PROCEED** to Phase 0 (don't ask for permission)
-4. ✅ **NEVER** skip Phase 0 clarifications
-5. ✅ **NEVER** try to write INITIAL.md directly
-
-### The 5-Phase Workflow
-
-#### Phase 0: Recognition & Basic Clarification
-**Who handles this**: YOU (main Claude Code)
-
-**Your Actions**:
-1. Ask 2-3 clarifying questions
-2. ⚠️ **CRITICAL**: WAIT for user response - DO NOT PROCEED
-3. After user responds:
-   - Determine feature name (snake_case)
-   - Create directories: `prps/research/`, `examples/{feature}/`
-   - Check Archon: `health_check()`
-   - Create Archon project and 6 tasks if available
-   - Proceed to Phase 1
-```
-
-**Delivery Pattern**:
-```markdown
-# From CLAUDE.md lines 218-229
-#### Phase 5: Delivery & Next Steps
-
-**Who handles this**: YOU
-
-**Your Actions**:
-1. Present summary to user
-2. Show file locations
-3. Quality check summary
-4. Provide next steps (/generate-prp, /execute-prp)
-5. Update Archon with completion notes
-6. Store INITIAL.md as Archon document
+volumes:
+  mcp-vibesbox-workspace:
 ```
 
 **Naming Convention**:
-- Phases: `Phase 0` through `Phase 5` (numbered)
-- Orchestrator role: "YOU (main Claude Code)" - explicit
-- User interaction: Phase 0 only (autonomous after)
-- Critical markers: `⚠️ **CRITICAL**:`, `✅ **action**`, `❌ **DON'T**`
+- Service name: `mcp-vibesbox-server` (matches container name)
+- Network name: `vibes-network` (external, pre-existing)
+- Volume name: `{service}-workspace` pattern
+- Environment variables: `${VAR:-default}` syntax
 
 **What to Mimic**:
-- Immediate recognition of trigger patterns
-- Explicit orchestrator responsibilities ("YOU handles this")
-- Phase 0 clarifications BEFORE autonomous work
-- Directory creation at start of workflow
-- Archon setup (project + tasks) if available
-- Final delivery with summary and next steps
-- Storing results in Archon for future reference
+- Use environment variables for paths: `${VIBES_PATH:-/workspace/vibes}`
+- External network reference: `external: true`
+- Container naming convention: match service name
+- VNC port: 5901 (standard)
 
 **What to Adapt**:
-- For generate-prp: Recognize INITIAL.md file as input trigger
-- For execute-prp: Recognize PRP file as input trigger
-- Different phases: Research vs Implementation vs Testing
-- Quality gates between phases (don't proceed if score < 8/10)
+- Make network name configurable
+- Make VNC port configurable
+- Support overriding container name
 
-### Pattern 9: Error Handling and Fallbacks
+### Pattern 5: Tool Availability Checking
 
-**Source**: [Local: CLAUDE.md lines 263-277, feature-analysis.md Assumption 4]
+**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/postCreate.sh]
 
 **What It Demonstrates**:
-Graceful degradation when Archon unavailable, error handling patterns, fallback strategies.
+Comprehensive tool availability checking with version extraction.
 
-**Example from Codebase**:
-```markdown
-# From CLAUDE.md lines 259-262
-#### If Unavailable
-- Proceed without tracking
-- Workflow continues normally
+**Code Structure**:
+```bash
+# Check if tool exists
+if command -v docker &>/dev/null; then
+  DOCKER_PATH=$(which docker)
+  DOCKER_VER=$(docker --version 2>/dev/null | awk '{print $3}' | tr -d ',' || echo 'unknown')
+  success "Docker CLI: found at $DOCKER_PATH (v$DOCKER_VER)"
+else
+  error "Docker CLI: NOT found"
+fi
 
-### Error Handling
-If subagent fails:
-1. Log error with context
-2. Continue with partial results
-3. Document what's missing
-4. Offer regeneration option
-```
-
-**Archon Fallback Pattern**:
-```python
-# From feature-analysis.md lines 283-286 (Assumption 4)
-# Always check Archon health first, use as primary research source
-# Fall back to web search only when needed
-
-health = health_check()
-if health["status"] == "healthy":
-    # Use Archon RAG
-    results = rag_search_knowledge_base(query="topic")
-else:
-    # Fallback to web search
-    results = web_search("topic documentation")
-    # Document URLs for future Archon ingestion
+# Check Docker Compose (two possible commands)
+if command -v docker-compose &>/dev/null || docker compose version &>/dev/null; then
+  success "Docker Compose: available"
+else
+  warn "Docker Compose: NOT found"
+fi
 ```
 
 **Naming Convention**:
-- Error states: Document failures clearly
-- Fallback strategy: Primary → Secondary → Tertiary
-- Partial results: Continue with what worked
-- Regeneration: Offer option to retry
+- Path variables: `{TOOL}_PATH`
+- Version variables: `{TOOL}_VER`
+- Fallback values: `|| echo 'unknown'` or `|| echo 'not found'`
 
 **What to Mimic**:
-- Health check determines strategy (Archon vs web)
-- Workflows continue even if features unavailable
-- Log errors with context (which subagent, which phase)
-- Partial results better than no results
-- Offer regeneration for quality issues
+- `command -v` for existence check (portable)
+- `which` for path extraction
+- Version parsing with `awk` and `tr`
+- Multiple command variants (docker-compose vs docker compose)
+- Fallback to 'unknown' on version extraction failure
 
 **What to Adapt**:
-- For execute-prp: Validation failures → iterative fixes
-- For generate-prp: Research failures → alternative sources
-- Task failures: Continue other parallel tasks, document failed ones
-- Quality failures: Regenerate specific phase, not entire workflow
+- Check for ImageMagick (import command)
+- Check for netcat (nc command)
+- Verify vibesbox-specific dependencies
 
-### Pattern 10: Quality Gates and Scoring
+### Pattern 6: Container State Inspection
 
-**Source**: [Local: CLAUDE.md lines 279-296, generate-prp.md lines 101-109]
+**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/test-docker.sh]
 
 **What It Demonstrates**:
-How to implement quality gates that prevent low-quality outputs from proceeding to next phase.
+Extracting specific information from Docker using format strings.
 
-**Example from Codebase**:
-```markdown
-# From CLAUDE.md lines 279-296
-### Quality Gates
-
-Before delivery, verify:
-- [ ] Feature description comprehensive
-- [ ] Examples extracted with guidance
-- [ ] Documentation includes working examples
-- [ ] Gotchas documented with solutions
-- [ ] Follows INITIAL_EXAMPLE.md structure
-- [ ] Quality score: 8+/10
-
-### Success Metrics
-
-- ✅ Total time: <10 minutes
-- ✅ Quality: 8+/10
-- ✅ Examples: 2-4 extracted
-- ✅ Documentation: 3-5 sources
-- ✅ Gotchas: 2-5 documented
-- ✅ PRP generation works first attempt
-```
-
-**Scoring Pattern**:
-```markdown
-# From generate-prp.md lines 108-109
-Score the PRP on a scale of 1-10 (confidence level to succeed in one-pass implementation using claude codes)
+**Code Structure**:
+```bash
+if docker info &>/dev/null; then
+    echo "✅ Docker daemon accessible"
+    echo "  Container runtime: $(docker info --format '{{.ServerVersion}}')"
+    echo "  Total containers: $(docker info --format '{{.Containers}}')"
+fi
 ```
 
 **Naming Convention**:
-- Checklists: `- [ ]` markdown checkboxes
-- Metrics: `✅` for success criteria
-- Scoring: 1-10 scale (8+ required to proceed)
-- Time limits: `<10 minutes` for INITIAL.md, adjust per workflow
+- Format templates: `--format '{{.FieldName}}'`
+- Nested fields: `{{.Parent.Child}}`
 
 **What to Mimic**:
-- Checklist-based quality verification
-- Quantitative metrics (time, count, score)
-- 8+/10 threshold for quality
-- Regeneration option if below threshold
-- Success criteria measurable and specific
+- Use `--format` for structured data extraction
+- Common docker inspect patterns:
+  - `docker inspect --format '{{.State.Running}}' container_name`
+  - `docker inspect --format '{{.State.Status}}' container_name`
+  - `docker inspect --format '{{.NetworkSettings.Networks}}' container_name`
+- Single-line extraction with command substitution
 
 **What to Adapt**:
-- For generate-prp: PRP completeness checklist
-- For execute-prp: Implementation validation gates
-- Different scoring criteria per phase
-- Time targets: Research vs Implementation vs Testing
+- Check if vibesbox container exists: `docker ps -a --filter name=mcp-vibesbox-server --format '{{.Names}}'`
+- Check running state: `docker inspect --format '{{.State.Running}}' mcp-vibesbox-server`
+- Get container uptime: `docker inspect --format '{{.State.StartedAt}}' mcp-vibesbox-server`
 
-### Pattern 11: File Organization and Naming
+### Pattern 7: Network Connectivity Testing
 
-**Source**: [Local: All factory files, CLAUDE.md structure]
+**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/test-network.sh]
 
 **What It Demonstrates**:
-Consistent file organization across commands, subagents, research outputs, and examples.
+Systematic network connectivity testing with multiple protocols.
 
-**Directory Structure**:
-```
-.claude/
-├── agents/                    # All subagent definitions
-│   ├── prp-initial-*.md      # Factory subagents
-│   ├── prp-gen-*.md          # Generate-prp subagents (NEW)
-│   └── prp-exec-*.md         # Execute-prp subagents (NEW)
-├── commands/                  # Command entry points
-│   ├── create-initial.md     # Factory orchestrator
-│   ├── generate-prp.md       # Current (to enhance)
-│   └── execute-prp.md        # Current (to enhance)
+**Code Structure**:
+```bash
+# Test DNS resolution and ping
+MCP_SERVERS=("azure-mcp-server" "terraform-mcp-server" "mcp-vibes-server")
 
-prps/
-├── research/                  # Research artifacts
-│   ├── feature-analysis.md
-│   ├── codebase-patterns.md
-│   ├── documentation-links.md
-│   ├── examples-to-include.md
-│   └── gotchas.md
-├── templates/
-│   └── prp_base.md           # PRP template
-├── INITIAL_{feature}.md      # Input files
-└── {feature}.md              # Output PRPs
+for server in "${MCP_SERVERS[@]}"; do
+    if ping -c 1 -W 2 "$server" &>/dev/null; then
+        echo "✅ $server - reachable"
+    else
+        echo "❌ $server - not reachable"
+    fi
+done
 
-examples/
-└── {feature}/                 # Extracted code
-    ├── README.md
-    └── {pattern}.{ext}
+# Test HTTP connectivity
+if curl -s -o /dev/null -w "%{http_code}" http://openmemory-ui:3000 | grep -q "200"; then
+    echo "✅ openmemory-ui:3000 - HTTP 200"
+else
+    echo "❌ openmemory-ui:3000 - not responding"
+fi
 ```
 
 **Naming Convention**:
-- Subagents: `prp-{workflow}-{responsibility}.md` (kebab-case)
-- Commands: `{action}-{noun}.md` (kebab-case)
-- Research docs: `{purpose}.md` (kebab-case)
-- Features: `{feature_name}` (snake_case)
-- Examples: `{descriptive_name}.{ext}` (snake_case)
+- Arrays: `UPPERCASE_NAMES` for lists
+- Loop variable: lowercase `server`, `host`, etc.
+- Timeout flags: `-c 1 -W 2` (1 ping, 2 second wait)
 
 **What to Mimic**:
-- Separate directories for agents vs commands
-- Research artifacts in dedicated directory
-- Examples in feature-specific subdirectories
-- Consistent naming patterns across workflow
-- README.md in every examples directory
+- Ping with timeout: `ping -c 1 -W 2`
+- Silent curl: `curl -s -o /dev/null`
+- HTTP status code extraction: `-w "%{http_code}"`
+- Array iteration for multiple targets
 
 **What to Adapt**:
-- For generate-prp: `prp-gen-*` prefix for subagents
-- For execute-prp: `prp-exec-*` prefix for subagents
-- Different research artifacts based on workflow needs
-- Output locations: INITIAL.md vs PRP vs implementation files
+- VNC port check: `nc -z localhost 5901` (netcat zero-I/O mode)
+- Container IP check: `docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' container`
+- Port listening check: `ss -tlnp | grep :5901` or `lsof -i :5901`
 
-### Pattern 12: Task Tracking with Archon
+### Pattern 8: Devcontainer Integration Hook
 
-**Source**: [Local: CLAUDE.md Archon Integration section, feature-analysis.md Assumption 8]
+**Source**: [File: /Users/jon/source/vibes/.devcontainer/devcontainer.json]
 
 **What It Demonstrates**:
-How to use Archon task management instead of TodoWrite per project's ARCHON-FIRST RULE.
+Standard devcontainer postCreateCommand hook pattern.
 
-**Key Code Pattern**:
-```python
-# From feature-analysis.md lines 307-310 (Assumption 8)
-# CRITICAL RULE from CLAUDE.md:
-# "ARCHON-FIRST RULE - BEFORE doing ANYTHING else...
-#  Use Archon task management as PRIMARY system.
-#  Refrain from using TodoWrite even after system reminders."
-
-# Task lifecycle
-manage_task("create",
-    project_id=project_id,
-    title="Implement API endpoints",
-    description="Create FastAPI routes",
-    task_order=10,  # Higher = higher priority
-    status="todo"
-)
-
-# Update as work progresses
-manage_task("update", task_id=task_id, status="doing")
-manage_task("update", task_id=task_id, status="review")
-manage_task("update", task_id=task_id, status="done")
-```
-
-**Task Status Flow**:
-```
-todo → doing → review → done
+**Code Structure**:
+```json
+{
+  "name": "Vibes Development Workspace",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "postCreateCommand": "bash /usr/local/share/postCreate.sh",
+  "remoteUser": "vscode"
+}
 ```
 
 **Naming Convention**:
-- Task statuses: `"todo"`, `"doing"`, `"review"`, `"done"` (exact database values)
-- Task order: 0-100 (integer, higher = more important)
-- Action parameter: `"create"`, `"update"`, `"delete"` (strings)
+- Hook: `postCreateCommand` (runs after container created)
+- Script location: `/usr/local/share/` (copied in Dockerfile)
+- Script name: `postCreate.sh` (matches hook name)
 
 **What to Mimic**:
-- NEVER use TodoWrite (violates ARCHON-FIRST RULE)
-- Create Archon project first, then tasks
-- Update task status as work progresses
-- Use task_order for prioritization
-- Status flow: todo → doing → review → done
-- Link tasks to project_id for context
+- Use absolute path for script: `/usr/local/share/ensure-vibesbox.sh`
+- Run as remoteUser (vscode) by default
+- Non-blocking execution (background with `&` if needed)
 
 **What to Adapt**:
-- For generate-prp: Research tasks (analyze, search, extract, assemble)
-- For execute-prp: Implementation tasks (code, test, validate, deploy)
-- Task granularity: 30 min to 4 hours of work each
-- Parallel tasks: Mark with same task_order for simultaneous execution
+- Chain multiple scripts: `bash /usr/local/share/postCreate.sh && bash /usr/local/share/ensure-vibesbox.sh`
+- OR: Integrate vibesbox check into existing postCreate.sh
+- Consider separate script for modularity
 
 ## Architectural Patterns
 
 ### Service Layer Organization
 
-**Pattern Observed**: Vertical slice architecture with feature-owned services
+**Pattern Observed**: Scripts are modular and single-purpose, with helper functions defined at the top.
 
 **Example from Codebase**:
-```typescript
-// From archon-ui-main/src/features/projects/services/projectService.ts
-export const projectService = {
-  async listProjects(): Promise<Project[]> { ... },
-  async getProject(projectId: string): Promise<Project> { ... },
-  async createProject(data: CreateProjectRequest): Promise<Project> { ... },
-  async updateProject(id: string, updates: Partial<Project>): Promise<Project> { ... },
-  async deleteProject(id: string): Promise<void> { ... },
-}
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ┌───────────────────────────────────────────────────────────────────┐
+# │                        Script Title                                │
+# └───────────────────────────────────────────────────────────────────┘
+
+#── helper functions ────────────────────────────────────────────────
+info()    { printf "\033[36mℹ [INFO]\033[0m  %s\n" "$*"; }
+success() { printf "\033[32m✔ [OK]\033[0m    %s\n" "$*"; }
+warn()    { printf "\033[33m⚠ [WARN]\033[0m  %s\n" "$*"; }
+error()   { printf "\033[31m✖ [ERROR]\033[0m %s\n" "$*"; }
+
+#── main logic ──────────────────────────────────────────────────────
+info "Starting operation..."
+# ... implementation ...
+success "Operation complete!"
 ```
 
-**Application to prp_workflow_improvements**:
-Generate-prp and execute-prp should follow service-oriented patterns:
-- Each subagent has clear input/output contracts
-- Orchestrator coordinates services, doesn't implement logic
-- Research services (Archon, web) abstracted from orchestrator
-- Validation services separate from execution services
+**Application to devcontainer_vibesbox_integration**:
+- Create `ensure-vibesbox.sh` with same structure
+- Define helpers at top (reuse existing pattern)
+- Organize into sections with ASCII art headers
+- Keep functions small and testable
 
 ### Data Access Patterns
 
-**Pattern Observed**: Archon MCP tools for knowledge access, local file operations for code
+**Pattern Observed**: Use Docker CLI as API, parse output with format strings and awk/grep.
 
 **Example from Codebase**:
-```python
-# Archon RAG for documentation
-results = mcp__archon__rag_search_knowledge_base(
-    query="FastAPI patterns",  # SHORT queries
-    match_count=5
-)
+```bash
+# Direct API calls
+CONTAINER_EXISTS=$(docker ps -a --filter name=mcp-vibesbox-server --format '{{.Names}}' 2>/dev/null)
+CONTAINER_RUNNING=$(docker inspect --format '{{.State.Running}}' mcp-vibesbox-server 2>/dev/null)
 
-# Local file search for code patterns
-files = Grep(
-    pattern="async.*def.*api",
-    glob="**/*.py",
-    output_mode="files_with_matches"
-)
+# Parsing with awk
+DOCKER_VER=$(docker --version 2>/dev/null | awk '{print $3}' | tr -d ',')
 
-# Read specific file
-content = Read("/absolute/path/to/file.py")
+# Using grep for boolean checks
+if docker network ls | grep -q "vibes-network"; then
+    # network exists
+fi
 ```
 
 **Recommendations**:
-- Use Archon for: Past PRPs, documentation, code examples, lessons learned
-- Use Grep for: Local codebase pattern matching
-- Use Read for: Extracting specific code sections
-- Use Write for: Creating research documents, extracted examples
-- Use Bash for: Running validation commands (pytest, ruff, mypy)
+- Use `docker inspect --format` for structured data
+- Use `docker ps --filter` for existence checks
+- Parse JSON output with `jq` if complex (optional)
+- Suppress errors with `2>/dev/null` for expected failures
+- Store results in variables for reuse
 
 ### Error Handling Patterns
 
-**Pattern Observed**: Fail-forward with detailed logging, graceful degradation
+**Pattern Observed**: Graceful degradation with clear error messages and non-blocking failures.
 
 **Example from Codebase**:
-```markdown
-# From CLAUDE.md Error Handling section
-**When to Fail Fast and Loud**:
-- Service startup failures
-- Missing configuration
-- Invalid data that would corrupt state
+```bash
+# Pattern 1: Try operation, warn if fails but continue
+if docker network connect vibes-network "$CONTAINER_ID" 2>/dev/null; then
+    echo "✅ Connected to vibes-network"
+else
+    echo "⚠️  Could not connect to vibes-network (might already be connected)"
+fi
 
-**When to Complete but Log Detailed Errors**:
-- Batch processing (crawling, document processing)
-- Background tasks
-- Optional features
+# Pattern 2: Check before action, provide context
+if docker info &>/dev/null; then
+    success "Docker daemon accessible"
+else
+    warn "Docker daemon not accessible"
+    warn "This might be expected in some devcontainer setups"
+fi
 
-**Critical Nuance**: Never accept corrupted data
-- Skip failed item entirely rather than storing corrupted data
+# Pattern 3: Set errexit but disable for expected failures
+set -euo pipefail
+if some_command 2>/dev/null || true; then
+    # won't exit script if command fails
+fi
 ```
 
 **Best Practices Identified**:
-- Subagent failures: Log, continue with partial results, offer regeneration
-- Archon unavailable: Fall back to web search, document URLs for later ingestion
-- Validation failures: Iterative fixes with detailed error messages
-- Quality failures: Regenerate specific phase, not entire workflow
-- User cancellation: Save partial progress, allow resume
+- Use `set -euo pipefail` for safety
+- Disable errexit selectively with `|| true`
+- Provide context in error messages (why it might fail)
+- Don't block devcontainer startup on vibesbox failures
+- Log errors but continue execution
 
 ### Testing Patterns
 
-**Test File Organization**: Mirror source structure in tests/ subdirectory
+**Test File Organization**: Test scripts colocated with main scripts in `.devcontainer/scripts/`
 
 **Fixture Patterns**:
-```python
-# From test_rag_simple.py
-@pytest.fixture
-def mock_supabase():
-    """Mock external dependencies"""
-    client = MagicMock()
-    client.rpc.return_value.execute.return_value.data = []
-    return client
+```bash
+# Test data as arrays
+MCP_SERVERS=("azure-mcp-server" "terraform-mcp-server" "mcp-vibes-server")
 
-@pytest.fixture
-def service_under_test(mock_supabase):
-    """Create service with mocked dependencies"""
-    with patch("module.get_client", return_value=mock_supabase):
-        from module import Service
-        return Service(client=mock_supabase)
+# Test iteration
+for server in "${MCP_SERVERS[@]}"; do
+    # run test
+done
 ```
 
 **Test Structure**:
-- Naming: `test_{feature}_{scenario}.py`
-- Organization: Class-based (`Test{Module}{Aspect}`)
-- Fixtures: Reusable setup with clear names
-- Assertions: Descriptive and specific
-- Async: Use `@pytest.mark.asyncio` for async tests
+- Naming: test-{component}.sh
+- Organization: Same directory as implementation
+- Fixtures: Inline arrays or variables at top
+- Assertions: Visual output with ✅/❌ emojis
 
 ## File Organization
 
 ### Typical Structure for Similar Features
 
 ```
-vibes/
-├── .claude/
-│   ├── agents/
-│   │   ├── prp-gen-feature-analyzer.md         # Phase 1
-│   │   ├── prp-gen-codebase-researcher.md      # Phase 2A
-│   │   ├── prp-gen-documentation-hunter.md     # Phase 2B
-│   │   ├── prp-gen-example-curator.md          # Phase 2C
-│   │   ├── prp-gen-gotcha-detective.md         # Phase 3
-│   │   ├── prp-gen-assembler.md                # Phase 4
-│   │   ├── prp-exec-task-analyzer.md           # Execute Phase 1
-│   │   ├── prp-exec-implementer-*.md           # Execute Phase 2 (parallel)
-│   │   └── prp-exec-validator.md               # Execute Phase 3
-│   └── commands/
-│       ├── generate-prp.md                      # Enhanced orchestrator
-│       └── execute-prp.md                       # Enhanced orchestrator
-├── prps/
-│   ├── research/                                # Research artifacts
-│   │   ├── feature-analysis.md
-│   │   ├── codebase-patterns.md
-│   │   ├── documentation-links.md
-│   │   ├── examples-to-include.md
-│   │   └── gotchas.md
-│   ├── templates/
-│   │   └── prp_base.md
-│   ├── INITIAL_{feature}.md                     # Input to generate-prp
-│   └── {feature}.md                             # Output from generate-prp
-└── examples/
-    └── {feature}/                               # Extracted code
-        ├── README.md
-        └── {pattern}.{ext}
+.devcontainer/
+├── devcontainer.json           # Main config (postCreateCommand hook)
+├── docker-compose.yml          # Devcontainer service definition
+└── scripts/
+    ├── postCreate.sh           # Main setup (calls other scripts)
+    ├── ensure-vibesbox.sh      # NEW: Vibesbox lifecycle management
+    ├── check-vibesbox.sh       # NEW: Health checking logic
+    ├── setup-network.sh        # Network setup (existing)
+    ├── test-docker.sh          # Docker validation (existing)
+    └── test-network.sh         # Network tests (existing)
+
+mcp/mcp-vibesbox-server/
+├── docker-compose.yml          # Vibesbox service definition
+├── Dockerfile                  # Image build instructions
+└── (server code)
+
+# Helper functions exported to user shell
+/etc/profile.d/
+└── vibesbox-helpers.sh         # NEW: CLI helper functions
 ```
 
-**Rationale**: Mirrors INITIAL.md factory structure proven to work. Separate agents from commands, research from outputs, examples in dedicated directory.
+**Rationale**:
+- Scripts in `.devcontainer/scripts/` are copied to `/usr/local/share/` during build
+- Helper functions in `/etc/profile.d/` are sourced on shell startup
+- Separation of concerns: lifecycle (ensure) vs health (check)
+- Existing pattern already established
 
 ### Module Naming Conventions
 
-- Main module: `{action}-{noun}.md` for commands (e.g., `generate-prp.md`)
-- Supporting modules: `prp-{workflow}-{responsibility}.md` for subagents
-- Test modules: Not applicable (commands/agents are markdown, not code)
-- Configuration: CLAUDE.md for workflow documentation
+- Main lifecycle script: `ensure-vibesbox.sh`
+- Health checking: `check-vibesbox.sh`
+- Helper functions: `vibesbox-helpers.sh`
+- Test modules: `test-vibesbox.sh`
+- Configuration: Environment variables (no separate config file)
 
-**Consistency Check**: New subagents follow `prp-{gen|exec|initial}-{role}` pattern. Research docs stay in `prps/research/`. Examples always in `examples/{feature}/`.
+**Consistency Check**:
+- Follows existing `setup-network.sh`, `test-docker.sh` pattern
+- Hyphenated names (not underscores)
+- Descriptive verb-noun format
+- `.sh` extension explicit
 
 ## Integration Points
 
-### Archon Integration
+### Database Integration
 
-**Pattern from Codebase**:
-Always check health, create project, track tasks, store results
+**Pattern from Codebase**: N/A - No database in this feature
 
-**Workflow**:
-```python
-# 1. Health check
-health = mcp__archon__health_check()
-archon_available = health["status"] == "healthy"
+**Migrations**: N/A
+**Models**: N/A
+**Queries**: N/A
 
-if archon_available:
-    # 2. Create project
-    project = mcp__archon__manage_project(
-        "create",
-        title="PRP: {feature_name}",
-        description="Generating PRP for {feature}"
-    )
+### API Routes
 
-    # 3. Create tasks (one per phase)
-    for phase in phases:
-        mcp__archon__manage_task(
-            "create",
-            project_id=project.id,
-            title=phase.title,
-            task_order=phase.priority
-        )
-
-    # 4. Update task status as work progresses
-    mcp__archon__manage_task("update", task_id=id, status="doing")
-
-    # 5. Store final result
-    mcp__archon__manage_document(
-        "create",
-        title="PRP: {feature}",
-        content=prp_content,
-        project_id=project.id
-    )
-```
-
-### Command Integration
-
-**Pattern from Codebase**:
-Commands invoke subagents, don't implement logic themselves
-
-**Router Setup**: Commands in `.claude/commands/` are entry points
-**Endpoint Naming**: `/{command-name}` (e.g., `/generate-prp`)
-**Request/Response**: User provides INITIAL.md path → receives PRP path + summary
+**Pattern from Codebase**: N/A - Bash scripting, no API routes
 
 ### Configuration Management
 
-**Pattern from Codebase**:
-CLAUDE.md documents workflows, subagents declare tools in frontmatter
+**Pattern from Codebase**: Environment variables with defaults
 
-**Environment Variables**: Archon MCP connection handled by Claude Code
-**Config Files**: CLAUDE.md is the configuration (no separate config files)
-**Secrets**: N/A (commands don't handle secrets directly)
+**Environment Variables**:
+```bash
+# From docker-compose.yml
+VIBES_PATH=${VIBES_PATH:-/workspace/vibes}
+
+# From scripts
+CONTAINER_NAME=${VIBESBOX_CONTAINER_NAME:-mcp-vibesbox-server}
+NETWORK_NAME=${VIBESBOX_NETWORK:-vibes-network}
+VNC_PORT=${VIBESBOX_VNC_PORT:-5901}
+```
+
+**Config Files**: None (pure environment variable approach)
+
+**Secrets**:
+- Docker socket access controlled via group membership
+- No VNC password by default (localhost only)
+- API keys managed separately (ANTHROPIC_API_KEY pattern)
 
 ## Code Style & Conventions
 
@@ -1009,224 +594,264 @@ CLAUDE.md documents workflows, subagents declare tools in frontmatter
 
 | Element | Convention | Example |
 |---------|------------|---------|
-| Subagent Files | prp-{workflow}-{role}.md | prp-gen-codebase-researcher.md |
-| Command Files | {action}-{noun}.md | generate-prp.md |
-| Research Docs | {purpose}.md | codebase-patterns.md |
-| Feature Names | snake_case | prp_workflow_improvements |
-| Example Files | {pattern}.{ext} | async_tool_pattern.py |
-| Directories | snake_case or kebab-case | prps/research/, examples/feature/ |
-| Archon Tools | mcp__archon__{function} | mcp__archon__rag_search_knowledge_base |
-| Task Status | Database values | "todo", "doing", "review", "done" |
+| Files | kebab-case | ensure-vibesbox.sh |
+| Functions | lowercase | info, success, check_container_running |
+| Variables (global) | UPPERCASE | CONTAINER_NAME, VIBES_PATH |
+| Variables (local) | lowercase | container_id, vnc_port |
+| Constants | UPPERCASE | DEFAULT_VNC_PORT=5901 |
+| Environment Vars | UPPERCASE_SNAKE_CASE | VIBESBOX_CONTAINER_NAME |
 
 ### Documentation Patterns
 
-**Docstring Style**: Markdown documentation within agent files
+**Docstring Style**: Inline comments with ASCII art headers
 
 **Example**:
-```markdown
----
-name: prp-gen-codebase-researcher
-description: Searches Archon and local codebase for patterns...
-tools: Read, Write, Grep, Glob, mcp__archon__rag_search_code_examples
-color: blue
----
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# PRP Generation Codebase Researcher
+# ┌───────────────────────────────────────────────────────────────────┐
+# │                    Vibesbox Lifecycle Manager                     │
+# └───────────────────────────────────────────────────────────────────┘
+#
+# Purpose: Auto-detect, start, and verify MCP Vibesbox Server
+# Usage: bash ensure-vibesbox.sh
+# Environment:
+#   VIBESBOX_CONTAINER_NAME - Container name (default: mcp-vibesbox-server)
+#   VIBESBOX_NETWORK        - Docker network (default: vibes-network)
+#   VIBESBOX_VNC_PORT       - VNC port (default: 5901)
+#   VIBESBOX_AUTO_BUILD     - Auto-build without prompt (default: false)
+#
 
-## Primary Objective
-Search for patterns...
+#── helper functions ────────────────────────────────────────────────
+# ... functions ...
 
-## Core Responsibilities
-1. Read requirements
-2. Search Archon
-3. Extract patterns
+#── main logic ──────────────────────────────────────────────────────
+# ... implementation ...
 ```
 
 ### Import Organization
 
-**Pattern Observed**: Tool declaration in YAML frontmatter
+**Pattern Observed**: N/A - Bash scripts don't have imports
 
-```yaml
-tools: Read, Write, Grep, Glob, Bash, mcp__archon__rag_search_code_examples
+**Sourcing Pattern**:
+```bash
+# Source shared functions (if separated)
+if [ -f "/usr/local/share/vibesbox-common.sh" ]; then
+    source "/usr/local/share/vibesbox-common.sh"
+fi
 ```
 
-Order: File tools (Read, Write) → Search tools (Grep, Glob) → Execution (Bash) → External (mcp__)
-
-## Recommendations for prp_workflow_improvements
+## Recommendations for devcontainer_vibesbox_integration
 
 ### Patterns to Follow
 
-1. **Multi-Subagent Architecture**: Use 6 subagents for generate-prp, 3-5 for execute-prp
-   - Source: INITIAL.md factory (proven pattern)
-   - Benefit: Separate context windows prevent pollution, enable parallel execution
-   - Implementation: Create subagents in `.claude/agents/` with YAML frontmatter
+1. **Helper Function Output Pattern**: Exact color codes and formatting
+   - Source: postCreate.sh
+   - Benefit: Consistent UX across all scripts, familiar to users
 
-2. **Parallel Execution in Phase 2**: Invoke 3 research agents simultaneously
-   - Source: Factory Phase 2 (3x speedup demonstrated)
-   - Benefit: Reduces total time from 15-20 min to <10 min
-   - Implementation: Single message with multiple agent invocations
+2. **Multi-Level Validation Pattern**: Progressive checks (CLI → daemon → container → VNC → screenshot)
+   - Source: test-docker.sh
+   - Benefit: Clear diagnostic information, graceful degradation
 
-3. **Archon-First Research**: Health check → Archon RAG → Web fallback
-   - Source: generate-prp.md + factory pattern
-   - Benefit: Faster, more accurate, curated knowledge
-   - Implementation: Always `health_check()` first, short queries (2-5 keywords)
+3. **Idempotent Operations Pattern**: Check-before-action with safe retry
+   - Source: setup-network.sh
+   - Benefit: Safe to run multiple times, no side effects
 
-4. **Code Extraction to Files**: Physical files in examples/, not just references
-   - Source: prp-initial-example-curator.md
-   - Benefit: Developers get runnable code, not just pointers
-   - Implementation: Read → Extract → Write with attribution + README
+4. **Environment Variable Configuration**: ${VAR:-default} syntax
+   - Source: docker-compose.yml
+   - Benefit: Flexible, no config file parsing, easy override
 
-5. **Quality Gates**: 8+/10 score required before proceeding to next phase
-   - Source: Factory quality gates
-   - Benefit: Prevents low-quality outputs from cascading
-   - Implementation: Checklist-based scoring, offer regeneration if < 8
+5. **Docker Format String Extraction**: Use --format for structured data
+   - Source: test-docker.sh
+   - Benefit: Reliable parsing, no fragile grep/awk chains
 
-6. **Archon Task Management**: Use Archon tasks, NEVER TodoWrite
-   - Source: ARCHON-FIRST RULE in CLAUDE.md
-   - Benefit: Centralized tracking, project context, persistence
-   - Implementation: Create project → tasks → update status as work progresses
+6. **ASCII Art Headers**: Sections clearly marked with box drawing
+   - Source: postCreate.sh
+   - Benefit: Readable, scannable, professional appearance
 
 ### Patterns to Avoid
 
-1. **Anti-pattern**: Sequential execution when tasks are independent
-   - Seen in: Current execute-prp.md (sequential steps)
-   - Issue: Wastes time - many PRP tasks can run in parallel
-   - Alternative: Analyze dependencies, group independent tasks, execute in parallel
+1. **Anti-pattern**: Blocking operations without timeout
+   - Seen in: N/A (not present in codebase - good!)
+   - Issue: Would hang devcontainer startup
+   - Alternative: All health checks must have timeouts
 
-2. **Anti-pattern**: TodoWrite for task tracking
-   - Seen in: execute-prp.md line 19
-   - Issue: Violates ARCHON-FIRST RULE, data not persisted
-   - Alternative: Use `mcp__archon__manage_task()` for all task management
+2. **Anti-pattern**: Hardcoded paths or values
+   - Seen in: Avoided in existing scripts
+   - Issue: Not flexible, breaks in different environments
+   - Alternative: Use environment variables with defaults
 
-3. **Anti-pattern**: Reference examples instead of extracting code
-   - Seen in: Current generate-prp (implies references)
-   - Issue: Developers can't run/study the code easily
-   - Alternative: Extract to physical files with README guidance
-
-4. **Anti-pattern**: Long Archon queries
-   - Seen in: Potential misuse (natural language queries)
-   - Issue: Archon works best with 2-5 keywords, not sentences
-   - Alternative: "async patterns" not "how to implement async patterns in Python"
-
-5. **Anti-pattern**: Skipping quality gates
-   - Seen in: Current commands lack quality scoring
-   - Issue: Low-quality PRPs lead to implementation failures
-   - Alternative: Score every output, require 8+/10, offer regeneration
+3. **Anti-pattern**: Complex error handling with multiple exit codes
+   - Seen in: N/A (scripts use simple success/fail)
+   - Issue: Would complicate devcontainer integration
+   - Alternative: Graceful degradation, warn but continue
 
 ### New Patterns Needed
 
 If no similar codebase patterns exist:
 
-1. **Task Dependency Analysis** (execute-prp)
-   - **Gap**: No automated dependency detection in codebase
-   - **Recommendation**: Parse PRP task list, identify "after" dependencies, create execution groups
-   - **Rationale**: Enables parallel execution of independent tasks
-   - **Example**:
-   ```python
-   # Analyze dependencies
-   tasks = parse_prp_tasks(prp_content)
-   groups = create_parallel_groups(tasks)  # Group by dependencies
+1. **Gap**: Health check polling with timeout
+   - **What's missing**: No existing pattern for "retry operation for N seconds"
+   - **Recommendation**:
+     ```bash
+     wait_for_condition() {
+       local timeout=$1
+       local check_command=$2
+       local start_time=$(date +%s)
 
-   # Execute groups in parallel
-   for group in groups:
-       execute_parallel([task for task in group if no_dependencies(task)])
-   ```
+       while true; do
+         if eval "$check_command"; then
+           return 0
+         fi
 
-2. **Automated Test Generation** (execute-prp)
-   - **Gap**: No test generation in current workflow
-   - **Recommendation**: Extract test patterns from codebase, adapt to new feature
-   - **Rationale**: Reduces testing burden, ensures consistency
-   - **Example**:
-   ```python
-   # Find test patterns
-   test_patterns = Grep(pattern="@pytest.fixture", glob="**/test_*.py")
+         local current_time=$(date +%s)
+         local elapsed=$((current_time - start_time))
 
-   # Adapt to new feature
-   new_tests = adapt_test_patterns(test_patterns, feature_code)
+         if [ $elapsed -ge $timeout ]; then
+           return 1
+         fi
 
-   # Write test file
-   Write(f"tests/test_{feature}.py", new_tests)
-   ```
+         sleep 2
+       done
+     }
 
-3. **PRP Quality Scoring Algorithm** (generate-prp)
-   - **Gap**: Subjective quality assessment
-   - **Recommendation**: Checklist-based scoring with weighted criteria
-   - **Rationale**: Objective, consistent, actionable
-   - **Example**:
-   ```markdown
-   Quality Checklist (10 points total):
-   - [ ] Feature description comprehensive (1 pt)
-   - [ ] Examples extracted with code files (2 pts)
-   - [ ] Documentation URLs included (1 pt)
-   - [ ] Gotchas documented with solutions (2 pts)
-   - [ ] Implementation blueprint clear (2 pts)
-   - [ ] Validation gates executable (1 pt)
-   - [ ] References existing patterns (1 pt)
+     # Usage:
+     if wait_for_condition 30 "nc -z localhost 5901"; then
+       success "VNC server ready"
+     else
+       warn "VNC server timeout after 30s"
+     fi
+     ```
+   - **Rationale**: VNC startup is async, need polling mechanism
+   - **Example**: Standard pattern from DevOps health check scripts
 
-   Score: X/10 (8+ required to proceed)
-   ```
+2. **Gap**: Screenshot capability testing
+   - **What's missing**: No pattern for testing X11/VNC display functionality
+   - **Recommendation**:
+     ```bash
+     test_screenshot() {
+       local display="${1:-:1}"
+       local output_file="/tmp/vibesbox-health-check.png"
+
+       # Try to capture screenshot
+       if DISPLAY="$display" import -window root "$output_file" 2>/dev/null; then
+         # Verify file exists and is not empty
+         if [ -s "$output_file" ]; then
+           rm -f "$output_file"
+           return 0
+         fi
+       fi
+       return 1
+     }
+     ```
+   - **Rationale**: Screenshot is definitive proof GUI automation works
+   - **Example**: ImageMagick import command standard for headless testing
+
+3. **Gap**: Progress indicators for long operations
+   - **What's missing**: No visual feedback during docker compose build
+   - **Recommendation**:
+     ```bash
+     show_progress() {
+       local message="$1"
+       local pid=$2
+
+       info "$message"
+       while kill -0 $pid 2>/dev/null; do
+         printf "."
+         sleep 1
+       done
+       echo ""
+     }
+
+     # Usage:
+     docker compose build --progress=plain &>/tmp/build.log &
+     BUILD_PID=$!
+     show_progress "Building vibesbox image" $BUILD_PID
+     wait $BUILD_PID
+     ```
+   - **Rationale**: Build takes 1-3 minutes, user needs feedback
+   - **Example**: Common shell progress indicator pattern
+
+4. **Gap**: CLI helper function export
+   - **What's missing**: No pattern for making functions available in user shell
+   - **Recommendation**:
+     ```bash
+     # Create /etc/profile.d/vibesbox-helpers.sh
+     # Functions defined here are sourced on shell startup
+
+     vibesbox-status() {
+       bash /usr/local/share/check-vibesbox.sh
+     }
+
+     vibesbox-start() {
+       docker compose -f /workspace/vibes/mcp/mcp-vibesbox-server/docker-compose.yml start
+     }
+
+     vibesbox-stop() {
+       docker compose -f /workspace/vibes/mcp/mcp-vibesbox-server/docker-compose.yml stop
+     }
+
+     # ... more helpers ...
+     ```
+   - **Rationale**: Users need CLI access to vibesbox operations
+   - **Example**: Standard Linux profile.d pattern for shell customization
 
 ## Archon Code Examples Referenced
 
-### Example 1: Human-in-the-Loop Workflow
-- **Archon ID**: c0e629a894699314
-- **Relevance**: 7/10
-- **Key Takeaway**: Shows tool approval flow and task step generation patterns
-- **Location in Archon**: pydantic-ai documentation, agent workflows
-
-### Example 2: Configure Hook Commands
-- **Archon ID**: 9a7d4217c64c9a0a
-- **Relevance**: 8/10
-- **Key Takeaway**: Command configuration structure for Claude Code
-- **Location in Archon**: Claude Code documentation, hooks section
-
-### Example 3: Run Graph with ProcessPoolExecutor
-- **Archon ID**: c0e629a894699314
+### Example 1: Environment Configuration Pattern
+- **Archon ID**: b8565aff9938938b
 - **Relevance**: 6/10
-- **Key Takeaway**: Parallel execution pattern with dependency injection
-- **Location in Archon**: pydantic-ai graph examples
+- **Key Takeaway**: Environment variable configuration pattern with validation
+- **Location in Archon**: GitHub context-engineering-intro commit
+
+### Example 2: Docker Orchestration Pattern
+- **Archon ID**: c0e629a894699314
+- **Relevance**: 5/10
+- **Key Takeaway**: Instrumentation and monitoring patterns for services
+- **Location in Archon**: Pydantic AI documentation
+
+### Example 3: Health Check Pattern
+- **Archon ID**: c0e629a894699314
+- **Relevance**: 4/10
+- **Key Takeaway**: Polling and validation patterns for service health
+- **Location in Archon**: Pydantic AI model instrumentation
 
 ## Local Files Referenced
 
-### File 1: /Users/jon/source/vibes/CLAUDE.md
-- **Lines**: 105-304
-- **Pattern Type**: Complete INITIAL.md factory workflow
-- **Relevance**: 10/10 - PRIMARY pattern to follow
+### File 1: /Users/jon/source/vibes/.devcontainer/scripts/postCreate.sh
+- **Lines**: 1-203
+- **Pattern Type**: Helper functions, tool checking, configuration setup
+- **Relevance**: Primary pattern source for output formatting and setup flow
 
-### File 2: /Users/jon/source/vibes/.claude/agents/prp-initial-example-curator.md
-- **Lines**: 1-150
-- **Pattern Type**: Code extraction and curation
-- **Relevance**: 10/10 - Code extraction pattern for generate-prp
+### File 2: /Users/jon/source/vibes/.devcontainer/scripts/test-docker.sh
+- **Lines**: 1-69
+- **Pattern Type**: Multi-level Docker validation and state detection
+- **Relevance**: Direct template for vibesbox health checking logic
 
-### File 3: /Users/jon/source/vibes/.claude/agents/prp-initial-assembler.md
-- **Lines**: 1-100
-- **Pattern Type**: Research synthesis and assembly
-- **Relevance**: 9/10 - Final assembly pattern for generate-prp
+### File 3: /Users/jon/source/vibes/.devcontainer/scripts/setup-network.sh
+- **Lines**: 1-26
+- **Pattern Type**: Idempotent network creation and connection
+- **Relevance**: Pattern for vibesbox container startup logic
 
-### File 4: /Users/jon/source/vibes/.claude/commands/generate-prp.md
-- **Lines**: 1-110
-- **Pattern Type**: Current PRP generation flow
-- **Relevance**: 10/10 - Shows what to enhance
+### File 4: /Users/jon/source/vibes/.devcontainer/scripts/test-network.sh
+- **Lines**: 1-35
+- **Pattern Type**: Network connectivity testing with multiple protocols
+- **Relevance**: Pattern for VNC port checking and connectivity validation
 
-### File 5: /Users/jon/source/vibes/.claude/commands/execute-prp.md
-- **Lines**: 1-40
-- **Pattern Type**: Current PRP execution flow
-- **Relevance**: 10/10 - Shows what to enhance
+### File 5: /Users/jon/source/vibes/mcp/mcp-vibesbox-server/docker-compose.yml
+- **Lines**: 1-35
+- **Pattern Type**: Complete service definition with systemd, VNC, networking
+- **Relevance**: Core configuration to orchestrate in automation scripts
 
-### File 6: /Users/jon/source/vibes/prps/PRP_create_initial_md_workflow.md
-- **Lines**: 1-100
-- **Pattern Type**: Complete PRP documenting the factory
-- **Relevance**: 9/10 - Shows PRP structure and success criteria
-
-### File 7: /Users/jon/source/vibes/infra/archon/python/tests/test_rag_simple.py
-- **Lines**: 1-80
-- **Pattern Type**: Testing patterns with fixtures
-- **Relevance**: 8/10 - Validation gate implementation
+### File 6: /Users/jon/source/vibes/.devcontainer/devcontainer.json
+- **Lines**: 1-44
+- **Pattern Type**: Devcontainer configuration and hook integration
+- **Relevance**: Integration point for vibesbox automation
 
 ---
 Generated: 2025-10-04
-Archon Examples Referenced: 26
-Local Files Referenced: 7
-Total Patterns Documented: 12
-Feature: prp_workflow_improvements
-Archon Project: 398ad324-008c-41e4-92cc-c5df6207553a
+Archon Examples Referenced: 3
+Local Files Referenced: 6
+Total Patterns Documented: 8
+Feature: devcontainer_vibesbox_integration
