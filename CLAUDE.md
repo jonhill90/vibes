@@ -100,6 +100,203 @@ The codebase has two specialized agents configured:
 1. **After code changes**, the `documentation-manager` agent should be called to update relevant docs
 2. **After implementing features**, the `validation-gates` agent should validate all tests pass
 
+---
+
+## INITIAL.md Factory Workflow
+
+### Overview
+
+Multi-subagent system for creating comprehensive INITIAL.md files that feed into the PRP generation process. This workflow automates requirements gathering through systematic research, reducing creation time from 30+ minutes to <10 minutes.
+
+**Key Innovation**: 6 specialized subagents with separate context windows running in parallel conduct comprehensive research without context pollution, then synthesize into a single production-ready INITIAL.md.
+
+### When to Use This Workflow
+
+✅ **Trigger this workflow when user says ANY of these**:
+- "Help me create INITIAL.md for [feature]"
+- "I need to build INITIAL.md for [feature]"
+- "Create INITIAL.md for [feature]"
+- "Generate INITIAL requirements for [feature]"
+- "Write INITIAL.md for [feature]"
+- "I want to make an INITIAL.md for [feature]"
+
+❌ **Don't use this workflow for**:
+- Executing/implementing existing INITIAL.md (use `/execute-prp` instead)
+- Generating PRP from existing INITIAL.md (use `/generate-prp` instead)
+
+### Immediate Recognition Actions
+
+When you detect an INITIAL.md creation request:
+
+1. ✅ **STOP** any other work immediately
+2. ✅ **ACKNOWLEDGE**: "I'll help create a comprehensive INITIAL.md using the factory workflow"
+3. ✅ **PROCEED** to Phase 0 (don't ask for permission)
+4. ✅ **NEVER** skip Phase 0 clarifications
+5. ✅ **NEVER** try to write INITIAL.md directly
+
+### The 5-Phase Workflow
+
+#### Phase 0: Recognition & Basic Clarification
+
+**Who handles this**: YOU (main Claude Code)
+**Time**: 2-3 minutes (includes user response wait)
+
+**Your Actions**:
+1. Ask 2-3 clarifying questions:
+   - Primary use case: What problem does this solve?
+   - Technical preferences: Specific technologies or recommend?
+   - Integration needs: Any existing systems to integrate?
+
+2. ⚠️ **CRITICAL**: WAIT for user response - DO NOT PROCEED
+
+3. After user responds:
+   - Determine feature name (snake_case)
+   - Create directories: `prps/research/`, `examples/{feature}/`
+   - Check Archon: `health_check()`
+   - Create Archon project and 6 tasks if available
+   - Proceed to Phase 1
+
+#### Phase 1: Deep Feature Analysis
+
+**Subagent**: `prp-initial-feature-clarifier`
+**Time**: 2-3 minutes
+**Mode**: AUTONOMOUS
+
+**What it does**:
+- Searches Archon for similar features
+- Decomposes request into requirements
+- Makes intelligent assumptions
+- Documents assumptions clearly
+- Creates `prps/research/feature-analysis.md`
+
+#### Phase 2: Parallel Research (CRITICAL PHASE)
+
+**Subagents**: THREE simultaneously
+- `prp-initial-codebase-researcher`
+- `prp-initial-documentation-hunter`
+- `prp-initial-example-curator`
+
+**Time**: 3-5 minutes (all run in parallel)
+
+⚠️ **CRITICAL**: Invoke all three in SINGLE message using parallel tool invocation
+
+**What each does**:
+- **Codebase**: Searches Archon + local code for patterns → `codebase-patterns.md`
+- **Documentation**: Checks Archon, then WebSearch for official docs → `documentation-links.md`
+- **Examples**: EXTRACTS code to `examples/{feature}/` directory → `examples-to-include.md` + code files
+
+**Expected Outputs**:
+- `prps/research/codebase-patterns.md`
+- `prps/research/documentation-links.md`
+- `prps/research/examples-to-include.md`
+- `examples/{feature}/` directory with code files + README
+
+#### Phase 3: Gotcha Analysis
+
+**Subagent**: `prp-initial-gotcha-detective`
+**Time**: 2 minutes
+
+**What it does**:
+- Searches Archon for known issues
+- Researches pitfalls via web
+- Identifies security concerns
+- Documents performance issues
+- Creates `prps/research/gotchas.md` with SOLUTIONS
+
+#### Phase 4: Final Assembly
+
+**Subagent**: `prp-initial-assembler`
+**Time**: 1-2 minutes
+
+**What it does**:
+- Reads ALL 5 research documents
+- Synthesizes into INITIAL.md structure
+- Follows INITIAL_EXAMPLE.md format
+- Ensures 8+/10 quality
+- Creates `prps/INITIAL_{feature}.md`
+
+#### Phase 5: Delivery & Next Steps
+
+**Who handles this**: YOU
+**Time**: 1 minute
+
+**Your Actions**:
+1. Present summary to user
+2. Show file locations
+3. Quality check summary
+4. Provide next steps (/generate-prp, /execute-prp)
+5. Update Archon with completion notes
+6. Store INITIAL.md as Archon document
+
+### Subagent Reference
+
+All subagents in `.claude/agents/`:
+
+| Agent | Purpose | Output |
+|-------|---------|--------|
+| prp-initial-feature-clarifier | Requirements analysis | feature-analysis.md |
+| prp-initial-codebase-researcher | Pattern extraction | codebase-patterns.md |
+| prp-initial-documentation-hunter | Doc research | documentation-links.md |
+| prp-initial-example-curator | Code extraction | examples-to-include.md + examples/ |
+| prp-initial-gotcha-detective | Pitfall identification | gotchas.md |
+| prp-initial-assembler | Final synthesis | INITIAL_{feature}.md |
+
+### Archon Integration
+
+#### Always Check Health First
+```python
+health = health_check()
+archon_available = health["status"] == "healthy"
+```
+
+#### If Archon Available
+- Create project for tracking
+- Create 6 tasks (one per phase)
+- Update task status: "todo" → "doing" → "done"
+- Store final INITIAL.md as document
+- Pass project_id to all subagents
+
+#### If Unavailable
+- Proceed without tracking
+- Workflow continues normally
+
+### Key Principles
+
+1. **Autonomous After Phase 0**: Subagents work without user input
+2. **Parallel Execution**: Phase 2 runs three agents simultaneously
+3. **Archon-First**: Always search Archon before external sources
+4. **Example Extraction**: Extract actual code, not just references
+5. **Quality Over Speed**: Target 8+/10, take extra time if needed
+
+### Error Handling
+
+If subagent fails:
+1. Log error with context
+2. Continue with partial results
+3. Document what's missing
+4. Offer regeneration option
+
+### Quality Gates
+
+Before delivery, verify:
+- [ ] Feature description comprehensive
+- [ ] Examples extracted with guidance
+- [ ] Documentation includes working examples
+- [ ] Gotchas documented with solutions
+- [ ] Follows INITIAL_EXAMPLE.md structure
+- [ ] Quality score: 8+/10
+
+### Success Metrics
+
+- ✅ Total time: <10 minutes
+- ✅ Quality: 8+/10
+- ✅ Examples: 2-4 extracted
+- ✅ Documentation: 3-5 sources
+- ✅ Gotchas: 2-5 documented
+- ✅ PRP generation works first attempt
+
+---
+
 ## Development Patterns
 
 ### PRP-Driven Development (Product Requirements Prompt)
