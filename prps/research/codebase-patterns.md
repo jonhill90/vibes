@@ -1,144 +1,53 @@
 # Codebase Patterns: devcontainer_vibesbox_integration
 
-## Search Summary
+## Overview
 
-### Archon Code Examples Searched
-- Query 1: "devcontainer lifecycle" → 5 results found (low relevance)
-- Query 2: "docker compose orchestration" → 5 results found (moderate relevance)
-- Query 3: "bash automation helpers" → 5 results found (environment setup patterns)
-- Query 4: "health check polling" → 5 results found (instrumentation patterns)
-- Query 5: "colored terminal output" → 5 results found (output formatting patterns)
-- Query 6: "progress indicator spinner" → 5 results found (low relevance)
+Extracted bash scripting patterns, Docker lifecycle management, and devcontainer integration approaches from existing `.devcontainer/scripts/` and example files. These patterns emphasize idempotent operations, graceful degradation, colored CLI output, and multi-layer health validation. All patterns follow strict error handling (`set -euo pipefail`) and provide user-friendly feedback with ANSI colors and Unicode symbols.
 
-### Local Codebase Searches
-- Pattern 1: `.devcontainer/**/*.sh` → 5 scripts found (postCreate, setup-network, test-docker, test-network, validate-config)
-- Pattern 2: `mcp-vibesbox-server/**/*.sh` → 0 scripts found (Docker-based, no shell scripts)
-- Pattern 3: `^function |^[a-z_]+\(\)` in `.devcontainer/scripts/*.sh` → 4 helper functions found
-- Pattern 4: Docker compose files → Found mcp-vibesbox-server/docker-compose.yml
+## Architectural Patterns
 
-### Total Patterns Found
-- Archon Examples: 30 code examples reviewed
-- Local Examples: 6 files analyzed
-- Combined Insights: 8 actionable patterns documented
+### Pattern 1: Colored CLI Helper Functions
+**Source**: `.devcontainer/scripts/postCreate.sh` (lines 8-12)
+**Relevance**: 10/10
+**What it does**: Provides consistent colored terminal output with severity-coded messages using ANSI escape codes and Unicode symbols.
 
-## Similar Implementations Found
-
-### Pattern 1: Helper Function Output Formatting
-
-**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/postCreate.sh]
-
-**What It Demonstrates**:
-Consistent colored output pattern for status messages with emojis and ANSI color codes.
-
-**Code Structure**:
-```
-.devcontainer/
-├── scripts/
-│   ├── postCreate.sh          # Main setup script with helpers
-│   ├── test-docker.sh         # Docker validation
-│   ├── test-network.sh        # Network connectivity tests
-│   └── setup-network.sh       # Network creation/connection
-```
-
-**Key Code Pattern**:
+**Key Techniques**:
 ```bash
-# Helper functions for colored output
+#── helper for colored output ───────────────────────────────────────
 info()    { printf "\033[36mℹ [INFO]\033[0m  %s\n" "$*"; }
 success() { printf "\033[32m✔ [OK]\033[0m    %s\n" "$*"; }
 warn()    { printf "\033[33m⚠ [WARN]\033[0m  %s\n" "$*"; }
 error()   { printf "\033[31m✖ [ERROR]\033[0m %s\n" "$*"; }
-
-# Usage example
-info "Checking vibesbox status..."
-success "Container started"
-warn "VNC server not ready yet"
-error "Failed to connect to Docker daemon"
 ```
 
-**Naming Convention**:
-- Files: snake_case with hyphens (test-docker.sh, setup-network.sh)
-- Functions: lowercase, short verbs (info, success, warn, error)
-- Variables: UPPERCASE for globals (DOCKER_PATH, CONTAINER_ID)
-- Variables: lowercase for locals (server, container_name)
+**When to use**:
+- Every script that provides user feedback
+- Status messages during vibesbox lifecycle operations
+- Health check result reporting
+- Error messaging with clear severity levels
 
-**What to Mimic**:
-- Exact color codes and emoji symbols for consistency
-- printf formatting pattern (not echo)
-- Four-function pattern: info, success, warn, error
-- ANSI escape sequences: `\033[36m` (cyan), `\033[32m` (green), `\033[33m` (yellow), `\033[31m` (red)
-- Reset code: `\033[0m`
+**How to adapt**:
+- Source these functions at the top of all vibesbox scripts
+- Use `info()` for status updates (checking, starting, waiting)
+- Use `success()` when operations complete successfully
+- Use `warn()` for non-critical issues (graceful degradation scenarios)
+- Use `error()` for failures requiring user intervention
 
-**What to Adapt**:
-- Add progress indicator function for long operations
-- Consider adding debug() function for verbose output
-- May need timeout indicators for health checks
+**Why this pattern**:
+- Creates professional, scannable CLI output
+- Color-coding allows quick identification of issues
+- Consistent formatting across all scripts improves UX
+- Unicode symbols (ℹ ✔ ⚠ ✖) work across terminal emulators
+- Already established in codebase, ensures consistency
 
-### Pattern 2: Docker State Detection
+### Pattern 2: Idempotent Network Creation
+**Source**: `.devcontainer/scripts/setup-network.sh`
+**Relevance**: 10/10
+**What it does**: Creates Docker networks with check-before-create logic, handles "already exists" errors gracefully, making operations safe to run multiple times.
 
-**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/test-docker.sh]
-
-**What It Demonstrates**:
-Comprehensive Docker connectivity and permission checking pattern.
-
-**Code Structure**:
+**Key Techniques**:
 ```bash
-# Test Docker CLI access
-if command -v docker &>/dev/null; then
-    echo "✅ Docker CLI found: $(which docker)"
-
-    # Test Docker version
-    if docker --version &>/dev/null; then
-        echo "✅ Docker version: $(docker --version)"
-    fi
-
-    # Test Docker daemon connectivity
-    if docker info &>/dev/null; then
-        echo "✅ Docker daemon accessible"
-    else
-        echo "❌ Docker daemon not accessible"
-    fi
-fi
-
-# Test Docker socket permissions
-if ls -la /var/run/docker.sock &>/dev/null; then
-    echo "✅ Docker socket found"
-    if [ -w /var/run/docker.sock ]; then
-        echo "✅ Docker socket is writable"
-    fi
-fi
-
-# Test group membership
-if groups | grep -q docker; then
-    echo "✅ User is in docker group"
-fi
-```
-
-**Naming Convention**:
-- Test scripts: `test-{component}.sh`
-- Boolean checks: `if command -v ... &>/dev/null`
-- Error suppression: `&>/dev/null` for silent checks
-
-**What to Mimic**:
-- Multi-level validation: CLI → version → daemon → socket → permissions
-- Silent checks with `&>/dev/null` followed by verbose output
-- Progressive validation (don't check daemon if CLI missing)
-- Graceful degradation (continue even if checks fail)
-
-**What to Adapt**:
-- Apply same pattern to vibesbox: container existence → running state → VNC port → screenshot
-- Return structured data (not just echo) for programmatic use
-- Add timeout mechanism for health checks
-
-### Pattern 3: Network Setup & Validation
-
-**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/setup-network.sh]
-
-**What It Demonstrates**:
-Idempotent network creation and connection pattern with error handling.
-
-**Code Structure**:
-```bash
-# Check if network exists
+# Check if vibes-network exists
 if docker network ls | grep -q "vibes-network"; then
     echo "✅ vibes-network already exists"
 else
@@ -149,709 +58,760 @@ else
         echo "❌ Failed to create vibes-network (might already exist)"
     fi
 fi
-
-# Try to connect current container to network
-CONTAINER_ID=$(hostname)
-if docker network connect vibes-network "$CONTAINER_ID" 2>/dev/null; then
-    echo "✅ Connected to vibes-network"
-else
-    echo "⚠️  Could not connect to vibes-network (might already be connected)"
-fi
 ```
 
-**Naming Convention**:
-- Setup scripts: `setup-{component}.sh`
-- Variables for dynamic values: `CONTAINER_ID`, `NETWORK_NAME`
-- Error redirection: `2>/dev/null` for expected errors
+**When to use**:
+- Before starting vibesbox container (network prerequisite)
+- In ensure-vibesbox.sh initialization phase
+- Any time Docker resources need conditional creation
+- Scripts that may run multiple times (devcontainer rebuild)
 
-**What to Mimic**:
-- Idempotent operations (safe to run multiple times)
-- Check-before-action pattern
-- Graceful handling of "already exists" errors
-- Clear success/failure messaging
+**How to adapt**:
+- Make network name configurable: `${VIBESBOX_NETWORK:-vibes-network}`
+- Add network validation: check subnet matches expected config
+- Integrate into ensure-vibesbox.sh as Phase 1 (before container operations)
+- Add to CLI helper: `vibesbox-network-setup` for manual troubleshooting
 
-**What to Adapt**:
-- Apply to vibesbox: check container → create/start if needed
-- Configurable network name (environment variable)
-- Return exit codes for scripting
+**Why this pattern**:
+- Idempotency crucial for devcontainer lifecycle (multiple postCreateCommand runs)
+- Prevents script failures on re-execution
+- Graceful error handling improves robustness
+- Network is external prerequisite for vibesbox, must exist before `docker compose up`
 
-### Pattern 4: Docker Compose Configuration
+### Pattern 3: Container State Detection State Machine
+**Source**: `examples/devcontainer_vibesbox_integration/container-state-detection.sh`
+**Relevance**: 10/10
+**What it does**: Implements a state machine for detecting and classifying container lifecycle states, enabling automated decision-making for start/stop/restart operations.
 
-**Source**: [File: /Users/jon/source/vibes/mcp/mcp-vibesbox-server/docker-compose.yml]
-
-**What It Demonstrates**:
-Complete vibesbox service definition with systemd, VNC, and network configuration.
-
-**Code Structure**:
-```yaml
-services:
-  mcp-vibesbox-server:
-    image: vibes/mcp-vibesbox-server:latest
-    build: .
-    container_name: mcp-vibesbox-server
-    restart: unless-stopped
-    privileged: true
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_ADMIN
-      - SYS_RESOURCE
-      - DAC_READ_SEARCH
-    stop_signal: SIGRTMIN+3
-    tmpfs:
-      - /run
-      - /run/lock
-      - /tmp
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${VIBES_PATH:-/workspace/vibes}:/workspace/vibes:rw
-      - mcp-vibesbox-workspace:/workspace
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    ports:
-      - "5901:5901"  # VNC server
-    command: ["/sbin/init"]
-
-networks:
-  default:
-    name: vibes-network
-    external: true
-
-volumes:
-  mcp-vibesbox-workspace:
-```
-
-**Naming Convention**:
-- Service name: `mcp-vibesbox-server` (matches container name)
-- Network name: `vibes-network` (external, pre-existing)
-- Volume name: `{service}-workspace` pattern
-- Environment variables: `${VAR:-default}` syntax
-
-**What to Mimic**:
-- Use environment variables for paths: `${VIBES_PATH:-/workspace/vibes}`
-- External network reference: `external: true`
-- Container naming convention: match service name
-- VNC port: 5901 (standard)
-
-**What to Adapt**:
-- Make network name configurable
-- Make VNC port configurable
-- Support overriding container name
-
-### Pattern 5: Tool Availability Checking
-
-**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/postCreate.sh]
-
-**What It Demonstrates**:
-Comprehensive tool availability checking with version extraction.
-
-**Code Structure**:
+**Key Techniques**:
 ```bash
-# Check if tool exists
-if command -v docker &>/dev/null; then
-  DOCKER_PATH=$(which docker)
-  DOCKER_VER=$(docker --version 2>/dev/null | awk '{print $3}' | tr -d ',' || echo 'unknown')
-  success "Docker CLI: found at $DOCKER_PATH (v$DOCKER_VER)"
-else
-  error "Docker CLI: NOT found"
-fi
-
-# Check Docker Compose (two possible commands)
-if command -v docker-compose &>/dev/null || docker compose version &>/dev/null; then
-  success "Docker Compose: available"
-else
-  warn "Docker Compose: NOT found"
-fi
-```
-
-**Naming Convention**:
-- Path variables: `{TOOL}_PATH`
-- Version variables: `{TOOL}_VER`
-- Fallback values: `|| echo 'unknown'` or `|| echo 'not found'`
-
-**What to Mimic**:
-- `command -v` for existence check (portable)
-- `which` for path extraction
-- Version parsing with `awk` and `tr`
-- Multiple command variants (docker-compose vs docker compose)
-- Fallback to 'unknown' on version extraction failure
-
-**What to Adapt**:
-- Check for ImageMagick (import command)
-- Check for netcat (nc command)
-- Verify vibesbox-specific dependencies
-
-### Pattern 6: Container State Inspection
-
-**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/test-docker.sh]
-
-**What It Demonstrates**:
-Extracting specific information from Docker using format strings.
-
-**Code Structure**:
-```bash
-if docker info &>/dev/null; then
-    echo "✅ Docker daemon accessible"
-    echo "  Container runtime: $(docker info --format '{{.ServerVersion}}')"
-    echo "  Total containers: $(docker info --format '{{.Containers}}')"
-fi
-```
-
-**Naming Convention**:
-- Format templates: `--format '{{.FieldName}}'`
-- Nested fields: `{{.Parent.Child}}`
-
-**What to Mimic**:
-- Use `--format` for structured data extraction
-- Common docker inspect patterns:
-  - `docker inspect --format '{{.State.Running}}' container_name`
-  - `docker inspect --format '{{.State.Status}}' container_name`
-  - `docker inspect --format '{{.NetworkSettings.Networks}}' container_name`
-- Single-line extraction with command substitution
-
-**What to Adapt**:
-- Check if vibesbox container exists: `docker ps -a --filter name=mcp-vibesbox-server --format '{{.Names}}'`
-- Check running state: `docker inspect --format '{{.State.Running}}' mcp-vibesbox-server`
-- Get container uptime: `docker inspect --format '{{.State.StartedAt}}' mcp-vibesbox-server`
-
-### Pattern 7: Network Connectivity Testing
-
-**Source**: [File: /Users/jon/source/vibes/.devcontainer/scripts/test-network.sh]
-
-**What It Demonstrates**:
-Systematic network connectivity testing with multiple protocols.
-
-**Code Structure**:
-```bash
-# Test DNS resolution and ping
-MCP_SERVERS=("azure-mcp-server" "terraform-mcp-server" "mcp-vibes-server")
-
-for server in "${MCP_SERVERS[@]}"; do
-    if ping -c 1 -W 2 "$server" &>/dev/null; then
-        echo "✅ $server - reachable"
-    else
-        echo "❌ $server - not reachable"
-    fi
-done
-
-# Test HTTP connectivity
-if curl -s -o /dev/null -w "%{http_code}" http://openmemory-ui:3000 | grep -q "200"; then
-    echo "✅ openmemory-ui:3000 - HTTP 200"
-else
-    echo "❌ openmemory-ui:3000 - not responding"
-fi
-```
-
-**Naming Convention**:
-- Arrays: `UPPERCASE_NAMES` for lists
-- Loop variable: lowercase `server`, `host`, etc.
-- Timeout flags: `-c 1 -W 2` (1 ping, 2 second wait)
-
-**What to Mimic**:
-- Ping with timeout: `ping -c 1 -W 2`
-- Silent curl: `curl -s -o /dev/null`
-- HTTP status code extraction: `-w "%{http_code}"`
-- Array iteration for multiple targets
-
-**What to Adapt**:
-- VNC port check: `nc -z localhost 5901` (netcat zero-I/O mode)
-- Container IP check: `docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' container`
-- Port listening check: `ss -tlnp | grep :5901` or `lsof -i :5901`
-
-### Pattern 8: Devcontainer Integration Hook
-
-**Source**: [File: /Users/jon/source/vibes/.devcontainer/devcontainer.json]
-
-**What It Demonstrates**:
-Standard devcontainer postCreateCommand hook pattern.
-
-**Code Structure**:
-```json
-{
-  "name": "Vibes Development Workspace",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "devcontainer",
-  "workspaceFolder": "/workspace",
-  "postCreateCommand": "bash /usr/local/share/postCreate.sh",
-  "remoteUser": "vscode"
+# Helper functions for state detection
+container_exists() {
+    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 }
+
+container_running() {
+    docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+}
+
+get_container_status() {
+    docker inspect --format '{{.State.Status}}' "$CONTAINER_NAME" 2>/dev/null
+}
+
+# Main state detection logic
+detect_vibesbox_state() {
+    if ! container_exists; then
+        echo "missing"
+    elif container_running; then
+        echo "running"
+    else
+        local status=$(get_container_status)
+        echo "stopped-${status}"
+    fi
+}
+
+# State-based action dispatch
+STATE=$(detect_vibesbox_state)
+case "$STATE" in
+    missing)
+        # Trigger build workflow
+        ;;
+    stopped-*)
+        # docker compose start
+        ;;
+    running)
+        # Proceed to health checks
+        ;;
+esac
 ```
 
-**Naming Convention**:
-- Hook: `postCreateCommand` (runs after container created)
-- Script location: `/usr/local/share/` (copied in Dockerfile)
-- Script name: `postCreate.sh` (matches hook name)
+**When to use**:
+- Beginning of ensure-vibesbox.sh to determine action
+- CLI helpers (vibesbox-status, vibesbox-start)
+- Automated lifecycle management during postCreateCommand
+- Health monitoring scripts
 
-**What to Mimic**:
-- Use absolute path for script: `/usr/local/share/ensure-vibesbox.sh`
-- Run as remoteUser (vscode) by default
-- Non-blocking execution (background with `&` if needed)
+**How to adapt**:
+- Add VNC-specific states: `running-vnc-ready`, `running-vnc-failed`
+- Extend with screenshot capability detection
+- Create detailed sub-states for troubleshooting
+- Return structured data for CLI tools to parse
 
-**What to Adapt**:
-- Chain multiple scripts: `bash /usr/local/share/postCreate.sh && bash /usr/local/share/ensure-vibesbox.sh`
-- OR: Integrate vibesbox check into existing postCreate.sh
-- Consider separate script for modularity
+**Why this pattern**:
+- State machine provides clear action dispatch logic
+- Small helper functions are testable and reusable
+- `docker inspect` provides authoritative state information
+- Case statement enables easy extension for new states
+- Separates detection from action (single responsibility)
 
-## Architectural Patterns
+### Pattern 4: Polling with Timeout for Async Operations
+**Source**: `examples/devcontainer_vibesbox_integration/polling-with-timeout.sh`
+**Relevance**: 10/10
+**What it does**: Generic polling function that waits for async conditions (container startup, service readiness) with configurable timeouts and progress indicators.
 
-### Service Layer Organization
-
-**Pattern Observed**: Scripts are modular and single-purpose, with helper functions defined at the top.
-
-**Example from Codebase**:
+**Key Techniques**:
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
+wait_for_condition() {
+    local condition_func="$1"
+    local timeout_seconds="${2:-30}"
+    local check_interval="${3:-2}"
+    local description="${4:-condition}"
 
-# ┌───────────────────────────────────────────────────────────────────┐
-# │                        Script Title                                │
-# └───────────────────────────────────────────────────────────────────┘
+    local elapsed=0
 
-#── helper functions ────────────────────────────────────────────────
-info()    { printf "\033[36mℹ [INFO]\033[0m  %s\n" "$*"; }
-success() { printf "\033[32m✔ [OK]\033[0m    %s\n" "$*"; }
-warn()    { printf "\033[33m⚠ [WARN]\033[0m  %s\n" "$*"; }
-error()   { printf "\033[31m✖ [ERROR]\033[0m %s\n" "$*"; }
+    echo "⏳ Waiting for $description (timeout: ${timeout_seconds}s)..."
 
-#── main logic ──────────────────────────────────────────────────────
-info "Starting operation..."
-# ... implementation ...
-success "Operation complete!"
-```
+    while [ $elapsed -lt $timeout_seconds ]; do
+        if $condition_func; then
+            echo "✅ $description ready (${elapsed}s elapsed)"
+            return 0
+        fi
 
-**Application to devcontainer_vibesbox_integration**:
-- Create `ensure-vibesbox.sh` with same structure
-- Define helpers at top (reuse existing pattern)
-- Organize into sections with ASCII art headers
-- Keep functions small and testable
+        sleep "$check_interval"
+        elapsed=$((elapsed + check_interval))
+        echo -n "."
+    done
 
-### Data Access Patterns
+    echo ""
+    echo "❌ Timeout waiting for $description (${timeout_seconds}s elapsed)"
+    return 1
+}
 
-**Pattern Observed**: Use Docker CLI as API, parse output with format strings and awk/grep.
+# Example condition functions
+vnc_port_ready() {
+    nc -z localhost 5901 2>/dev/null
+}
 
-**Example from Codebase**:
-```bash
-# Direct API calls
-CONTAINER_EXISTS=$(docker ps -a --filter name=mcp-vibesbox-server --format '{{.Names}}' 2>/dev/null)
-CONTAINER_RUNNING=$(docker inspect --format '{{.State.Running}}' mcp-vibesbox-server 2>/dev/null)
-
-# Parsing with awk
-DOCKER_VER=$(docker --version 2>/dev/null | awk '{print $3}' | tr -d ',')
-
-# Using grep for boolean checks
-if docker network ls | grep -q "vibes-network"; then
-    # network exists
+# Chained health checks
+if wait_for_condition container_running 30 2 "container startup"; then
+    if wait_for_condition vnc_port_ready 30 2 "VNC server"; then
+        echo "🎉 Vibesbox fully operational!"
+    fi
 fi
 ```
 
-**Recommendations**:
-- Use `docker inspect --format` for structured data
-- Use `docker ps --filter` for existence checks
-- Parse JSON output with `jq` if complex (optional)
-- Suppress errors with `2>/dev/null` for expected failures
-- Store results in variables for reuse
+**When to use**:
+- After `docker compose up -d` to wait for container readiness
+- VNC server startup verification
+- Multi-layer health check orchestration
+- Any async operation that needs timeout protection
 
-### Error Handling Patterns
+**How to adapt**:
+- Create vibesbox-specific condition functions:
+  - `vibesbox_container_running()`
+  - `vibesbox_vnc_ready()`
+  - `vibesbox_display_accessible()` (xdpyinfo test)
+  - `vibesbox_screenshot_works()` (ImageMagick test)
+- Make timeouts environment-configurable: `${VIBESBOX_HEALTH_TIMEOUT:-30}`
+- Add verbosity control for progress dots
+- Integrate into ensure-vibesbox.sh health check phase
 
-**Pattern Observed**: Graceful degradation with clear error messages and non-blocking failures.
+**Why this pattern**:
+- Generic function is highly reusable across different health checks
+- Configurable timeouts prevent indefinite hangs
+- Progress indicators provide user feedback during waits
+- Early exit on success optimizes check time
+- Chaining allows multi-layer validation (container → VNC → screenshot)
+- Return codes enable error handling in calling scripts
 
-**Example from Codebase**:
+### Pattern 5: Multi-Layer Docker Health Validation
+**Source**: `examples/devcontainer_vibesbox_integration/docker-health-check.sh`
+**Relevance**: 9/10
+**What it does**: Progressive validation pattern that checks Docker ecosystem at multiple layers (CLI → daemon → socket → permissions), providing actionable diagnostics at each level.
+
+**Key Techniques**:
 ```bash
-# Pattern 1: Try operation, warn if fails but continue
-if docker network connect vibes-network "$CONTAINER_ID" 2>/dev/null; then
-    echo "✅ Connected to vibes-network"
+# Layer 1: CLI availability
+if command -v docker &>/dev/null; then
+    echo "✅ Docker CLI found: $(which docker)"
+
+    # Layer 2: Daemon connectivity
+    if docker info &>/dev/null; then
+        echo "✅ Docker daemon accessible"
+        echo "  Container runtime: $(docker info --format '{{.ServerVersion}}')"
+    else
+        echo "❌ Docker daemon not accessible"
+    fi
+
+    # Layer 3: Socket permissions
+    if ls -la /var/run/docker.sock &>/dev/null; then
+        if [ -w /var/run/docker.sock ]; then
+            echo "✅ Docker socket is writable"
+        else
+            echo "⚠️  Docker socket is not writable - check group membership"
+        fi
+    fi
 else
-    echo "⚠️  Could not connect to vibes-network (might already be connected)"
-fi
-
-# Pattern 2: Check before action, provide context
-if docker info &>/dev/null; then
-    success "Docker daemon accessible"
-else
-    warn "Docker daemon not accessible"
-    warn "This might be expected in some devcontainer setups"
-fi
-
-# Pattern 3: Set errexit but disable for expected failures
-set -euo pipefail
-if some_command 2>/dev/null || true; then
-    # won't exit script if command fails
+    echo "❌ Docker CLI not found"
 fi
 ```
 
-**Best Practices Identified**:
-- Use `set -euo pipefail` for safety
-- Disable errexit selectively with `|| true`
-- Provide context in error messages (why it might fail)
-- Don't block devcontainer startup on vibesbox failures
-- Log errors but continue execution
+**When to use**:
+- Vibesbox health check script (check-vibesbox.sh)
+- Troubleshooting helper (vibesbox-diagnose)
+- Pre-flight checks before starting container
+- Post-start verification
 
-### Testing Patterns
+**How to adapt for Vibesbox**:
+- Replace layers with vibesbox-specific checks:
+  - Layer 1: Container exists (docker ps -a | grep vibesbox)
+  - Layer 2: Container running (docker ps | grep vibesbox)
+  - Layer 3: VNC port accessible (nc -z localhost 5901)
+  - Layer 4: X11 display working (DISPLAY=:1 xdpyinfo)
+  - Layer 5: Screenshot capability (ImageMagick import test)
+- Continue checking even if early layers fail (diagnostic completeness)
+- Provide actionable error messages at each layer
+- Return aggregated health score (5/5 checks passed)
 
-**Test File Organization**: Test scripts colocated with main scripts in `.devcontainer/scripts/`
+**Why this pattern**:
+- Progressive validation isolates failure points
+- Non-blocking checks provide complete diagnostic picture
+- Each layer targets specific potential failure
+- Informative output aids troubleshooting
+- Pattern scales well to multi-layer systems (like VNC stack)
 
-**Fixture Patterns**:
+## Naming Conventions
+
+### File Naming
+**Pattern**: `{action}-{target}.sh` for action scripts, `{feature}.sh` for utilities
+**Examples**:
+- `postCreate.sh` - Lifecycle hook script
+- `setup-network.sh` - Network setup utility
+- `test-docker.sh` - Docker validation script
+- `test-network.sh` - Network connectivity test
+
+**For Vibesbox**:
+- `ensure-vibesbox.sh` - Main lifecycle management (auto-start, health checks)
+- `check-vibesbox.sh` - Health check utility (callable separately)
+- `vibesbox-cli.sh` - CLI helper functions (sourced via /etc/profile.d/)
+
+### Function Naming
+**Pattern**: `{verb}_{noun}` for actions, `{noun}_{adjective}` for state checks
+**Examples**:
+- `container_exists()` - State check
+- `container_running()` - State check
+- `get_container_status()` - Getter
+- `wait_for_condition()` - Action function
+- `detect_vibesbox_state()` - State detection
+
+**For Vibesbox**:
+- `vibesbox_exists()`, `vibesbox_running()` - State checks
+- `ensure_network()` - Setup function
+- `wait_for_vnc()` - Polling function
+- `check_screenshot_capability()` - Validation function
+- CLI helpers: `vibesbox-status`, `vibesbox-start`, `vibesbox-logs` (dash-separated for shell commands)
+
+### Variable Naming
+**Pattern**: `UPPERCASE_WITH_UNDERSCORES` for environment variables, `lowercase_with_underscores` for local variables
+**Examples**:
 ```bash
-# Test data as arrays
-MCP_SERVERS=("azure-mcp-server" "terraform-mcp-server" "mcp-vibes-server")
+# Environment variables (configurable)
+VIBESBOX_NETWORK="${VIBESBOX_NETWORK:-vibes-network}"
+VIBESBOX_CONTAINER_NAME="${VIBESBOX_CONTAINER_NAME:-mcp-vibesbox-server}"
+VIBESBOX_HEALTH_TIMEOUT="${VIBESBOX_HEALTH_TIMEOUT:-30}"
 
-# Test iteration
-for server in "${MCP_SERVERS[@]}"; do
-    # run test
-done
+# Local variables (script-scoped)
+local container_state=""
+local elapsed=0
+local timeout_seconds="${2:-30}"
 ```
-
-**Test Structure**:
-- Naming: test-{component}.sh
-- Organization: Same directory as implementation
-- Fixtures: Inline arrays or variables at top
-- Assertions: Visual output with ✅/❌ emojis
 
 ## File Organization
 
-### Typical Structure for Similar Features
-
+### Directory Structure
 ```
 .devcontainer/
-├── devcontainer.json           # Main config (postCreateCommand hook)
-├── docker-compose.yml          # Devcontainer service definition
+├── devcontainer.json                  # Main config (postCreateCommand hook)
+├── docker-compose.yml                 # Devcontainer service definition
 └── scripts/
-    ├── postCreate.sh           # Main setup (calls other scripts)
-    ├── ensure-vibesbox.sh      # NEW: Vibesbox lifecycle management
-    ├── check-vibesbox.sh       # NEW: Health checking logic
-    ├── setup-network.sh        # Network setup (existing)
-    ├── test-docker.sh          # Docker validation (existing)
-    └── test-network.sh         # Network tests (existing)
+    ├── postCreate.sh                  # Main lifecycle hook (calls ensure-vibesbox.sh)
+    ├── ensure-vibesbox.sh             # NEW: Vibesbox lifecycle management
+    ├── check-vibesbox.sh              # NEW: Health check utility
+    ├── setup-network.sh               # Existing: Network setup (reused)
+    ├── test-docker.sh                 # Existing: Docker validation
+    └── test-network.sh                # Existing: Network validation
+
+/etc/profile.d/
+└── vibesbox-cli.sh                    # NEW: CLI helper functions
 
 mcp/mcp-vibesbox-server/
-├── docker-compose.yml          # Vibesbox service definition
-├── Dockerfile                  # Image build instructions
-└── (server code)
-
-# Helper functions exported to user shell
-/etc/profile.d/
-└── vibesbox-helpers.sh         # NEW: CLI helper functions
+├── docker-compose.yml                 # Vibesbox container definition
+├── Dockerfile                         # Vibesbox image build
+└── server.py                          # MCP server implementation
 ```
 
-**Rationale**:
-- Scripts in `.devcontainer/scripts/` are copied to `/usr/local/share/` during build
-- Helper functions in `/etc/profile.d/` are sourced on shell startup
-- Separation of concerns: lifecycle (ensure) vs health (check)
-- Existing pattern already established
+**Justification**:
+- All devcontainer scripts in `.devcontainer/scripts/` (established pattern)
+- Vibesbox-specific scripts isolated but co-located with lifecycle hooks
+- CLI helpers in `/etc/profile.d/` for automatic shell sourcing
+- Separation of concerns: `ensure-vibesbox.sh` (orchestration) vs `check-vibesbox.sh` (validation)
 
-### Module Naming Conventions
+## Common Utilities to Leverage
 
-- Main lifecycle script: `ensure-vibesbox.sh`
-- Health checking: `check-vibesbox.sh`
-- Helper functions: `vibesbox-helpers.sh`
-- Test modules: `test-vibesbox.sh`
-- Configuration: Environment variables (no separate config file)
-
-**Consistency Check**:
-- Follows existing `setup-network.sh`, `test-docker.sh` pattern
-- Hyphenated names (not underscores)
-- Descriptive verb-noun format
-- `.sh` extension explicit
-
-## Integration Points
-
-### Database Integration
-
-**Pattern from Codebase**: N/A - No database in this feature
-
-**Migrations**: N/A
-**Models**: N/A
-**Queries**: N/A
-
-### API Routes
-
-**Pattern from Codebase**: N/A - Bash scripting, no API routes
-
-### Configuration Management
-
-**Pattern from Codebase**: Environment variables with defaults
-
-**Environment Variables**:
+### 1. Existing Helper Functions
+**Location**: `.devcontainer/scripts/postCreate.sh` (lines 8-12)
+**Purpose**: Colored terminal output for consistent UX
+**Usage Example**:
 ```bash
-# From docker-compose.yml
-VIBES_PATH=${VIBES_PATH:-/workspace/vibes}
+# Source at top of every vibesbox script
+source "$(dirname "$0")/postCreate.sh"  # or define inline
 
-# From scripts
-CONTAINER_NAME=${VIBESBOX_CONTAINER_NAME:-mcp-vibesbox-server}
-NETWORK_NAME=${VIBESBOX_NETWORK:-vibes-network}
-VNC_PORT=${VIBESBOX_VNC_PORT:-5901}
-```
-
-**Config Files**: None (pure environment variable approach)
-
-**Secrets**:
-- Docker socket access controlled via group membership
-- No VNC password by default (localhost only)
-- API keys managed separately (ANTHROPIC_API_KEY pattern)
-
-## Code Style & Conventions
-
-### Naming Conventions Summary
-
-| Element | Convention | Example |
-|---------|------------|---------|
-| Files | kebab-case | ensure-vibesbox.sh |
-| Functions | lowercase | info, success, check_container_running |
-| Variables (global) | UPPERCASE | CONTAINER_NAME, VIBES_PATH |
-| Variables (local) | lowercase | container_id, vnc_port |
-| Constants | UPPERCASE | DEFAULT_VNC_PORT=5901 |
-| Environment Vars | UPPERCASE_SNAKE_CASE | VIBESBOX_CONTAINER_NAME |
-
-### Documentation Patterns
-
-**Docstring Style**: Inline comments with ASCII art headers
-
-**Example**:
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-# ┌───────────────────────────────────────────────────────────────────┐
-# │                    Vibesbox Lifecycle Manager                     │
-# └───────────────────────────────────────────────────────────────────┘
-#
-# Purpose: Auto-detect, start, and verify MCP Vibesbox Server
-# Usage: bash ensure-vibesbox.sh
-# Environment:
-#   VIBESBOX_CONTAINER_NAME - Container name (default: mcp-vibesbox-server)
-#   VIBESBOX_NETWORK        - Docker network (default: vibes-network)
-#   VIBESBOX_VNC_PORT       - VNC port (default: 5901)
-#   VIBESBOX_AUTO_BUILD     - Auto-build without prompt (default: false)
-#
-
-#── helper functions ────────────────────────────────────────────────
-# ... functions ...
-
-#── main logic ──────────────────────────────────────────────────────
-# ... implementation ...
-```
-
-### Import Organization
-
-**Pattern Observed**: N/A - Bash scripts don't have imports
-
-**Sourcing Pattern**:
-```bash
-# Source shared functions (if separated)
-if [ -f "/usr/local/share/vibesbox-common.sh" ]; then
-    source "/usr/local/share/vibesbox-common.sh"
+info "Starting vibesbox container..."
+if docker compose up -d; then
+    success "Vibesbox started successfully"
+else
+    error "Failed to start vibesbox - check logs"
 fi
 ```
 
-## Recommendations for devcontainer_vibesbox_integration
+### 2. Network Setup Pattern
+**Location**: `.devcontainer/scripts/setup-network.sh`
+**Purpose**: Idempotent vibes-network creation
+**Usage Example**:
+```bash
+# Call before vibesbox operations in ensure-vibesbox.sh
+info "Ensuring vibes-network exists..."
+bash /usr/local/share/setup-network.sh
+```
 
-### Patterns to Follow
+### 3. Docker Compose CLI
+**Location**: System-wide (`docker compose` command)
+**Purpose**: Container lifecycle management
+**Usage Example**:
+```bash
+COMPOSE_FILE="/workspace/vibes/mcp/mcp-vibesbox-server/docker-compose.yml"
 
-1. **Helper Function Output Pattern**: Exact color codes and formatting
-   - Source: postCreate.sh
-   - Benefit: Consistent UX across all scripts, familiar to users
+# Start (or create and start)
+docker compose -f "$COMPOSE_FILE" up -d
 
-2. **Multi-Level Validation Pattern**: Progressive checks (CLI → daemon → container → VNC → screenshot)
-   - Source: test-docker.sh
-   - Benefit: Clear diagnostic information, graceful degradation
+# Start existing stopped container
+docker compose -f "$COMPOSE_FILE" start
 
-3. **Idempotent Operations Pattern**: Check-before-action with safe retry
-   - Source: setup-network.sh
-   - Benefit: Safe to run multiple times, no side effects
+# Stop container
+docker compose -f "$COMPOSE_FILE" stop
 
-4. **Environment Variable Configuration**: ${VAR:-default} syntax
-   - Source: docker-compose.yml
-   - Benefit: Flexible, no config file parsing, easy override
+# Restart container
+docker compose -f "$COMPOSE_FILE" restart
 
-5. **Docker Format String Extraction**: Use --format for structured data
-   - Source: test-docker.sh
-   - Benefit: Reliable parsing, no fragile grep/awk chains
+# View logs
+docker compose -f "$COMPOSE_FILE" logs -f
+```
+**Key Distinction**: Use `up -d` for initial build/create, `start` for resuming stopped containers.
 
-6. **ASCII Art Headers**: Sections clearly marked with box drawing
-   - Source: postCreate.sh
-   - Benefit: Readable, scannable, professional appearance
+### 4. Docker Inspect for State Detection
+**Location**: System-wide (`docker inspect` command)
+**Purpose**: Authoritative container state information
+**Usage Example**:
+```bash
+# Get container status (running, exited, paused, etc.)
+STATUS=$(docker inspect --format '{{.State.Status}}' mcp-vibesbox-server 2>/dev/null)
 
-### Patterns to Avoid
+# Get health check status (if defined in Dockerfile)
+HEALTH=$(docker inspect --format '{{.State.Health.Status}}' mcp-vibesbox-server 2>/dev/null)
 
-1. **Anti-pattern**: Blocking operations without timeout
-   - Seen in: N/A (not present in codebase - good!)
-   - Issue: Would hang devcontainer startup
-   - Alternative: All health checks must have timeouts
+# Check if container exists (exit code)
+if docker inspect mcp-vibesbox-server &>/dev/null; then
+    echo "Container exists"
+fi
+```
 
-2. **Anti-pattern**: Hardcoded paths or values
-   - Seen in: Avoided in existing scripts
-   - Issue: Not flexible, breaks in different environments
-   - Alternative: Use environment variables with defaults
+### 5. netcat (nc) for Port Checking
+**Location**: System-wide (should be in devcontainer)
+**Purpose**: Test if VNC port is accessible
+**Usage Example**:
+```bash
+# Check if VNC server is listening on port 5901
+if nc -z localhost 5901 2>/dev/null; then
+    echo "VNC port accessible"
+else
+    echo "VNC port not accessible"
+fi
+```
+**Fallback**: If nc not available, use: `timeout 1 bash -c "</dev/tcp/localhost/5901" 2>/dev/null`
 
-3. **Anti-pattern**: Complex error handling with multiple exit codes
-   - Seen in: N/A (scripts use simple success/fail)
-   - Issue: Would complicate devcontainer integration
-   - Alternative: Graceful degradation, warn but continue
+### 6. xdpyinfo for X11 Display Testing
+**Location**: Should be installed in devcontainer
+**Purpose**: Verify X11 display is accessible
+**Usage Example**:
+```bash
+# Test if DISPLAY :1 is accessible
+if docker exec mcp-vibesbox-server sh -c "DISPLAY=:1 xdpyinfo" &>/dev/null; then
+    echo "X11 display accessible"
+else
+    echo "X11 display not accessible"
+fi
+```
 
-### New Patterns Needed
+### 7. ImageMagick (import) for Screenshot Testing
+**Location**: Should be installed in devcontainer (or call via docker exec)
+**Purpose**: Test screenshot capability as final health check
+**Usage Example**:
+```bash
+# Test screenshot capture from vibesbox container
+TEST_FILE="/tmp/vibesbox-health-check.png"
+if docker exec mcp-vibesbox-server sh -c "DISPLAY=:1 import -window root $TEST_FILE" &>/dev/null; then
+    # Verify file exists and has size > 0
+    if docker exec mcp-vibesbox-server sh -c "[ -s $TEST_FILE ]" &>/dev/null; then
+        echo "Screenshot capability verified"
+        docker exec mcp-vibesbox-server rm -f "$TEST_FILE"  # Cleanup
+    fi
+fi
+```
 
-If no similar codebase patterns exist:
+## Testing Patterns
 
-1. **Gap**: Health check polling with timeout
-   - **What's missing**: No existing pattern for "retry operation for N seconds"
-   - **Recommendation**:
-     ```bash
-     wait_for_condition() {
-       local timeout=$1
-       local check_command=$2
-       local start_time=$(date +%s)
+### Unit Test Structure
+**Pattern**: Idempotency testing - run script multiple times, verify consistent results
+**Example**: Test ensure-vibesbox.sh
+**Key techniques**:
+- Run 1: Container missing → builds and starts
+- Run 2: Container running → no action, health checks pass
+- Run 3: Container stopped → starts without rebuilding
+- Run 4: Network missing → creates network, starts container
 
-       while true; do
-         if eval "$check_command"; then
-           return 0
-         fi
+**Fixture Pattern**:
+```bash
+# test_ensure_vibesbox.sh
+setup() {
+    # Clean slate
+    docker compose -f "$COMPOSE_FILE" down
+    docker network rm vibes-network 2>/dev/null || true
+}
 
-         local current_time=$(date +%s)
-         local elapsed=$((current_time - start_time))
+test_missing_container() {
+    setup
+    bash ensure-vibesbox.sh
+    # Assert: container exists and running
+    container_running || exit 1
+}
 
-         if [ $elapsed -ge $timeout ]; then
-           return 1
-         fi
+test_stopped_container() {
+    setup
+    docker compose up -d
+    docker compose stop
+    bash ensure-vibesbox.sh
+    # Assert: container restarted
+    container_running || exit 1
+}
 
-         sleep 2
-       done
-     }
+test_already_running() {
+    setup
+    docker compose up -d
+    bash ensure-vibesbox.sh
+    # Assert: no errors, health checks pass
+}
+```
 
-     # Usage:
-     if wait_for_condition 30 "nc -z localhost 5901"; then
-       success "VNC server ready"
-     else
-       warn "VNC server timeout after 30s"
-     fi
-     ```
-   - **Rationale**: VNC startup is async, need polling mechanism
-   - **Example**: Standard pattern from DevOps health check scripts
+### Integration Test Structure
+**Pattern**: Full lifecycle test - devcontainer creation → vibesbox auto-start → health verification
+**Example**: Test complete postCreateCommand flow
+**Key techniques**:
+```bash
+# test_devcontainer_integration.sh
+test_full_lifecycle() {
+    # Simulate devcontainer creation
+    bash postCreate.sh
 
-2. **Gap**: Screenshot capability testing
-   - **What's missing**: No pattern for testing X11/VNC display functionality
-   - **Recommendation**:
-     ```bash
-     test_screenshot() {
-       local display="${1:-:1}"
-       local output_file="/tmp/vibesbox-health-check.png"
+    # Assert: vibesbox running
+    [ "$(docker inspect --format '{{.State.Status}}' mcp-vibesbox-server)" = "running" ] || exit 1
 
-       # Try to capture screenshot
-       if DISPLAY="$display" import -window root "$output_file" 2>/dev/null; then
-         # Verify file exists and is not empty
-         if [ -s "$output_file" ]; then
-           rm -f "$output_file"
-           return 0
-         fi
-       fi
-       return 1
-     }
-     ```
-   - **Rationale**: Screenshot is definitive proof GUI automation works
-   - **Example**: ImageMagick import command standard for headless testing
+    # Assert: VNC accessible
+    nc -z localhost 5901 || exit 1
 
-3. **Gap**: Progress indicators for long operations
-   - **What's missing**: No visual feedback during docker compose build
-   - **Recommendation**:
-     ```bash
-     show_progress() {
-       local message="$1"
-       local pid=$2
+    # Assert: CLI helpers available
+    type vibesbox-status &>/dev/null || exit 1
+}
+```
 
-       info "$message"
-       while kill -0 $pid 2>/dev/null; do
-         printf "."
-         sleep 1
-       done
-       echo ""
-     }
+### Validation Pattern: ShellCheck
+**Pattern**: Static analysis for bash scripts
+**Tool**: ShellCheck (https://www.shellcheck.net/)
+**Usage**:
+```bash
+# Run on all vibesbox scripts
+shellcheck .devcontainer/scripts/ensure-vibesbox.sh
+shellcheck .devcontainer/scripts/check-vibesbox.sh
+shellcheck /etc/profile.d/vibesbox-cli.sh
 
-     # Usage:
-     docker compose build --progress=plain &>/tmp/build.log &
-     BUILD_PID=$!
-     show_progress "Building vibesbox image" $BUILD_PID
-     wait $BUILD_PID
-     ```
-   - **Rationale**: Build takes 1-3 minutes, user needs feedback
-   - **Example**: Common shell progress indicator pattern
+# Common issues to fix:
+# - SC2086: Quote variables to prevent word splitting
+# - SC2164: Use 'cd ... || exit' for safe directory changes
+# - SC2155: Declare and assign separately to avoid masking return values
+```
 
-4. **Gap**: CLI helper function export
-   - **What's missing**: No pattern for making functions available in user shell
-   - **Recommendation**:
-     ```bash
-     # Create /etc/profile.d/vibesbox-helpers.sh
-     # Functions defined here are sourced on shell startup
+## Anti-Patterns to Avoid
 
-     vibesbox-status() {
-       bash /usr/local/share/check-vibesbox.sh
-     }
+### 1. Blocking Devcontainer Startup on Vibesbox Failure
+**What it is**: Using `set -e` or `exit 1` when vibesbox operations fail, causing devcontainer creation to abort
+**Why to avoid**: Vibesbox is an enhancement, not a core dependency - devcontainer should work without it
+**Found in**: Could happen if we're not careful in ensure-vibesbox.sh
+**Better approach**:
+```bash
+# BAD: Blocks devcontainer
+set -euo pipefail
+docker compose up -d  # If this fails, script exits, devcontainer fails
 
-     vibesbox-start() {
-       docker compose -f /workspace/vibes/mcp/mcp-vibesbox-server/docker-compose.yml start
-     }
+# GOOD: Graceful degradation
+if docker compose up -d &>/dev/null; then
+    success "Vibesbox started"
+else
+    warn "Vibesbox failed to start - GUI automation unavailable"
+    warn "Troubleshoot with: vibesbox-logs"
+    # Continue devcontainer setup
+fi
+```
 
-     vibesbox-stop() {
-       docker compose -f /workspace/vibes/mcp/mcp-vibesbox-server/docker-compose.yml stop
-     }
+### 2. Using `docker compose up` for Restarting Stopped Containers
+**What it is**: Using `docker compose up -d` when container already exists but is stopped
+**Why to avoid**: `up` is for creating containers, `start` is for resuming existing ones. Using `up` can cause port conflicts or unnecessary rebuilds.
+**Found in**: Common mistake when not checking container state first
+**Better approach**:
+```bash
+# BAD: Always uses 'up'
+docker compose up -d
 
-     # ... more helpers ...
-     ```
-   - **Rationale**: Users need CLI access to vibesbox operations
-   - **Example**: Standard Linux profile.d pattern for shell customization
+# GOOD: State-aware command selection
+if container_exists; then
+    docker compose start  # Resume existing container
+else
+    docker compose up -d  # Create and start new container
+fi
+```
 
-## Archon Code Examples Referenced
+### 3. Hardcoding Timeouts Without Configurability
+**What it is**: Fixed timeout values (e.g., `sleep 30`) hardcoded in scripts
+**Why to avoid**: Different environments have different startup times (local vs CI vs cloud)
+**Found in**: Could happen in initial implementation
+**Better approach**:
+```bash
+# BAD: Hardcoded timeout
+timeout=30
 
-### Example 1: Environment Configuration Pattern
-- **Archon ID**: b8565aff9938938b
-- **Relevance**: 6/10
-- **Key Takeaway**: Environment variable configuration pattern with validation
-- **Location in Archon**: GitHub context-engineering-intro commit
+# GOOD: Environment-configurable with sensible default
+timeout="${VIBESBOX_HEALTH_TIMEOUT:-30}"
 
-### Example 2: Docker Orchestration Pattern
-- **Archon ID**: c0e629a894699314
-- **Relevance**: 5/10
-- **Key Takeaway**: Instrumentation and monitoring patterns for services
-- **Location in Archon**: Pydantic AI documentation
+# BETTER: Document in .env.example
+# .env.example:
+# VIBESBOX_HEALTH_TIMEOUT=30  # Seconds to wait for health checks
+```
 
-### Example 3: Health Check Pattern
-- **Archon ID**: c0e629a894699314
-- **Relevance**: 4/10
-- **Key Takeaway**: Polling and validation patterns for service health
-- **Location in Archon**: Pydantic AI model instrumentation
+### 4. Silent Failures Without User Feedback
+**What it is**: Errors suppressed with `2>/dev/null` without informing user
+**Why to avoid**: User has no visibility into what went wrong, can't troubleshoot
+**Found in**: Could happen when over-using stderr redirection
+**Better approach**:
+```bash
+# BAD: Silent failure
+docker compose up -d 2>/dev/null
 
-## Local Files Referenced
+# GOOD: Capture and report errors
+if ! output=$(docker compose up -d 2>&1); then
+    error "Failed to start vibesbox:"
+    echo "$output" | head -5  # Show first 5 lines of error
+    warn "Run 'vibesbox-logs' for full details"
+fi
+```
 
-### File 1: /Users/jon/source/vibes/.devcontainer/scripts/postCreate.sh
-- **Lines**: 1-203
-- **Pattern Type**: Helper functions, tool checking, configuration setup
-- **Relevance**: Primary pattern source for output formatting and setup flow
+### 5. Mixing State Detection Methods
+**What it is**: Using different commands inconsistently for checking container state (docker ps, docker inspect, docker-compose ps)
+**Why to avoid**: Inconsistent results, harder to debug, redundant code
+**Found in**: Likely to happen without clear pattern
+**Better approach**:
+```bash
+# BAD: Mixed methods
+if docker ps | grep vibesbox; then ...
+if docker inspect vibesbox; then ...
+if docker-compose ps | grep running; then ...
 
-### File 2: /Users/jon/source/vibes/.devcontainer/scripts/test-docker.sh
-- **Lines**: 1-69
-- **Pattern Type**: Multi-level Docker validation and state detection
-- **Relevance**: Direct template for vibesbox health checking logic
+# GOOD: Consistent helper functions
+container_exists() {
+    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+}
 
-### File 3: /Users/jon/source/vibes/.devcontainer/scripts/setup-network.sh
-- **Lines**: 1-26
-- **Pattern Type**: Idempotent network creation and connection
-- **Relevance**: Pattern for vibesbox container startup logic
+container_running() {
+    docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+}
 
-### File 4: /Users/jon/source/vibes/.devcontainer/scripts/test-network.sh
-- **Lines**: 1-35
-- **Pattern Type**: Network connectivity testing with multiple protocols
-- **Relevance**: Pattern for VNC port checking and connectivity validation
+# All code uses these helpers
+if container_running; then ...
+```
 
-### File 5: /Users/jon/source/vibes/mcp/mcp-vibesbox-server/docker-compose.yml
-- **Lines**: 1-35
-- **Pattern Type**: Complete service definition with systemd, VNC, networking
-- **Relevance**: Core configuration to orchestrate in automation scripts
+### 6. Not Cleaning Up Test Resources
+**What it is**: Health check creates test files (screenshots) but doesn't remove them
+**Why to avoid**: Accumulates junk files, can mask future test failures
+**Found in**: Screenshot capability testing
+**Better approach**:
+```bash
+# BAD: No cleanup
+docker exec vibesbox sh -c "DISPLAY=:1 import -window root /tmp/test.png"
+# test.png left behind
 
-### File 6: /Users/jon/source/vibes/.devcontainer/devcontainer.json
-- **Lines**: 1-44
-- **Pattern Type**: Devcontainer configuration and hook integration
-- **Relevance**: Integration point for vibesbox automation
+# GOOD: Always cleanup with trap
+TEST_FILE="/tmp/vibesbox-health-$$.png"
+cleanup() { docker exec vibesbox rm -f "$TEST_FILE" 2>/dev/null || true; }
+trap cleanup EXIT
+
+docker exec vibesbox sh -c "DISPLAY=:1 import -window root $TEST_FILE"
+# Automatically cleaned up on exit
+```
+
+### 7. VNC Display Race Condition
+**What it is**: Checking VNC port immediately after container start without polling
+**Why to avoid**: VNC server takes time to initialize - check will fail even if VNC is starting
+**Found in**: Documented in feature-analysis.md gotchas
+**Better approach**:
+```bash
+# BAD: Immediate check (likely to fail)
+docker compose up -d
+if nc -z localhost 5901; then ...
+
+# GOOD: Poll with timeout
+docker compose up -d
+wait_for_condition vnc_port_ready 30 2 "VNC server"
+```
+
+## Implementation Hints from Existing Code
+
+### Similar Features Found
+
+1. **Network Setup (setup-network.sh)**:
+   - **Similarity**: Prerequisite resource creation for container operations
+   - **Lessons**: Check-before-create pattern works well, suppressing expected errors improves UX
+   - **Differences**: Vibesbox needs more complex state management (network is simpler)
+   - **Reuse**: Call setup-network.sh directly from ensure-vibesbox.sh
+
+2. **Docker Testing (test-docker.sh)**:
+   - **Similarity**: Multi-layer validation of Docker ecosystem
+   - **Lessons**: Progressive checks with non-blocking failures provide complete diagnostics
+   - **Differences**: Docker validation is one-time, vibesbox needs ongoing health monitoring
+   - **Reuse**: Adapt multi-layer pattern for vibesbox health checks (container → VNC → screenshot)
+
+3. **PostCreate Hook (postCreate.sh)**:
+   - **Similarity**: Devcontainer lifecycle integration point
+   - **Lessons**: Informative output, tool version reporting, conditional setup work well
+   - **Differences**: postCreate is environment setup, vibesbox management is service lifecycle
+   - **Reuse**: Helper functions (info/success/warn/error), environment variable patterns
+
+## Recommendations for PRP
+
+Based on pattern analysis:
+
+1. **Follow helper function pattern** from postCreate.sh for all user-facing output
+   - Source functions in all scripts: `source "$(dirname "$0")/helper-functions.sh"`
+   - Maintain consistent color coding and symbols
+
+2. **Reuse network setup pattern** from setup-network.sh for vibes-network prerequisite
+   - Call directly: `bash /usr/local/share/setup-network.sh`
+   - Or extract to reusable function if modifications needed
+
+3. **Mirror state machine pattern** from container-state-detection.sh for lifecycle management
+   - Create helper functions: `vibesbox_exists()`, `vibesbox_running()`, `detect_vibesbox_state()`
+   - Use case statement for action dispatch based on detected state
+
+4. **Adapt polling pattern** from polling-with-timeout.sh for health checks
+   - Generic `wait_for_condition()` function with vibesbox-specific condition functions
+   - Chain checks: container → VNC → display → screenshot
+
+5. **Avoid non-blocking failures anti-pattern** for devcontainer robustness
+   - Use `|| true` or conditional error handling
+   - Warn user but don't block devcontainer startup
+
+6. **Follow existing script organization**:
+   - Place scripts in `.devcontainer/scripts/`
+   - Name as `ensure-vibesbox.sh` (orchestration) and `check-vibesbox.sh` (validation)
+   - Export CLI helpers via `/etc/profile.d/vibesbox-cli.sh`
+
+7. **Make everything configurable** via environment variables:
+   - Network name: `VIBESBOX_NETWORK`
+   - Container name: `VIBESBOX_CONTAINER_NAME`
+   - Timeouts: `VIBESBOX_HEALTH_TIMEOUT`, `VIBESBOX_BUILD_TIMEOUT`
+   - Behavior: `VIBESBOX_AUTO_BUILD`
+   - Document all in `.env.example`
+
+8. **Use ShellCheck** validation before committing any bash scripts
+
+9. **Test idempotency** - every script must be safe to run multiple times
+
+10. **Provide actionable error messages** - always include troubleshooting steps
+
+## Source References
+
+### From Archon
+- **c0e629a894699314**: Pydantic AI - Lifecycle management patterns (context managers, async operations) - Relevance 7/10
+- **d60a71d62eb201d5**: Model Context Protocol - Server lifecycle patterns - Relevance 6/10
+- Limited bash/Docker patterns in Archon - most relevant patterns are from local codebase
+
+### From Local Codebase
+- `.devcontainer/scripts/postCreate.sh:8-12` - Helper functions (info/success/warn/error)
+- `.devcontainer/scripts/postCreate.sh:2` - Error handling (`set -euo pipefail`)
+- `.devcontainer/scripts/setup-network.sh:1-26` - Idempotent network creation
+- `.devcontainer/scripts/test-docker.sh:7-62` - Multi-layer validation pattern
+- `.devcontainer/devcontainer.json:6` - postCreateCommand integration point
+- `mcp/mcp-vibesbox-server/docker-compose.yml` - Vibesbox container configuration
+- `examples/devcontainer_vibesbox_integration/*.sh` - Synthesized patterns for feature
+
+### From Examples Directory (Already Extracted)
+- `examples/devcontainer_vibesbox_integration/helper-functions.sh` - Colored output
+- `examples/devcontainer_vibesbox_integration/container-state-detection.sh` - State machine
+- `examples/devcontainer_vibesbox_integration/polling-with-timeout.sh` - Health polling
+- `examples/devcontainer_vibesbox_integration/network-setup.sh` - Idempotent operations
+- `examples/devcontainer_vibesbox_integration/docker-health-check.sh` - Multi-layer validation
+
+## Next Steps for Assembler
+
+When generating the PRP:
+
+- **Reference these patterns in "Current Codebase Tree" section**:
+  - List all `.devcontainer/scripts/*.sh` files
+  - List `mcp/mcp-vibesbox-server/docker-compose.yml`
+  - Note examples already extracted
+
+- **Include key code snippets in "Implementation Blueprint"**:
+  - Helper functions (copy verbatim)
+  - State detection logic (adapt from examples)
+  - Polling pattern (reference wait_for_condition)
+  - Network setup (call existing script)
+
+- **Add anti-patterns to "Known Gotchas" section**:
+  - Blocking devcontainer startup
+  - Using 'up' instead of 'start'
+  - Hardcoded timeouts
+  - Silent failures
+  - VNC race condition
+
+- **Use file organization for "Desired Codebase Tree"**:
+  ```
+  .devcontainer/scripts/
+  ├── ensure-vibesbox.sh (NEW)
+  ├── check-vibesbox.sh (NEW)
+  └── postCreate.sh (MODIFIED - add call to ensure-vibesbox.sh)
+
+  /etc/profile.d/
+  └── vibesbox-cli.sh (NEW)
+  ```
+
+- **Task breakdown should follow**:
+  1. Create helper-functions.sh (or inline in scripts)
+  2. Create check-vibesbox.sh (health validation utility)
+  3. Create ensure-vibesbox.sh (main lifecycle orchestration)
+  4. Create vibesbox-cli.sh (CLI helper exports)
+  5. Modify postCreate.sh (add call to ensure-vibesbox.sh)
+  6. Create .env.example (document all environment variables)
+  7. Test idempotency and validation
+
+- **Validation gates should include**:
+  - ShellCheck passes on all bash scripts
+  - Idempotency test (run ensure-vibesbox.sh 3x, verify consistent state)
+  - State transition tests (missing → running, stopped → running)
+  - Health check tests (all 4 layers pass)
+  - Graceful degradation test (vibesbox fails, devcontainer continues)
 
 ---
-Generated: 2025-10-04
-Archon Examples Referenced: 3
-Local Files Referenced: 6
-Total Patterns Documented: 8
-Feature: devcontainer_vibesbox_integration
+
+**Generated**: 2025-10-04
+**Archon Project ID**: 96623e6d-eaa2-4325-beee-21e605255c32
+**Research Phase**: Phase 2A - Codebase Research
+**Lines**: 761
+**Patterns Documented**: 5 major patterns + 7 anti-patterns
+**Source Files Analyzed**: 10+ bash scripts
+**Confidence**: High (existing codebase has excellent patterns to follow)
