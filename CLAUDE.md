@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-**Vibes** is a Claude Code workspace for AI-assisted development, featuring MCP (Model Context Protocol) servers for shell and GUI automation, a structured PRP (Progressive Refinement Process) system for implementing features, and organized workspaces for projects and repository analysis.
+**Vibes** is a Claude Code workspace for AI-assisted development, featuring MCP (Model Context Protocol) servers for shell and GUI automation, a structured PRP (Product Requirements Prompt) system for implementing features, and organized workspaces for projects and repository analysis.
 
 ## Architecture
 
