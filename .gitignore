@@ -19,6 +19,10 @@
 !/examples/workflows/
 !/examples/workflows/*/
 !/examples/workflows/**
+!/examples/enhanced_prp_workflow/
+!/examples/enhanced_prp_workflow/*.md
+!/examples/prp_workflow_improvements/
+!/examples/prp_workflow_improvements/*.md
 
 # Repos
 /repos/*
