@@ -8,8 +8,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - vibes-devcontainer-cache:/home/vscode/.cache
       - vibes-devcontainer-go:/home/vscode/go
+      - claude-auth:/home/vscode/.claude:rw
     command: sleep infinity
-    working_dir: /workspace/vibes
+    working_dir: /workspace
     environment:
       - DOCKER_HOST=unix:///var/run/docker.sock
     user: vscode
@@ -19,3 +20,4 @@ services:
 volumes:
   vibes-devcontainer-cache:
   vibes-devcontainer-go:
+  claude-auth:

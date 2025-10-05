@@ -167,15 +167,44 @@ else
 fi
 
 echo
+info "🐳 Configuring Docker socket permissions..."
+if [ -S /var/run/docker.sock ]; then
+  if sudo chgrp docker /var/run/docker.sock 2>/dev/null; then
+    success "Docker socket group set to 'docker'"
+
+    # Verify permissions (should be 660 or more restrictive)
+    PERMS=$(stat -c '%a' /var/run/docker.sock 2>/dev/null || stat -f '%A' /var/run/docker.sock 2>/dev/null)
+    if [ -n "$PERMS" ] && [ "$PERMS" -le 660 ]; then
+      success "Docker socket permissions secure: $PERMS"
+    elif [ -n "$PERMS" ]; then
+      warn "Docker socket permissions too open: $PERMS (should be 660 or less)"
+    fi
+
+    # Verify access immediately
+    if docker ps &>/dev/null; then
+      success "Docker access verified"
+    else
+      warn "Docker access verification failed - may need container restart"
+    fi
+  else
+    warn "Failed to set Docker socket group - may need manual fix"
+    warn "Run manually if needed: sudo chgrp docker /var/run/docker.sock"
+  fi
+else
+  warn "Docker socket not found at /var/run/docker.sock"
+  warn "Docker access may not work in this environment"
+fi
+
+echo
 #── Workspace setup ─────────────────────────────────────────────────
 info "📁 Setting up workspace..."
 
 # Add aliases to bashrc if not already present
 if ! grep -q "alias cdv=" "$HOME/.bashrc" 2>/dev/null; then
-  echo 'alias cdv="cd /workspace/vibes"' >> "$HOME/.bashrc"
-  echo 'alias vibes="cd /workspace/vibes"' >> "$HOME/.bashrc"
-  echo 'export VIBES_HOME="/workspace/vibes"' >> "$HOME/.bashrc"
-  echo 'export PATH="/workspace/vibes/bin:$PATH"' >> "$HOME/.bashrc"
+  echo 'alias cdv="cd /workspace"' >> "$HOME/.bashrc"
+  echo 'alias vibes="cd /workspace"' >> "$HOME/.bashrc"
+  echo 'export VIBES_HOME="/workspace"' >> "$HOME/.bashrc"
+  echo 'export PATH="/workspace/bin:$PATH"' >> "$HOME/.bashrc"
   success "Added workspace aliases to ~/.bashrc"
 else
   success "Workspace aliases already configured"
@@ -186,10 +215,10 @@ echo
 info "🖥️  Setting up vibesbox automation..."
 
 # Install CLI helper functions (makes vibesbox-* commands available)
-if [ -f /workspace/vibes/.devcontainer/scripts/install-vibesbox-cli.sh ]; then
-  bash /workspace/vibes/.devcontainer/scripts/install-vibesbox-cli.sh || {
+if [ -f /workspace/.devcontainer/scripts/install-vibesbox-cli.sh ]; then
+  bash /workspace/.devcontainer/scripts/install-vibesbox-cli.sh || {
     warn "CLI helper installation failed - functions may not be auto-loaded"
-    warn "You can manually source: source /workspace/vibes/.devcontainer/scripts/vibesbox-cli.sh"
+    warn "You can manually source: source /workspace/.devcontainer/scripts/vibesbox-cli.sh"
   }
 else
   warn "install-vibesbox-cli.sh not found - skipping CLI setup"
@@ -197,14 +226,23 @@ fi
 
 echo
 # Ensure vibesbox is running (with graceful degradation)
-if [ -f /workspace/vibes/.devcontainer/scripts/ensure-vibesbox.sh ]; then
-  bash /workspace/vibes/.devcontainer/scripts/ensure-vibesbox.sh || {
+if [ -f /workspace/.devcontainer/scripts/ensure-vibesbox.sh ]; then
+  bash /workspace/.devcontainer/scripts/ensure-vibesbox.sh || {
     warn "Vibesbox setup encountered issues - GUI automation may be unavailable"
     warn "Devcontainer will continue without vibesbox"
     warn "To troubleshoot: vibesbox-status"
   }
 else
   warn "ensure-vibesbox.sh not found - skipping vibesbox setup"
+fi
+
+echo
+info "📝 Claude CLI Authentication:"
+if [ -f "$HOME/.claude/.credentials.json" ]; then
+  success "Claude credentials found (authenticated)"
+else
+  info "First-time setup: Run 'claude auth login' to persist credentials"
+  info "Credentials will persist across devcontainer rebuilds via named volume"
 fi
 
 echo

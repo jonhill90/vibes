@@ -21,14 +21,8 @@ services:
       - ${VIBES_PATH:-/workspace/vibes}:/workspace/vibes:rw
       - mcp-vibesbox-workspace:/workspace
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    ports:
-      - "5901:5901"  # VNC server (now enabled since Chromium + VNC are working)
+    network_mode: host
     command: ["/sbin/init"]
-
-networks:
-  default:
-    name: vibes-network
-    external: true
 
 volumes:
   mcp-vibesbox-workspace:

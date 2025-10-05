@@ -8,7 +8,7 @@ VIBESBOX_NETWORK="${VIBESBOX_NETWORK:-vibes-network}"
 VIBESBOX_CONTAINER_NAME="${VIBESBOX_CONTAINER_NAME:-mcp-vibesbox-server}"
 VIBESBOX_VNC_PORT="${VIBESBOX_VNC_PORT:-5901}"
 VIBESBOX_HEALTH_TIMEOUT="${VIBESBOX_HEALTH_TIMEOUT:-30}"
-COMPOSE_FILE="${VIBESBOX_COMPOSE_FILE:-/workspace/vibes/mcp/mcp-vibesbox-server/docker-compose.yml}"
+COMPOSE_FILE="${VIBESBOX_COMPOSE_FILE:-/workspace/mcp/mcp-vibesbox-server/docker-compose.yml}"
 
 #── Colored Output Functions ─────────────────────────────────────────
 # Pattern: examples/devcontainer_vibesbox_integration/helper-functions.sh
