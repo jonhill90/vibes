@@ -71,7 +71,9 @@ For each documentation source:
 
 ### 5. Output Generation
 
-Create `prps/research/documentation-links.md` with:
+**CRITICAL**: Use the exact output path provided in the context (DO NOT hardcode paths).
+
+Create the documentation file at the specified path with:
 
 ```markdown
 # Documentation Resources: {feature_name}
@@ -271,7 +273,7 @@ When generating the PRP:
 ## Autonomous Working Protocol
 
 ### Phase 1: Requirements Understanding
-1. Read `prps/research/feature-analysis.md`
+1. Read feature-analysis.md from path provided in context ("Feature Analysis Path")
 2. List all frameworks, libraries, and technologies
 3. Identify specific features/APIs needed
 4. Note any version requirements
@@ -326,10 +328,16 @@ Before outputting documentation-links.md, verify:
 
 ## Output Location
 
-**CRITICAL**: Output file to exact path:
+**CRITICAL**: Output file to the EXACT path provided in the context's "Output Path" field.
+
+DO NOT hardcode `prps/research/` - use the parameterized path from context.
+
+Example context will provide:
 ```
-prps/research/documentation-links.md
+**Output Path**: prps/{feature_name}/planning/documentation-links.md
 ```
+
+Use that EXACT path for Write() operation.
 
 ## Error Handling
 

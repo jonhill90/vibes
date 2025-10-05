@@ -26,20 +26,53 @@ Generate a complete PRP with thorough research using a 5-phase multi-subagent ap
 initial_md_path = "$ARGUMENTS"
 initial_content = Read(initial_md_path)
 
-# 2. Extract feature name
+# 2. Extract and validate feature name (SECURITY: prevent command injection)
 # From file name: prps/INITIAL_user_auth.md → "user_auth"
-# Or from content Goal section
-feature_name = extract_feature_name(initial_md_path, initial_content)
+import re
 
-# 3. Create directories
-Bash("mkdir -p prps/research")
-Bash(f"mkdir -p examples/{feature_name}")
+def extract_feature_name(filepath: str) -> str:
+    """Safely extract feature name with strict validation."""
+    # SECURITY: Check for path traversal in full path first
+    if ".." in filepath:
+        raise ValueError(f"Path traversal detected in filepath: {filepath}")
 
-# 4. Check Archon availability
+    basename = filepath.split("/")[-1]
+    feature = basename.replace("INITIAL_", "").replace(".md", "")
+
+    # SECURITY: Whitelist validation (only safe characters)
+    if not re.match(r'^[a-zA-Z0-9_-]+$', feature):
+        raise ValueError(
+            f"Invalid feature name: '{feature}'\n"
+            f"Must contain only: letters, numbers, hyphens, underscores\n"
+            f"Examples: user_auth, web-scraper, apiClient123"
+        )
+
+    # SECURITY: Length validation
+    if len(feature) > 50:
+        raise ValueError(f"Feature name too long: {len(feature)} chars (max: 50)")
+
+    # SECURITY: No directory traversal in feature name
+    if ".." in feature or "/" in feature or "\\" in feature:
+        raise ValueError(f"Path traversal detected: {feature}")
+
+    # SECURITY: No command injection
+    dangerous_chars = ['$', '`', ';', '&', '|', '>', '<', '\n', '\r']
+    if any(char in feature for char in dangerous_chars):
+        raise ValueError(f"Dangerous characters detected: {feature}")
+
+    return feature
+
+feature_name = extract_feature_name(initial_md_path)
+
+# 3. Create scoped directories (per-feature, not global)
+Bash(f"mkdir -p prps/{feature_name}/planning")
+Bash(f"mkdir -p prps/{feature_name}/examples")
+
+# 4. Check Archon availability and setup project/tasks
+# For Archon integration patterns, see: .claude/patterns/archon-workflow.md
 health = mcp__archon__health_check()
 archon_available = health["status"] == "healthy"
 
-# 5. If Archon available, create project and tasks
 if archon_available:
     # Create project
     project = mcp__archon__manage_project("create",
@@ -70,8 +103,10 @@ if archon_available:
         )
         task_ids.append(task["task"]["id"])
 else:
+    # Graceful fallback - continue without tracking
     project_id = None
     task_ids = []
+    print("ℹ️ Archon MCP not available - proceeding without project tracking")
 
 # 6. Proceed to Phase 1
 ```
@@ -106,7 +141,7 @@ context = f'''You are analyzing an INITIAL.md file to create feature analysis fo
 5. Make intelligent assumptions for gaps
 6. Create comprehensive feature-analysis.md
 
-**Output**: prps/research/feature-analysis.md
+**Output Path**: prps/{feature_name}/planning/feature-analysis.md
 '''
 
 # 3. Invoke analyzer
@@ -114,14 +149,14 @@ Task(subagent_type="prp-gen-feature-analyzer",
      description="Analyze INITIAL.md requirements",
      prompt=context)
 
-# 4. Wait for completion - subagent will create prps/research/feature-analysis.md
+# 4. Wait for completion - subagent will create prps/{feature_name}/planning/feature-analysis.md
 
 # 5. Mark task complete
 if archon_available:
     mcp__archon__manage_task("update", task_id=task_ids[0], status="done")
 ```
 
-**Expected Output**: `prps/research/feature-analysis.md`
+**Expected Output**: `prps/{feature_name}/planning/feature-analysis.md`
 
 ---
 
@@ -149,7 +184,7 @@ if archon_available:
 
 researcher_context = f'''You are searching for codebase patterns for PRP generation.
 
-**Feature Analysis**: prps/research/feature-analysis.md (READ THIS FIRST)
+**Feature Analysis Path**: prps/{feature_name}/planning/feature-analysis.md (READ THIS FIRST)
 **Feature Name**: {feature_name}
 **Archon Project ID**: {project_id if archon_available else "Not available"}
 
@@ -160,12 +195,12 @@ researcher_context = f'''You are searching for codebase patterns for PRP generat
 4. Extract naming conventions, file organization, utilities
 5. Create comprehensive codebase-patterns.md
 
-**Output**: prps/research/codebase-patterns.md
+**Output Path**: prps/{feature_name}/planning/codebase-patterns.md
 '''
 
 hunter_context = f'''You are finding official documentation for PRP generation.
 
-**Feature Analysis**: prps/research/feature-analysis.md (READ THIS FIRST)
+**Feature Analysis Path**: prps/{feature_name}/planning/feature-analysis.md (READ THIS FIRST)
 **Feature Name**: {feature_name}
 **Archon Project ID**: {project_id if archon_available else "Not available"}
 
@@ -176,28 +211,28 @@ hunter_context = f'''You are finding official documentation for PRP generation.
 4. Find official docs with working examples
 5. Create comprehensive documentation-links.md
 
-**Output**: prps/research/documentation-links.md
+**Output Path**: prps/{feature_name}/planning/documentation-links.md
 '''
 
 curator_context = f'''You are extracting code examples for PRP generation.
 
-**Feature Analysis**: prps/research/feature-analysis.md (READ THIS FIRST)
+**Feature Analysis Path**: prps/{feature_name}/planning/feature-analysis.md (READ THIS FIRST)
 **Feature Name**: {feature_name}
-**Examples Directory**: examples/{feature_name}/
+**Examples Directory**: prps/{feature_name}/examples/
 **Archon Project ID**: {project_id if archon_available else "Not available"}
 
 **Your Task**:
 1. Read feature-analysis.md to understand patterns needed
 2. Search Archon code examples
 3. Search local codebase for similar code
-4. EXTRACT actual code to examples/{feature_name}/ (NOT just references!)
+4. EXTRACT actual code to prps/{feature_name}/examples/ (NOT just references!)
 5. Create README.md with "what to mimic" guidance
 6. Create examples-to-include.md report
 
-**Output**:
-- examples/{feature_name}/example_*.py (2-4 code files)
-- examples/{feature_name}/README.md
-- prps/research/examples-to-include.md
+**Output Paths**:
+- prps/{feature_name}/examples/example_*.py (2-4 code files)
+- prps/{feature_name}/examples/README.md
+- prps/{feature_name}/planning/examples-to-include.md
 '''
 
 # 3. ⚠️ CRITICAL: Parallel invocation - SINGLE message with THREE Task calls
@@ -251,9 +286,9 @@ if archon_available:
 context = f'''You are identifying gotchas and pitfalls for PRP generation.
 
 **Research Documents** (READ ALL):
-- prps/research/feature-analysis.md
-- prps/research/codebase-patterns.md
-- prps/research/documentation-links.md
+- prps/{feature_name}/planning/feature-analysis.md
+- prps/{feature_name}/planning/codebase-patterns.md
+- prps/{feature_name}/planning/documentation-links.md
 
 **Feature Name**: {feature_name}
 **Archon Project ID**: {project_id if archon_available else "Not available"}
@@ -265,7 +300,7 @@ context = f'''You are identifying gotchas and pitfalls for PRP generation.
 4. Document SOLUTIONS (not just warnings!)
 5. Create comprehensive gotchas.md
 
-**Output**: prps/research/gotchas.md
+**Output Path**: prps/{feature_name}/planning/gotchas.md
 '''
 
 # 3. Invoke detective
@@ -280,7 +315,7 @@ if archon_available:
     mcp__archon__manage_task("update", task_id=task_ids[4], status="done")
 ```
 
-**Expected Output**: `prps/research/gotchas.md`
+**Expected Output**: `prps/{feature_name}/planning/gotchas.md`
 
 ---
 
@@ -314,15 +349,15 @@ if archon_available:
 context = f'''You are assembling the final PRP from all research.
 
 **Research Documents** (READ ALL 5):
-1. prps/research/feature-analysis.md
-2. prps/research/codebase-patterns.md
-3. prps/research/documentation-links.md
-4. prps/research/examples-to-include.md
-5. prps/research/gotchas.md
+1. prps/{feature_name}/planning/feature-analysis.md
+2. prps/{feature_name}/planning/codebase-patterns.md
+3. prps/{feature_name}/planning/documentation-links.md
+4. prps/{feature_name}/planning/examples-to-include.md
+5. prps/{feature_name}/planning/gotchas.md
 
 **Template**: prps/templates/prp_base.md (USE THIS STRUCTURE)
 **Feature Name**: {feature_name}
-**Examples Directory**: examples/{feature_name}/
+**Examples Directory**: prps/{feature_name}/examples/
 **Archon Project ID**: {project_id if archon_available else "Not available"}
 
 **Your Task**:
@@ -339,7 +374,7 @@ context = f'''You are assembling the final PRP from all research.
 
 **CRITICAL**: PRP must score 8+/10 for implementation readiness.
 
-**Output**: prps/{feature_name}.md (and store in Archon if available)
+**Output Path**: prps/{feature_name}/{feature_name}.md (and store in Archon if available)
 '''
 
 # 3. Invoke assembler
@@ -362,43 +397,76 @@ if archon_available:
 
 **Quality Gate Check**:
 
+For quality scoring criteria and enforcement patterns, see: `.claude/patterns/quality-gates.md`
+
+For comprehensive validation checklist, reference: `prps/templates/prp_base.md` - Final validation Checklist section
+
 ```python
 # 1. Read the generated PRP
-prp_content = Read(f"prps/{feature_name}.md")
+prp_content = Read(f"prps/{feature_name}/{feature_name}.md")
 
-# 2. Extract quality score
-# Look for "Score: X/10" in the PRP
-quality_score = extract_score(prp_content)
+# 2. Extract quality score (pattern from quality-gates.md)
+import re
+score_match = re.search(r'Score:\s*(\d+)/10', prp_content)
+quality_score = int(score_match.group(1)) if score_match else 0
 
-# 3. Verify minimum quality
+# 3. Verify minimum quality (8+/10 enforcement)
 if quality_score < 8:
     print(f"⚠️ Quality Gate Failed: PRP scored {quality_score}/10 (minimum: 8/10)")
-    print("\nWould you like me to:")
+    print("\nOptions:")
     print("1. Regenerate with additional research")
     print("2. Review and improve specific sections")
     print("3. Proceed anyway (not recommended)")
-    # Wait for user decision
+
+    choice = input("Choose (1/2/3): ")
+
+    if choice == "1":
+        # Re-run research phases with enhanced criteria
+        print("Re-running research phases...")
+        # Trigger Phase 2 again
+    elif choice == "2":
+        # Identify and enhance weak sections
+        gaps = identify_missing_sections(prp_content)
+        print("\nIdentified gaps:")
+        for gap in gaps:
+            print(f"  - {gap}")
+        # Re-run specific subagents
+    elif choice != "3":
+        print("❌ Invalid choice - aborting")
+        exit(1)
+    else:
+        print("⚠️ Proceeding with quality score below threshold")
 else:
+    print(f"✅ Quality Gate Passed: {quality_score}/10")
     # Proceed to delivery
 ```
 
-**Delivery Message**:
+**Completion Report**:
+
+See `.claude/patterns/quality-gates.md` for quality metrics structure.
 
 ```markdown
 ✅ **PRP Generated Successfully!**
 
-**Generated Files**:
-- 📄 `prps/{feature_name}.md` - Comprehensive implementation-ready PRP
-- 📁 `examples/{feature_name}/` - Extracted code examples ({count} files)
-- 📋 `prps/research/` - Supporting research (5 documents)
+**Output**: `prps/{feature_name}/{feature_name}.md`
 
 **Quality Assessment**:
-- PRP Quality Score: {score}/10 ✅
-- Documentation sources: {count} official references
-- Code examples: {count} files extracted with guidance
-- Gotchas documented: {count} with solutions
-- Task breakdown: {count} tasks with clear dependencies
+- PRP Quality Score: {quality_score}/10 {'✅' if quality_score >= 8 else '⚠️'}
+- Documentation sources: {doc_count} official references
+- Code examples: {example_count} files extracted with guidance
+- Gotchas documented: {gotcha_count} with solutions
+- Task breakdown: {task_count} tasks with clear dependencies
 - Validation gates: ✅ Executable commands provided
+
+**Research Artifacts**:
+- `prps/{feature_name}/planning/feature-analysis.md`
+- `prps/{feature_name}/planning/codebase-patterns.md`
+- `prps/{feature_name}/planning/documentation-links.md`
+- `prps/{feature_name}/planning/examples-to-include.md`
+- `prps/{feature_name}/planning/gotchas.md`
+
+**Extracted Examples**:
+- `prps/{feature_name}/examples/` ({example_count} files)
 
 **Time to Generate**: {elapsed_time} minutes
 
@@ -406,17 +474,22 @@ else:
 
 1. **Review the PRP** (recommended):
    ```bash
-   cat prps/{feature_name}.md
+   cat prps/{feature_name}/{feature_name}.md
    ```
 
 2. **Review extracted examples** (optional but helpful):
    ```bash
-   cat examples/{feature_name}/README.md
+   cat prps/{feature_name}/examples/README.md
    ```
 
 3. **Execute the PRP** (when ready to implement):
    ```bash
-   /execute-prp prps/{feature_name}.md
+   /execute-prp prps/{feature_name}/{feature_name}.md
+   ```
+
+4. **(Optional) Cleanup after execution**:
+   ```bash
+   /prp-cleanup {feature_name}
    ```
 
 **Archon Tracking**: {if available, show project URL or note unavailable}

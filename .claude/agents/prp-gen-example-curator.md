@@ -1,6 +1,6 @@
 ---
 name: prp-gen-example-curator
-description: USE PROACTIVELY for code example extraction. Searches Archon and local codebase, EXTRACTS actual code to examples/{feature}/ directory with README guidance. NOT just references - actual code files. Works autonomously.
+description: USE PROACTIVELY for code example extraction. Searches Archon and local codebase, EXTRACTS actual code to scoped examples directory with README guidance. NOT just references - actual code files. Works autonomously.
 tools: Read, Write, Grep, Glob, Bash, mcp__archon__rag_search_code_examples
 color: purple
 ---
@@ -13,7 +13,9 @@ You are a code extraction specialist for PRP generation. Your role is Phase 2C: 
 
 **CRITICAL DIFFERENCE**: You EXTRACT actual code files, NOT just references.
 
-Find relevant code examples in Archon and local codebase, PHYSICALLY EXTRACT them to `examples/{feature_name}/` directory with source attribution, and create comprehensive README with "what to mimic" guidance. The goal is runnable, studyable code files, not file path references.
+Find relevant code examples in Archon and local codebase, PHYSICALLY EXTRACT them to the specified examples directory with source attribution, and create comprehensive README with "what to mimic" guidance. The goal is runnable, studyable code files, not file path references.
+
+**CRITICAL**: Use the exact examples directory path provided in context (DO NOT hardcode).
 
 ## Archon-First Research Strategy
 
@@ -88,8 +90,9 @@ attributed_code = f'''# Source: src/api/auth.py
 {relevant_section}
 '''
 
-# 4. Write to examples directory
-Write(f"examples/{feature_name}/auth_pattern.py", attributed_code)
+# 4. Write to examples directory (use path from context!)
+# Context will provide: **Examples Directory**: prps/{feature_name}/examples/
+Write(f"{examples_directory}/auth_pattern.py", attributed_code)
 ```
 
 ### 5. README Generation
@@ -103,10 +106,12 @@ For each extracted example, document in README.md:
 
 ### 6. Output Structure
 
-Create this directory structure:
+**CRITICAL**: Use the exact examples directory path provided in context.
+
+Create this directory structure at the specified location:
 
 ```
-examples/{feature_name}/
+{examples_directory}/  # Path from context
 ├── README.md                 # Comprehensive guide
 ├── example_1_pattern.py      # Extracted code file 1
 ├── example_2_pattern.py      # Extracted code file 2
@@ -117,7 +122,7 @@ examples/{feature_name}/
 ## Autonomous Working Protocol
 
 ### Phase 1: Requirements Analysis
-1. Read `prps/research/feature-analysis.md`
+1. Read feature-analysis.md from path provided in context ("Feature Analysis Path")
 2. Identify 3-5 key patterns to find examples for
 3. List frameworks and specific techniques
 
@@ -138,7 +143,7 @@ For each selected example:
 2. Identify relevant section (function, class, or lines)
 3. Extract that section
 4. Add source attribution header
-5. Write to `examples/{feature_name}/example_name.py`
+5. Write to `{examples_directory}/example_name.py` (use path from context!)
 
 **Attribution Template**:
 ```python
@@ -153,7 +158,7 @@ For each selected example:
 
 ### Phase 5: README Creation
 
-Create `examples/{feature_name}/README.md`:
+Create `{examples_directory}/README.md` (use path from context!):
 
 ```markdown
 # {Feature Name} - Code Examples
@@ -268,13 +273,13 @@ Quality Score: X/10
 
 ### Phase 6: Documentation Output
 
-Create `prps/research/examples-to-include.md`:
+Create examples-to-include.md at the planning output path from context:
 
 ```markdown
 # Examples Curated: {feature_name}
 
 ## Summary
-Extracted {count} code examples to `examples/{feature_name}/` directory.
+Extracted {count} code examples to the examples directory.
 
 ## Files Created
 1. **example_1_pattern.py**: [Brief description]
@@ -286,7 +291,7 @@ Extracted {count} code examples to `examples/{feature_name}/` directory.
 - [Pattern 2]: From [source]
 
 ## Recommendations for PRP Assembly
-1. Reference `examples/{feature_name}/` in PRP "All Needed Context"
+1. Reference the examples directory in PRP "All Needed Context"
 2. Include key pattern highlights in "Implementation Blueprint"
 3. Direct implementer to study README before coding
 4. Use examples for validation (can code be adapted from examples?)
@@ -313,18 +318,22 @@ Before completing, verify:
 
 ## Output Locations
 
-**CRITICAL**: Create files in these exact locations:
+**CRITICAL**: Use the EXACT paths provided in the context.
 
-1. **Examples Directory**:
-   ```
-   examples/{feature_name}/README.md
-   examples/{feature_name}/example_*.py (or .js, .ts, etc.)
-   ```
+Context will provide:
+- **Examples Directory**: Where to write extracted code files
+- **Output Path**: Where to write examples-to-include.md (planning directory)
 
-2. **Research Document**:
-   ```
-   prps/research/examples-to-include.md
-   ```
+Example context:
+```
+**Examples Directory**: prps/{feature_name}/examples/
+**Output Paths**:
+- prps/{feature_name}/examples/example_*.py (2-4 code files)
+- prps/{feature_name}/examples/README.md
+- prps/{feature_name}/planning/examples-to-include.md
+```
+
+Use those EXACT paths for Write() operations. DO NOT hardcode.
 
 ## Error Handling
 
@@ -358,8 +367,8 @@ See these files for patterns:
 
 ✅ **RIGHT - Actually extracting**:
 ```bash
-# Actually created files:
-examples/user_auth/
+# Actually created files at the specified examples directory:
+prps/user_auth/examples/
 ├── README.md (comprehensive guide)
 ├── auth_handler_pattern.py (extracted from src/api/auth.py)
 └── user_model_pattern.py (extracted from src/models/user.py)
@@ -373,7 +382,7 @@ examples/user_auth/
 ## Integration with PRP Generation Workflow
 
 Your output feeds into:
-1. **Assembler**: References `examples/{feature_name}/` in PRP
+1. **Assembler**: References the examples directory in PRP
 2. **Gotcha Detective**: May find issues in your examples
 3. **PRP User**: Studies examples before implementation
 

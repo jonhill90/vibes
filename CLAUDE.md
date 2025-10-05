@@ -183,6 +183,23 @@ The codebase has two specialized agents configured:
 
 ## Development Patterns
 
+### Pattern Library
+
+The `.claude/patterns/` directory contains reusable implementation patterns for the PRP system.
+
+**Before implementing**:
+1. Check `.claude/patterns/README.md` index
+2. Search for existing pattern that matches your need
+3. If found: Use pattern as-is (copy-paste examples)
+4. If not found: Implement, then consider extracting to pattern (after 3rd use)
+
+**Pattern Index**: [.claude/patterns/README.md](.claude/patterns/README.md)
+
+**Key Patterns**:
+- **archon-workflow.md**: Archon MCP integration (health check, graceful fallback)
+- **parallel-subagents.md**: Parallel task execution (3x speedup)
+- **quality-gates.md**: Quality scoring and validation loops
+
 ### PRP-Driven Development (Product Requirements Prompt)
 
 PRPs are context engineering artifacts that enable first-pass success through comprehensive briefing.

@@ -78,7 +78,9 @@ For any unclear requirements:
 
 ### 5. Output Generation
 
-Create `prps/research/feature-analysis.md` with:
+**CRITICAL**: Use the exact output path provided in the context (DO NOT hardcode paths).
+
+Create the feature analysis file at the specified path with:
 
 ```markdown
 # Feature Analysis: {feature_name}
@@ -185,10 +187,16 @@ Before outputting feature-analysis.md, verify:
 
 ## Output Location
 
-**CRITICAL**: Output file to exact path:
+**CRITICAL**: Output file to the EXACT path provided in the context's "Output Path" field.
+
+DO NOT hardcode `prps/research/` - use the parameterized path from context.
+
+Example context will provide:
 ```
-prps/research/feature-analysis.md
+**Output Path**: prps/{feature_name}/planning/feature-analysis.md
 ```
+
+Use that EXACT path for Write() operation.
 
 ## Error Handling
 

@@ -26,21 +26,57 @@ Implement a feature using the PRP file with a 5-phase multi-subagent approach. E
 prp_path = "$ARGUMENTS"
 prp_content = Read(prp_path)
 
-# 2. Extract feature name
+# 2. Extract and validate feature name (SECURITY: prevent command injection)
 # From file name: prps/user_auth.md → "user_auth"
-# Or from PRP Goal section
-feature_name = extract_feature_name(prp_path, prp_content)
+import re
+
+def extract_feature_name(filepath: str) -> str:
+    """Safely extract feature name with strict validation."""
+    # SECURITY: Check for path traversal in full path first
+    if ".." in filepath:
+        raise ValueError(f"Path traversal detected in filepath: {filepath}")
+
+    basename = filepath.split("/")[-1]
+    feature = basename.replace(".md", "")
+
+    # SECURITY: Whitelist validation (only safe characters)
+    if not re.match(r'^[a-zA-Z0-9_-]+$', feature):
+        raise ValueError(
+            f"Invalid feature name: '{feature}'\n"
+            f"Must contain only: letters, numbers, hyphens, underscores\n"
+            f"Examples: user_auth, web-scraper, apiClient123"
+        )
+
+    # SECURITY: Length validation
+    if len(feature) > 50:
+        raise ValueError(f"Feature name too long: {len(feature)} chars (max: 50)")
+
+    # SECURITY: No directory traversal in feature name
+    if ".." in feature or "/" in feature or "\\" in feature:
+        raise ValueError(f"Path traversal detected: {feature}")
+
+    # SECURITY: No command injection
+    dangerous_chars = ['$', '`', ';', '&', '|', '>', '<', '\n', '\r']
+    if any(char in feature for char in dangerous_chars):
+        raise ValueError(f"Dangerous characters detected: {feature}")
+
+    return feature
+
+feature_name = extract_feature_name(prp_path)
+
+# 2.5. Create execution directory (scoped)
+Bash(f"mkdir -p prps/{feature_name}/execution")
 
 # 3. Extract all tasks from PRP Implementation Blueprint
 # Look for "Task List (Execute in Order)" section
 tasks = extract_tasks_from_prp(prp_content)
 # Each task has: name, responsibility, files, steps, validation
 
-# 4. Check Archon availability
+# 4. Check Archon availability and setup project/tasks
+# For Archon integration patterns, see: .claude/patterns/archon-workflow.md
 health = mcp__archon__health_check()
 archon_available = health["status"] == "healthy"
 
-# 5. If Archon available, create project and tasks
 if archon_available:
     # Create project
     project = mcp__archon__manage_project("create",
@@ -64,8 +100,10 @@ if archon_available:
             "archon_task_id": archon_task["task"]["id"]
         })
 else:
+    # Graceful fallback - continue without tracking
     project_id = None
     task_mappings = tasks  # Just use PRP tasks without Archon IDs
+    print("ℹ️ Archon MCP not available - proceeding without project tracking")
 
 # 6. Proceed to Phase 1 (dependency analysis)
 ```
@@ -291,6 +329,8 @@ Task(subagent_type="prp-exec-test-generator",
 **Mode**: AUTONOMOUS with iteration loops
 **Duration**: 10-90 minutes (depending on issues found)
 
+For validation patterns and loop structure, see: `.claude/patterns/quality-gates.md`
+
 **Your Actions**:
 
 ```python
@@ -310,13 +350,17 @@ context = f'''You are running systematic validation for implemented code.
 **Test Files**: {test_files}
 **Validation Gates**: (from PRP Validation Loop section)
 
+**Validation Pattern**: See .claude/patterns/quality-gates.md for:
+- Multi-level validation structure
+- Max 5 attempts per level
+- Error analysis and fix application
+
 **Your Task**:
 1. Read the PRP Validation Loop section
 2. Execute each validation level in order
 3. For each failure:
-   - Analyze error messages
-   - Check PRP gotchas for guidance
-   - Apply fixes
+   - Analyze error messages (check PRP gotchas first)
+   - Apply fix based on error analysis
    - Re-run validation
    - Iterate until pass (max 5 attempts per level)
 4. Document all issues found and fixed
@@ -324,7 +368,7 @@ context = f'''You are running systematic validation for implemented code.
 
 **CRITICAL**: Iterate on failures. Don't give up until all tests pass or max attempts reached.
 
-**Output**: prps/validation-report.md with all results
+**Output**: prps/{feature_name}/execution/validation-report.md with all results
 '''
 
 # 3. Invoke validator

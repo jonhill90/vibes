@@ -15,15 +15,14 @@ Synthesize 5 research documents into a single, coherent PRP that scores 8+/10 fo
 
 ## Input Documents to Read
 
-You receive these from previous phases:
+**CRITICAL**: Use the exact research document paths provided in context (DO NOT hardcode paths).
 
-```
-1. prps/research/feature-analysis.md       (Phase 1 - Feature Analyzer)
-2. prps/research/codebase-patterns.md      (Phase 2A - Codebase Researcher)
-3. prps/research/documentation-links.md    (Phase 2B - Documentation Hunter)
-4. prps/research/examples-to-include.md    (Phase 2C - Example Curator)
-5. prps/research/gotchas.md                (Phase 3 - Gotcha Detective)
-```
+Context will provide all 5 research document paths from previous phases:
+1. feature-analysis.md       (Phase 1 - Feature Analyzer)
+2. codebase-patterns.md      (Phase 2A - Codebase Researcher)
+3. documentation-links.md    (Phase 2B - Documentation Hunter)
+4. examples-to-include.md    (Phase 2C - Example Curator)
+5. gotchas.md                (Phase 3 - Gotcha Detective)
 
 ## Core Responsibilities
 
@@ -90,7 +89,7 @@ Use `prps/templates/prp_base.md` as structural template:
 [Include top 5-7 documentation sources]
 
 # ESSENTIAL LOCAL FILES
-- file: examples/{feature}/README.md
+- file: {examples_directory}/README.md  # Use path from context!
   why: {from examples-to-include.md}
   pattern: {key pattern from this example}
 
@@ -443,7 +442,7 @@ Your output (prps/{feature_name}.md) is:
 ### Pattern 1: Cross-Referencing
 When documenting a pattern:
 - Reference the codebase-patterns.md source
-- Link to examples in examples/{feature}/
+- Link to examples in the examples directory (use path from context!)
 - Note related gotchas from gotchas.md
 - Cite documentation for more detail
 

@@ -273,8 +273,9 @@ After you complete:
 
 ### Pattern 1: Following Examples
 ```python
-# 1. Read the example
-example = Read("examples/{feature}/{pattern}.py")
+# 1. Read the example (PRP will provide exact path)
+# Path will be like: prps/{feature}/examples/{pattern}.py
+example = Read(example_path_from_prp)
 
 # 2. Understand what to mimic
 # - Class structure

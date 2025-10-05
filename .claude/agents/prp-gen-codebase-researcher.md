@@ -71,7 +71,9 @@ For each discovered pattern, document:
 
 ### 5. Output Generation
 
-Create `prps/research/codebase-patterns.md` with:
+**CRITICAL**: Use the exact output path provided in the context (DO NOT hardcode paths).
+
+Create the codebase patterns file at the specified path with:
 
 ```markdown
 # Codebase Patterns: {feature_name}
@@ -207,7 +209,7 @@ When generating the PRP:
 ## Autonomous Working Protocol
 
 ### Phase 1: Understanding Requirements
-1. Read `prps/research/feature-analysis.md`
+1. Read feature-analysis.md from path provided in context ("Feature Analysis Path")
 2. Extract technical components to search for
 3. Identify key frameworks and libraries
 4. Note architectural style
@@ -258,10 +260,16 @@ Before outputting codebase-patterns.md, verify:
 
 ## Output Location
 
-**CRITICAL**: Output file to exact path:
+**CRITICAL**: Output file to the EXACT path provided in the context's "Output Path" field.
+
+DO NOT hardcode `prps/research/` - use the parameterized path from context.
+
+Example context will provide:
 ```
-prps/research/codebase-patterns.md
+**Output Path**: prps/{feature_name}/planning/codebase-patterns.md
 ```
+
+Use that EXACT path for Write() operation.
 
 ## Error Handling
 

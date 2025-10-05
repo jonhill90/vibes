@@ -416,7 +416,7 @@ Edit(file,
 ### Strategy 2: Reference Examples
 ```python
 # 1. Identify what code is trying to do
-# 2. Check examples/{feature}/ for similar code
+# 2. Check PRP for examples directory path (prps/{feature}/examples/)
 # 3. Compare implementation with example
 # 4. Align to example pattern
 # 5. Re-run validation
