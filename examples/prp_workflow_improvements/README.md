@@ -533,3 +533,25 @@ Total Examples: 6 (5 code files + 1 README)
 Source Types: Factory: 4, Current Commands: 2
 Feature: prp_workflow_improvements
 Quality Score: 10/10 - Comprehensive examples with detailed guidance
+
+---
+
+## ⚠️ Deprecation Notice
+
+**Note**: The INITIAL.md factory workflow documented in these examples has been deprecated and removed as of 2025-10-05.
+
+**What was removed**:
+- 6 `prp-initial-*` subagent files
+- `/create-initial` command
+- Factory workflow documentation from CLAUDE.md
+
+**Why it was removed**:
+The factory automated a creative thinking task (requirements gathering) that benefits from human judgment. Manual INITIAL.md creation takes 10-20 minutes and produces better results.
+
+**Current workflow**:
+1. **Manual INITIAL.md creation** (10-20 minutes)
+2. `/generate-prp INITIAL.md` (automated research & PRP creation)
+3. `/execute-prp PRP.md` (automated implementation)
+
+**Historical value**:
+These examples are preserved to show the evolution of the PRP workflow and document why automation isn't always the answer. They serve as a case study in identifying over-engineering.
