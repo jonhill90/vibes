@@ -1,719 +1,996 @@
-# Codebase Patterns: Initial Factory Removal
+# Codebase Patterns: prp_context_cleanup
 
 ## Overview
 
-This document extracts patterns for safely removing the INITIAL.md factory workflow (6 agents + 1 command) while preserving the core PRP generation/execution system. The key insight: this is a **reversal pattern** - removing over-automation and returning to a simpler, more effective workflow where manual INITIAL.md creation (10-20 min) precedes automated PRP generation.
+This analysis extracts concrete implementation patterns from the existing PRP system codebase to guide the context cleanup refactoring. The current system uses multi-phase orchestration with Archon MCP integration, parallel subagent execution, and file-based research artifacts. Key patterns include: health-check-first Archon workflow, parallel Task invocation for speedup, scoped directory organization, error handling with graceful degradation, and quality gate validation.
 
 ## Architectural Patterns
 
-### Pattern 1: Agent File Organization
-**Source**: `.claude/agents/` directory structure
-**Relevance**: 10/10
-**What it does**: Organizes agents by workflow phase with consistent naming conventions
+### Pattern 1: Phase-Based Workflow Orchestration
+
+**Source**: `.claude/commands/generate-prp.md` (lines 10-582), `.claude/commands/execute-prp.md` (lines 9-620)
+**Relevance**: 10/10 - Core pattern for both commands
+
+**What it does**: Orchestrates complex workflows through distinct phases, each with clear inputs/outputs and responsibility boundaries. Commands act as lightweight coordinators, delegating work to specialized subagents.
 
 **Key Techniques**:
-```
-.claude/agents/
-├── documentation-manager.md       # General purpose
-├── validation-gates.md            # General purpose
-├── prp-gen-*.md                  # PRP Generation (6 agents) - PRESERVE
-├── prp-exec-*.md                 # PRP Execution (4 agents) - PRESERVE
-└── prp-initial-*.md              # INITIAL Factory (6 agents) - DELETE
-```
+```python
+# Phase 0: Setup & Initialization (Command handles this)
+# 1. Read input file
+# 2. Extract feature name
+# 3. Create directories
+# 4. Check Archon health
+# 5. Create Archon project + tasks
 
-**Agent Naming Convention**:
-- `prp-gen-{phase}`: PRP generation subagents (from INITIAL.md)
-- `prp-exec-{phase}`: PRP execution subagents (from PRP)
-- `prp-initial-{phase}`: INITIAL factory subagents (DEPRECATED)
+# Phase 1: Analysis (Single subagent)
+# - Sequential execution
+# - Creates foundation for Phase 2
 
-**When to use**:
-- When organizing multi-phase workflows with subagents
-- When creating parallel execution groups
-- When maintaining clear separation between workflow stages
+# Phase 2: Parallel Research/Implementation (CRITICAL)
+# - THREE subagents simultaneously
+# - 3x speedup via parallelization
+# - Independent work on separate artifacts
 
-**How to adapt**:
-- Delete all `prp-initial-*.md` files (6 files)
-- Preserve all `prp-gen-*.md` files (6 files)
-- Preserve all `prp-exec-*.md` files (4 files)
-- Update CLAUDE.md to reflect 10 total agents (was 12+)
+# Phase 3: Secondary Processing (Single subagent)
+# - Gotcha detection OR test generation
 
-**Why this pattern**:
-- Clear namespace prevents confusion between similar agents
-- Prefix-based grouping makes batch operations easy
-- Phase-based naming documents execution order
+# Phase 4: Assembly/Validation (Single subagent)
+# - Synthesizes all prior work
+# - Quality gates and scoring
 
-### Pattern 2: Agent Frontmatter Structure
-**Source**: All agent files in `.claude/agents/`
-**Relevance**: 9/10
-**What it does**: Uses YAML frontmatter to define agent metadata and tool permissions
-
-**Key Techniques**:
-```yaml
----
-name: prp-gen-codebase-researcher
-description: USE PROACTIVELY for codebase pattern extraction...
-tools: Read, Write, Grep, Glob, mcp__archon__rag_search_code_examples
-color: green
----
+# Phase 5: Completion & Reporting (Command handles this)
+# - Validation checks
+# - User-facing reports
+# - Archon finalization
 ```
 
 **When to use**:
-- Every agent definition file needs frontmatter
-- Tool permissions must be explicitly listed
-- Description should trigger proactive use
+- Multi-step workflows with clear dependencies
+- Parallelizable research or implementation tasks
+- Need for quality gates between phases
+- Complex coordination requiring different expertise per phase
 
 **How to adapt**:
-- After deleting prp-initial-* agents, verify prp-gen-* agents have correct tools
-- No changes needed to frontmatter format
-- Ensure no tools reference deleted agents
+- Keep Phase 0 and Phase 5 in command file (orchestration)
+- Extract phase pseudocode to pattern documents
+- Reference pattern docs instead of duplicating code
+- Maintain parallel execution in Phase 2
 
 **Why this pattern**:
-- Claude Code uses frontmatter for agent discovery
-- Tool restrictions enforce security boundaries
-- Proactive triggers enable autonomous execution
+- Clear separation of concerns (command vs subagent)
+- Enables parallel execution where possible
+- Testable phase boundaries
+- Progressive disclosure (load phase details on-demand)
 
-### Pattern 3: Command File Structure
-**Source**: `.claude/commands/create-initial.md` (to be deleted)
-**Relevance**: 8/10
-**What it does**: Defines slash commands that orchestrate multi-agent workflows
+---
+
+### Pattern 2: Archon MCP Integration Workflow
+
+**Source**: `examples/prp_workflow_improvements/archon_integration_pattern.md`, `.claude/commands/generate-prp.md` (lines 38-77), `.claude/commands/execute-prp.md` (lines 39-71)
+**Relevance**: 10/10 - Duplicated across 6+ locations, needs consolidation
+
+**What it does**: Health-check-first pattern with graceful degradation when Archon unavailable. Creates projects and tasks for tracking, updates status throughout workflow, stores final documents.
 
 **Key Techniques**:
-```markdown
-# Command Name
+```python
+# 1. Health Check First (ALWAYS)
+health = mcp__archon__health_check()
+archon_available = health["status"] == "healthy"
 
-## Trigger Patterns
-- List of user phrases that activate this command
+# 2. Graceful Fallback
+if archon_available:
+    # Create project
+    project = mcp__archon__manage_project("create",
+        title=f"PRP Generation: {feature_name}",
+        description=f"Creating comprehensive PRP from {initial_md_path}"
+    )
+    project_id = project["project"]["id"]
 
-## The N-Phase Workflow
-### Phase 0: Setup (YOU handle this)
-### Phase 1: Subagent execution
-### Phase N: Completion
+    # Create tasks with priority ordering
+    tasks = [
+        {"title": "Phase 1: Analysis", "assignee": "subagent-name", "order": 100},
+        {"title": "Phase 2A: Research", "assignee": "subagent-name", "order": 90},
+        # Higher order = higher priority (0-100)
+    ]
 
-## Archon Integration
-- Health check → Create project → Create tasks → Execute
+    task_ids = []
+    for task_def in tasks:
+        task = mcp__archon__manage_task("create",
+            project_id=project_id,
+            title=task_def["title"],
+            description=f"{task_def['assignee']} - Autonomous execution",
+            status="todo",
+            assignee=task_def["assignee"],
+            task_order=task_def["order"]
+        )
+        task_ids.append(task["task"]["id"])
+else:
+    project_id = None
+    task_ids = []
+    print("ℹ️ Archon MCP not available - proceeding without project tracking")
+
+# 3. Task Status Updates Throughout Workflow
+# Before starting phase
+if archon_available:
+    mcp__archon__manage_task("update", task_id=task_ids[0], status="doing")
+
+# After completing phase
+if archon_available:
+    mcp__archon__manage_task("update", task_id=task_ids[0], status="done")
+
+# 4. Parallel Task Updates (Phase 2)
+if archon_available:
+    # Update all parallel tasks to "doing"
+    for i in [1, 2, 3]:  # Tasks 2A, 2B, 2C
+        mcp__archon__manage_task("update", task_id=task_ids[i], status="doing")
+
+    # After all complete
+    for i in [1, 2, 3]:
+        mcp__archon__manage_task("update", task_id=task_ids[i], status="done")
+
+# 5. Error Handling - Reset on Failure
+try:
+    # Invoke subagent
+    Task(subagent_type="agent-name", description="task", prompt=context)
+except Exception as e:
+    if archon_available:
+        mcp__archon__manage_task("update", task_id=task_id,
+            description=f"ERROR: {e}",
+            status="todo"  # Reset to allow retry
+        )
+
+# 6. Project Completion
+mcp__archon__manage_project("update",
+    project_id=project_id,
+    description=f"COMPLETED: {summary_stats}"
+)
+
+# 7. Document Storage
+mcp__archon__manage_document("create",
+    project_id=project_id,
+    title=f"{feature_name}.md",
+    content=final_content,
+    document_type="prp"
+)
 ```
 
 **When to use**:
-- Creating orchestration commands for multi-agent workflows
-- Defining clear phase boundaries with responsibilities
-- Integrating with Archon for task tracking
+- Any multi-phase workflow requiring tracking
+- Features needing project/task visibility
+- Integration with Archon knowledge base
+- Progress monitoring and status updates
 
 **How to adapt**:
-- Delete `.claude/commands/create-initial.md` entirely
-- Preserve `/generate-prp` and `/execute-prp` commands
-- Update CLAUDE.md to remove all references to `/create-initial`
+- Extract this entire pattern to `.claude/patterns/archon-workflow.md`
+- Commands reference the pattern doc instead of duplicating
+- Keep only health check and if/else branching in commands
+- Load full pattern doc only when implementing Archon integration
 
 **Why this pattern**:
-- Phased execution enables parallel optimization
-- Clear ownership (YOU vs subagent) prevents ambiguity
-- Archon integration provides observability
+- Graceful degradation (works without Archon)
+- Task status flow: todo → doing → done → (or back to todo on error)
+- Higher task_order = higher priority (0-100)
+- Project tracking for multi-phase workflows
+- Error recovery through status resets
 
-### Pattern 4: Documentation Section Removal
-**Source**: `CLAUDE.md` lines 185-378 (INITIAL.md Factory Workflow section)
-**Relevance**: 10/10
-**What it does**: Shows how to cleanly remove large documentation sections while maintaining coherence
+**CRITICAL**: This pattern is currently duplicated across 6+ files. Consolidating to single source of truth is PRIMARY goal of this refactoring.
+
+---
+
+### Pattern 3: Parallel Subagent Execution
+
+**Source**: `.claude/commands/generate-prp.md` (lines 128-234, 560-580), `.claude/commands/execute-prp.md` (lines 123-234, 585-597)
+**Relevance**: 10/10 - Key innovation, must preserve
+
+**What it does**: Invokes multiple Task tools in SINGLE response to execute independent subagents simultaneously, achieving 3x speedup for research and 30-50% speedup for implementation.
 
 **Key Techniques**:
-```markdown
-# BEFORE (lines 183-185)
----
+```python
+# CRITICAL: Parallel Phase 2 Research (generate-prp)
+# Sequential would be: 5min + 4min + 5min = 14 minutes
+# Parallel: max(5, 4, 5) = 5 minutes (64% faster)
 
-## INITIAL.md Factory Workflow
-[~193 lines of factory documentation]
+# 1. Prepare context for EACH subagent
+researcher_context = f'''Research task context...'''
+hunter_context = f'''Documentation task context...'''
+curator_context = f'''Example extraction task context...'''
 
----
+# 2. Update ALL Archon tasks to "doing" BEFORE invoking
+if archon_available:
+    for i in [1, 2, 3]:  # Tasks 2A, 2B, 2C
+        mcp__archon__manage_task("update", task_id=task_ids[i], status="doing")
 
-## Development Patterns
+# 3. ⚠️ CRITICAL: Invoke ALL THREE in SINGLE response
+# Print user-facing message
+print("Invoking all three Phase 2 research subagents in parallel...")
 
-# AFTER (lines 183-185)
----
+# Then invoke all three Task tools in THIS SAME RESPONSE:
+Task(subagent_type="prp-gen-codebase-researcher",
+     description="Search codebase patterns",
+     prompt=researcher_context)
 
-## Development Patterns
+Task(subagent_type="prp-gen-documentation-hunter",
+     description="Find official documentation",
+     prompt=hunter_context)
+
+Task(subagent_type="prp-gen-example-curator",
+     description="Extract code examples",
+     prompt=curator_context)
+
+# 4. After ALL complete, update Archon tasks to "done"
+if archon_available:
+    for i in [1, 2, 3]:
+        mcp__archon__manage_task("update", task_id=task_ids[i], status="done")
+
+# CRITICAL: execute-prp Parallel Implementation
+# Group-based parallelization for task dependencies
+
+for group_number, group in enumerate(groups):
+    if group['mode'] == "parallel":
+        # Update ALL group tasks to "doing"
+        if archon_available:
+            for task in group['tasks']:
+                archon_task_id = get_archon_task_id(task, task_mappings)
+                mcp__archon__manage_task("update",
+                    task_id=archon_task_id, status="doing")
+
+        # Prepare contexts for ALL tasks in group
+        implementer_contexts = []
+        for task in group['tasks']:
+            ctx = f'''Implement {task['name']}...'''
+            implementer_contexts.append((task, ctx))
+
+        # ⚠️ CRITICAL: Invoke ALL in SINGLE response
+        for task, ctx in implementer_contexts:
+            Task(subagent_type="prp-exec-implementer",
+                 description=f"Implement {task['name']}",
+                 prompt=ctx)
+
+        # Mark all done AFTER all finish
+        if archon_available:
+            for task in group['tasks']:
+                archon_task_id = get_archon_task_id(task, task_mappings)
+                mcp__archon__manage_task("update",
+                    task_id=archon_task_id, status="done")
+
+    elif group['mode'] == "sequential":
+        # Execute one at a time (dependencies require it)
+        for task in group['tasks']:
+            # ... standard sequential pattern
 ```
 
 **When to use**:
-- Removing deprecated features from documentation
-- Maintaining document flow after large deletions
-- Preserving section separators and structure
+- Independent tasks with no file conflicts
+- Research phases (Archon search, web search, code extraction)
+- Implementation tasks in different files/modules
+- Any work that can be done simultaneously
 
 **How to adapt**:
-1. Read CLAUDE.md to identify exact line range (185-378)
-2. Read lines before/after to verify boundaries
-3. Delete section completely
-4. Preserve separator lines (`---`) for document structure
-5. Verify next section starts correctly
+- Extract parallelization logic to `.claude/patterns/parallel-subagents.md`
+- Include timing math and speedup calculations in pattern doc
+- Commands reference pattern for "how to invoke parallel tasks"
+- Keep only the actual Task() invocations in commands
 
 **Why this pattern**:
-- Clean section boundaries prevent orphaned content
-- Preserving separators maintains visual structure
-- Verification prevents broken references
+- 3x speedup for research (generate-prp Phase 2)
+- 30-50% speedup for implementation (execute-prp Phase 2)
+- Separate context windows prevent conflicts
+- Archon tracks all tasks independently
+- System automatically waits for all to complete
 
-### Pattern 5: Duplicate Agent Consolidation
-**Source**: Comparison of `prp-gen-*` vs `prp-initial-*` agents
-**Relevance**: 9/10
-**What it does**: Handles cases where similar agents exist with different prefixes
+**Performance Math**:
+```
+Generate-PRP Phase 2:
+- Sequential: 5min + 4min + 5min = 14 minutes
+- Parallel: max(5, 4, 5) = 5 minutes
+- Speedup: 64% faster
+
+Execute-PRP (6 tasks example):
+- Sequential: 6 × 20min = 120 minutes
+- Parallel (3 groups): 20 + 20 + 20 = 60 minutes
+- Speedup: 50% faster
+```
+
+---
+
+### Pattern 4: File Organization with Scoped Directories
+
+**Source**: `.claude/commands/generate-prp.md` (lines 35-36), `prps/INITIAL_prp_context_cleanup.md` (lines 85-97, 289-292)
+**Relevance**: 10/10 - THIS is what we're refactoring TO
+
+**What it does**: Creates feature-scoped directories to prevent root directory pollution. All artifacts for a feature go in `prps/{feature}/` subdirectories.
+
+**Current Pattern** (PROBLEM):
+```bash
+# Global pollution - multiple features share same directories
+prps/research/                    # GLOBAL - all features dump here
+  ├── feature-analysis.md         # Which feature?
+  ├── codebase-patterns.md        # Which feature?
+  └── documentation-links.md      # Which feature?
+
+examples/{feature}/               # ROOT POLLUTION
+  ├── example_1.py
+  └── README.md
+```
+
+**Desired Pattern** (SOLUTION):
+```bash
+# Scoped per-feature - clean separation
+prps/{feature_name}/
+├── INITIAL.md                    # User's original request
+├── {feature_name}.md             # Final PRP deliverable
+├── planning/                     # Phase 1-3 research artifacts
+│   ├── feature-analysis.md
+│   ├── codebase-patterns.md
+│   ├── documentation-links.md
+│   ├── examples-to-include.md
+│   └── gotchas.md
+├── examples/                     # Phase 2C extracted code
+│   ├── README.md
+│   └── *.py files
+└── execution/                    # Phase 0-5 execution artifacts
+    ├── execution-plan.md
+    ├── test-generation-report.md
+    └── validation-report.md
+```
 
 **Key Techniques**:
 ```bash
-# Identify duplicates by comparing base names
-prp-gen-codebase-researcher.md      # KEEP
-prp-initial-codebase-researcher.md  # DELETE
+# Feature name extraction (consistent pattern)
+# From file: prps/INITIAL_user_auth.md → "user_auth"
+# From file: prps/user_auth.md → "user_auth"
+feature_name = extract_feature_name(file_path)
 
-prp-gen-documentation-hunter.md     # KEEP
-prp-initial-documentation-hunter.md # DELETE
+# Directory creation (generate-prp Phase 0)
+Bash(f"mkdir -p prps/{feature_name}/planning")
+Bash(f"mkdir -p prps/{feature_name}/examples")
 
-prp-gen-example-curator.md          # KEEP
-prp-initial-example-curator.md      # DELETE
+# Directory creation (execute-prp Phase 0)
+Bash(f"mkdir -p prps/{feature_name}/execution")
+
+# Subagent output paths (ALL updated for scoped directories)
+# Phase 1 output
+output_path = f"prps/{feature_name}/planning/feature-analysis.md"
+
+# Phase 2A output
+output_path = f"prps/{feature_name}/planning/codebase-patterns.md"
+
+# Phase 2B output
+output_path = f"prps/{feature_name}/planning/documentation-links.md"
+
+# Phase 2C outputs
+output_path = f"prps/{feature_name}/planning/examples-to-include.md"
+examples_dir = f"prps/{feature_name}/examples/"
+
+# Phase 3 output
+output_path = f"prps/{feature_name}/planning/gotchas.md"
+
+# Phase 4 output (execute-prp)
+output_path = f"prps/{feature_name}/execution/execution-plan.md"
 ```
 
 **When to use**:
-- When removing redundant agent implementations
-- When consolidating similar functionality
-- When deprecating experimental features
+- ANY PRP generation or execution workflow
+- Features generating multiple artifacts
+- Long-lived projects with cleanup needs
+- Avoiding root directory pollution
 
 **How to adapt**:
-1. Compare agent purposes (read first 20 lines of each)
-2. Verify prp-gen-* version has all needed functionality
-3. Check that commands reference correct version
-4. Delete prp-initial-* version safely
+- Update ALL path references in commands
+- Update ALL path references in subagent prompts
+- Provide backward compatibility (check both old and new paths)
+- Document migration path for users
 
 **Why this pattern**:
-- Prevents accidental deletion of active agents
-- Ensures functionality preservation during cleanup
-- Documents which version is canonical
+- Zero root directory pollution
+- Self-contained feature artifacts
+- Easy cleanup via directory removal
+- Clear scope boundaries
+- Scalable to infinite features
+
+**Migration Strategy**:
+```python
+# Backward compatibility for existing PRPs
+def get_artifact_path(feature_name, artifact_type):
+    """Try new path first, fall back to old path."""
+    new_path = f"prps/{feature_name}/planning/{artifact_type}.md"
+    old_path = f"prps/research/{artifact_type}.md"
+
+    if file_exists(new_path):
+        return new_path
+    elif file_exists(old_path):
+        return old_path
+    else:
+        return new_path  # Create new path
+```
+
+---
+
+### Pattern 5: Subagent Invocation with Context Passing
+
+**Source**: `.claude/commands/generate-prp.md` (lines 89-122), `.claude/commands/execute-prp.md` (lines 83-117)
+**Relevance**: 10/10 - Core invocation pattern
+
+**What it does**: Prepares comprehensive context strings for subagents, then invokes Task tool with subagent_type, description, and prompt parameters.
+
+**Key Techniques**:
+```python
+# 1. Prepare comprehensive context string
+context = f'''You are [role description] for PRP [generation/execution].
+
+**Input File**: {input_path}
+**Feature Name**: {feature_name}
+**Archon Project ID**: {project_id if archon_available else "Not available"}
+
+**Your Task**:
+1. [Specific step 1]
+2. [Specific step 2]
+3. [Specific step 3]
+...
+
+**Critical Instructions**:
+- [Important constraint or pattern to follow]
+- [What to avoid]
+
+**Output**: {expected_output_path}
+'''
+
+# 2. Invoke Task tool
+Task(subagent_type="prp-gen-feature-analyzer",
+     description="Brief description for UI",
+     prompt=context)
+
+# 3. Wait for completion (automatic)
+# Claude Code waits for subagent to finish
+
+# 4. Read output
+result = Read(expected_output_path)
+```
+
+**Subagent Types** (Naming Convention):
+```
+# PRP Generation Subagents
+prp-gen-feature-analyzer
+prp-gen-codebase-researcher
+prp-gen-documentation-hunter
+prp-gen-example-curator
+prp-gen-gotcha-detective
+prp-gen-assembler
+
+# PRP Execution Subagents
+prp-exec-task-analyzer
+prp-exec-implementer
+prp-exec-test-generator
+prp-exec-validator
+```
+
+**When to use**:
+- Delegating specialized work to subagents
+- Parallel or sequential task execution
+- Need for separate context windows
+- Autonomous subagent workflows
+
+**How to adapt**:
+- Keep context preparation in commands (it's contextual)
+- Extract reusable context templates to pattern docs
+- Keep Task() invocations in commands (they're the action)
+- Reference subagent capabilities from pattern docs
+
+**Why this pattern**:
+- Clear role assignment
+- Separate context windows prevent interference
+- Archon project ID enables tracking
+- Output path consistency
+- Autonomous execution without user interaction
+
+---
+
+### Pattern 6: Quality Gates and Validation
+
+**Source**: `.claude/commands/generate-prp.md` (lines 363-395, 499-524), `.claude/commands/execute-prp.md` (lines 344-356, 526-550)
+**Relevance**: 9/10 - Critical for deliverable quality
+
+**What it does**: Validates outputs against quality criteria before delivery. For PRPs, requires 8+/10 score. For execution, requires all validation gates to pass.
+
+**Key Techniques**:
+```python
+# Generate-PRP Quality Gates
+quality_checks = [
+    "PRP score >= 8/10",
+    "All 5 research documents created",
+    "Examples extracted to examples/{feature}/ (not just references)",
+    "Examples have README with 'what to mimic' guidance",
+    "Documentation includes URLs with specific sections",
+    "Gotchas documented with solutions (not just warnings)",
+    "Task list is logical and ordered",
+    "Validation gates are executable commands",
+    "Codebase patterns referenced appropriately"
+]
+
+# Read PRP and extract score
+prp_content = Read(f"prps/{feature_name}.md")
+quality_score = extract_score(prp_content)  # Look for "Score: X/10"
+
+# Enforce minimum quality
+if quality_score < 8:
+    print(f"⚠️ Quality Gate Failed: PRP scored {quality_score}/10 (minimum: 8/10)")
+    print("\nWould you like me to:")
+    print("1. Regenerate with additional research")
+    print("2. Review and improve specific sections")
+    print("3. Proceed anyway (not recommended)")
+    # Wait for user decision
+else:
+    # Proceed to delivery
+    print(f"✅ Quality Gate Passed: {quality_score}/10")
+
+# Execute-PRP Quality Gates
+quality_checks = [
+    "All PRP tasks implemented",
+    "All files created/modified as specified",
+    "Tests generated for all components",
+    "Test coverage >= 70%",
+    "All syntax checks pass",
+    "All unit tests pass",
+    "All integration tests pass",
+    "All validation gates from PRP pass",
+    "Known gotchas from PRP addressed"
+]
+
+# Verify each check
+issues = []
+for check in quality_checks:
+    if not verify_check(check):
+        issues.append(check)
+
+# Report issues
+if issues:
+    print("⚠️ Quality Gate Issues:")
+    for issue in issues:
+        print(f"  - {issue}")
+```
+
+**When to use**:
+- Before delivering any artifact
+- After test generation
+- Post-validation iteration
+- Quality assurance checkpoints
+
+**How to adapt**:
+- Extract quality criteria to `.claude/patterns/quality-gates.md`
+- Reference prp_base.md checklist (already exists)
+- Commands perform checks, pattern doc defines criteria
+- Keep scoring logic in commands (it's workflow-specific)
+
+**Why this pattern**:
+- Prevents low-quality deliverables
+- 8+/10 ensures implementation readiness
+- Interactive user decision on failures
+- Progressive quality improvement
+
+---
 
 ## Naming Conventions
 
 ### File Naming
 
-**Agent Files**:
-- Pattern: `{workflow}-{phase}-{role}.md`
-- Examples:
-  - `prp-gen-feature-analyzer.md` (PRP generation, phase 1)
-  - `prp-exec-implementer.md` (PRP execution, implementation)
-  - `documentation-manager.md` (general purpose, no prefix)
+**INITIAL.md files**:
+- Pattern: `prps/INITIAL_{feature_name}.md`
+- Examples: `INITIAL_user_auth.md`, `INITIAL_web_scraper.md`, `INITIAL_prp_context_cleanup.md`
 
-**Command Files**:
-- Pattern: `{action}-{noun}.md` or `{workflow-name}.md`
-- Examples:
-  - `generate-prp.md` (workflow command)
-  - `execute-prp.md` (workflow command)
-  - `create-initial.md` (DELETE - deprecated workflow)
+**PRP files**:
+- Pattern: `prps/{feature_name}.md`
+- Examples: `user_auth.md`, `web_scraper.md`, `prp_context_cleanup.md`
 
-**Documentation Sections**:
-- Pattern: `## {Feature Name} Workflow` or `## {Feature Name}`
-- Mark deprecated sections with clear headers before removal
+**Research artifacts** (OLD - being replaced):
+- Pattern: `prps/research/{artifact_type}.md`
+- Examples: `feature-analysis.md`, `codebase-patterns.md`, `documentation-links.md`
 
-### Deletion Naming Pattern
+**Research artifacts** (NEW - per-feature scoped):
+- Pattern: `prps/{feature_name}/planning/{artifact_type}.md`
+- Examples: `prps/user_auth/planning/feature-analysis.md`
 
-**Files to Delete** (7 total):
-1. `.claude/agents/prp-initial-feature-clarifier.md`
-2. `.claude/agents/prp-initial-codebase-researcher.md`
-3. `.claude/agents/prp-initial-documentation-hunter.md`
-4. `.claude/agents/prp-initial-example-curator.md`
-5. `.claude/agents/prp-initial-gotcha-detective.md`
-6. `.claude/agents/prp-initial-assembler.md`
-7. `.claude/commands/create-initial.md`
+**Examples directory** (OLD - root pollution):
+- Pattern: `examples/{feature_name}/`
+- Examples: `examples/user_auth/`, `examples/web_scraper/`
 
-**Files to Preserve** (10 agents + 2 commands):
-- All 6 `prp-gen-*.md` agents
-- All 4 `prp-exec-*.md` agents
-- `generate-prp.md` command
-- `execute-prp.md` command
+**Examples directory** (NEW - scoped):
+- Pattern: `prps/{feature_name}/examples/`
+- Examples: `prps/user_auth/examples/`
 
-### Reference Update Pattern
+**Execution artifacts** (NEW):
+- Pattern: `prps/{feature_name}/execution/{artifact_type}.md`
+- Examples: `prps/user_auth/execution/execution-plan.md`
 
-**Strings to Remove from CLAUDE.md**:
-- "INITIAL.md Factory" (section title)
-- "prp-initial-*" (agent references)
-- "/create-initial" (command reference)
-- "12+ agents" or "12 agents" → "10 agents"
-- "6 specialized subagents" (in factory context)
+### Subagent Naming
 
-**Strings to Preserve**:
-- "INITIAL.md" (as a file format)
-- "Manual INITIAL.md creation" (recommended workflow)
-- "prp-gen-*" (agent references)
-- "prp-exec-*" (agent references)
+**PRP Generation**:
+- Pattern: `prp-gen-{capability}`
+- Examples: `prp-gen-feature-analyzer`, `prp-gen-codebase-researcher`
+
+**PRP Execution**:
+- Pattern: `prp-exec-{capability}`
+- Examples: `prp-exec-task-analyzer`, `prp-exec-implementer`
+
+---
 
 ## File Organization
 
-### Directory Structure
+### Current Directory Structure (BEFORE refactoring)
+```
+vibes/
+├── .claude/
+│   ├── commands/
+│   │   ├── generate-prp.md          # 582 lines (80% pseudocode)
+│   │   └── execute-prp.md           # 620 lines (80% pseudocode)
+│   └── agents/
+│       ├── prp-gen-*.md             # 6 generation subagents
+│       └── prp-exec-*.md            # 4 execution subagents
+├── prps/
+│   ├── research/                    # GLOBAL - pollution from all features
+│   │   ├── feature-analysis.md
+│   │   ├── codebase-patterns.md
+│   │   ├── documentation-links.md
+│   │   ├── examples-to-include.md
+│   │   └── gotchas.md
+│   ├── templates/
+│   │   └── prp_base.md
+│   ├── INITIAL_{feature}.md
+│   └── {feature}.md
+└── examples/                        # ROOT POLLUTION
+    └── {feature}/                   # Multiple features here
+        ├── README.md
+        └── *.py files
+```
 
-**Current State**:
+### Desired Directory Structure (AFTER refactoring)
 ```
-.claude/
-├── agents/
-│   ├── documentation-manager.md        # KEEP
-│   ├── validation-gates.md             # KEEP
-│   ├── prp-gen-*.md (6 files)         # KEEP
-│   ├── prp-exec-*.md (4 files)        # KEEP
-│   └── prp-initial-*.md (6 files)     # DELETE
-└── commands/
-    ├── generate-prp.md                 # KEEP
-    ├── execute-prp.md                  # KEEP
-    ├── create-initial.md               # DELETE
-    ├── prep-parallel.md                # KEEP
-    ├── execute-parallel.md             # KEEP
-    └── list-prps.md                    # KEEP
-```
-
-**After Cleanup**:
-```
-.claude/
-├── agents/
-│   ├── documentation-manager.md        # 2 general purpose
-│   ├── validation-gates.md
-│   ├── prp-gen-*.md (6 files)         # 6 PRP generation
-│   └── prp-exec-*.md (4 files)        # 4 PRP execution
-└── commands/
-    ├── generate-prp.md                 # Core workflows
-    ├── execute-prp.md
-    ├── prep-parallel.md                # Supporting commands
-    ├── execute-parallel.md
-    └── list-prps.md
+vibes/
+├── .claude/
+│   ├── commands/
+│   │   ├── generate-prp.md          # 80-120 lines (orchestration only)
+│   │   ├── execute-prp.md           # 80-120 lines (orchestration only)
+│   │   └── prp-cleanup.md           # NEW - archive/delete planning artifacts
+│   ├── agents/
+│   │   ├── prp-gen-*.md             # 6 subagents (paths updated)
+│   │   └── prp-exec-*.md            # 4 subagents (paths updated)
+│   ├── patterns/                    # NEW - extracted implementation patterns
+│   │   ├── archon-workflow.md       # Health check, project/task management
+│   │   ├── parallel-subagents.md    # Multi-task invocation patterns
+│   │   ├── quality-gates.md         # Scoring criteria, validation
+│   │   └── error-handling.md        # Subagent failure recovery
+│   └── templates/                   # NEW - report templates
+│       ├── completion-report.md     # Success metrics structure
+│       └── validation-report.md     # Validation level results
+├── prps/
+│   ├── {feature_name}/              # PER-FEATURE scoped (clean!)
+│   │   ├── INITIAL.md               # User's original request
+│   │   ├── {feature_name}.md        # Final PRP deliverable
+│   │   ├── planning/                # Research artifacts (generate-prp)
+│   │   │   ├── feature-analysis.md
+│   │   │   ├── codebase-patterns.md
+│   │   │   ├── documentation-links.md
+│   │   │   ├── examples-to-include.md
+│   │   │   └── gotchas.md
+│   │   ├── examples/                # Extracted code (not in root!)
+│   │   │   ├── README.md
+│   │   │   └── *.py files
+│   │   └── execution/               # Implementation artifacts (execute-prp)
+│   │       ├── execution-plan.md
+│   │       ├── test-generation-report.md
+│   │       └── validation-report.md
+│   ├── archive/                     # Cleaned up features (timestamped)
+│   │   └── {feature}_{timestamp}/   # Via prp-cleanup command
+│   └── templates/
+│       └── prp_base.md              # Unchanged
+└── examples/                        # LEGACY - old PRPs still use this
+    └── {feature}/                   # Gradually migrate to prps/{feature}/examples/
 ```
 
 **Justification**:
-- Removes 6 redundant agents (50% reduction from 12 to 6 subagents)
-- Simplifies workflow: Manual INITIAL → /generate-prp → /execute-prp
-- Eliminates automation of creative thinking (INITIAL creation)
-- Preserves automation of mechanical work (PRP research/implementation)
+- **Per-feature scoping**: Eliminates root directory pollution
+- **planning/ subdirectory**: All research artifacts in one place, easy to archive
+- **examples/ subdirectory**: Code examples scoped to feature, not global
+- **execution/ subdirectory**: Implementation artifacts separate from research
+- **patterns/ directory**: Reusable implementation patterns (DRY principle)
+- **Backward compatibility**: Old PRPs continue working with legacy `examples/{feature}/`
 
-### Git Organization
-
-**Safe Deletion Process**:
-```bash
-# 1. Check git status before deletion
-git status
-
-# 2. If uncommitted changes exist, understand them first
-git diff
-
-# 3. Stage deletions explicitly (not wildcards)
-git rm .claude/agents/prp-initial-feature-clarifier.md
-git rm .claude/agents/prp-initial-codebase-researcher.md
-git rm .claude/agents/prp-initial-documentation-hunter.md
-git rm .claude/agents/prp-initial-example-curator.md
-git rm .claude/agents/prp-initial-gotcha-detective.md
-git rm .claude/agents/prp-initial-assembler.md
-git rm .claude/commands/create-initial.md
-
-# 4. Stage documentation update
-git add CLAUDE.md
-
-# 5. Verify staged changes
-git diff --staged
-
-# 6. Commit with descriptive message
-git commit -m "Remove INITIAL.md factory workflow
-
-- Delete 6 prp-initial-* agent files
-- Delete create-initial command
-- Remove factory documentation section from CLAUDE.md
-- Reduce agent count from 12+ to 10
-- Return to manual INITIAL.md → /generate-prp → /execute-prp workflow"
-```
-
-**Git Best Practices for Deletions**:
-- Use `git rm` instead of `rm` to stage deletions
-- Review `git diff --staged` before committing
-- Write commit messages explaining what and why
-- Include impact summary (agent count, workflow changes)
+---
 
 ## Common Utilities to Leverage
 
-### 1. Git Safety Check
-**Location**: Shell commands
-**Purpose**: Verify repository state before major changes
-**Usage Example**:
-```bash
-# Check for uncommitted changes
-git status --short
-
-# Check staged changes
-git diff --staged
-
-# Check recent commits for context
-git log --oneline -5
-```
-
-### 2. Grep Reference Verification
-**Location**: Grep tool
-**Purpose**: Find all references to deleted items
-**Usage Example**:
-```bash
-# Find all references to prp-initial agents
-grep -r "prp-initial-" .claude/
-
-# Find all references to create-initial command
-grep -r "create-initial" CLAUDE.md
-
-# Verify no orphaned references after deletion
-grep -r "INITIAL.md Factory" .
-```
-
-### 3. File Comparison for Duplicates
-**Location**: Read tool + manual comparison
-**Purpose**: Verify functionality before deletion
+### 1. Archon Health Check
+**Location**: MCP tool `mcp__archon__health_check()`
+**Purpose**: Verify Archon MCP server availability before operations
 **Usage Example**:
 ```python
-# Read both versions
-gen_agent = Read(".claude/agents/prp-gen-codebase-researcher.md")
-initial_agent = Read(".claude/agents/prp-initial-codebase-researcher.md")
-
-# Compare core responsibilities (lines 10-50)
-# Verify prp-gen version has all needed features
-# Then safely delete prp-initial version
-```
-
-### 4. Line Range Extraction
-**Location**: Read tool with offset/limit
-**Purpose**: Precisely identify documentation sections to remove
-**Usage Example**:
-```python
-# Read around section boundaries
-before = Read("CLAUDE.md", offset=180, limit=10)  # Lines 180-190
-target = Read("CLAUDE.md", offset=185, limit=195) # Lines 185-380
-after = Read("CLAUDE.md", offset=375, limit=10)   # Lines 375-385
-
-# Verify clean boundaries before deletion
-```
-
-### 5. Archon Health Check Pattern
-**Location**: Archon MCP server integration
-**Purpose**: Check availability before operations
-**Usage Example**:
-```python
-# Always check Archon availability first
 health = mcp__archon__health_check()
 archon_available = health["status"] == "healthy"
 
-# If available, update project/task status
 if archon_available:
-    mcp__archon__manage_task("update",
-        task_id=task_id,
-        status="done",
-        notes="Deleted 6 prp-initial agents, 1 command, updated docs"
-    )
+    # Proceed with Archon operations
+else:
+    # Graceful fallback
 ```
+
+### 2. Archon Project Management
+**Location**: MCP tool `mcp__archon__manage_project()`
+**Purpose**: Create, update, delete projects for tracking
+**Usage Example**:
+```python
+project = mcp__archon__manage_project("create",
+    title=f"PRP Generation: {feature_name}",
+    description=f"Creating comprehensive PRP from {initial_md_path}"
+)
+project_id = project["project"]["id"]
+```
+
+### 3. Archon Task Management
+**Location**: MCP tool `mcp__archon__manage_task()`
+**Purpose**: Create, update task status throughout workflow
+**Usage Example**:
+```python
+task = mcp__archon__manage_task("create",
+    project_id=project_id,
+    title="Phase 1: Feature Analysis",
+    status="todo",
+    assignee="prp-gen-feature-analyzer",
+    task_order=100  # Higher = higher priority
+)
+task_id = task["task"]["id"]
+
+# Update status
+mcp__archon__manage_task("update", task_id=task_id, status="doing")
+```
+
+### 4. Archon Knowledge Base Search
+**Location**: MCP tools `mcp__archon__rag_search_knowledge_base()`, `mcp__archon__rag_search_code_examples()`
+**Purpose**: Search Archon for documentation and code patterns
+**Usage Example**:
+```python
+# Search knowledge base (2-5 keywords only!)
+docs = mcp__archon__rag_search_knowledge_base(
+    query="FastAPI async",
+    match_count=5
+)
+
+# Search code examples
+examples = mcp__archon__rag_search_code_examples(
+    query="validation decorator",
+    match_count=3
+)
+```
+
+### 5. Feature Name Extraction
+**Location**: Inline logic in commands (should be extracted to utility)
+**Purpose**: Consistent feature name extraction from file paths
+**Usage Example**:
+```python
+# From: prps/INITIAL_user_auth.md → "user_auth"
+# From: prps/user_auth.md → "user_auth"
+feature_name = extract_feature_name(file_path, content)
+```
+
+**Recommendation**: Extract this to a shared utility pattern doc.
+
+---
 
 ## Testing Patterns
 
-### Unit Test Structure
-**Pattern**: Verification via grep and file existence checks
-**Example**: Post-deletion verification
+### Integration Test Structure
+**Pattern**: End-to-end PRP generation and execution workflows
+**Example**: Generate PRP, execute PRP, verify all artifacts created
 **Key techniques**:
-- **File deletion verification**: Check files no longer exist
-- **Reference verification**: Grep for orphaned references
-- **Preservation verification**: Confirm kept files still exist
+- Quality score validation (8+/10 for PRPs)
+- File existence checks
+- Validation gate execution
+- Test coverage verification (70%+ for execute-prp)
 
+### Validation Gates (execute-prp)
+**Pattern**: Multi-level validation with iteration loops
 ```bash
-# Verify deletions
-test ! -f .claude/agents/prp-initial-feature-clarifier.md
-test ! -f .claude/commands/create-initial.md
+# Level 1: Syntax & Style
+ruff check --fix && mypy .
 
-# Verify no references remain
-! grep -r "prp-initial-" .claude/commands/
-! grep -r "create-initial" CLAUDE.md
-! grep "INITIAL.md Factory" CLAUDE.md
+# Level 2: Unit Tests
+pytest tests/ -v
 
-# Verify preservations
-test -f .claude/agents/prp-gen-feature-analyzer.md
-test -f .claude/commands/generate-prp.md
-
-# Count agents (should be 10)
-agent_count=$(ls .claude/agents/prp-*.md | wc -l)
-test $agent_count -eq 10
+# Level 3: Integration Tests
+# (Project-specific commands from PRP)
 ```
 
-### Documentation Quality Test
-**Pattern**: Manual review of CLAUDE.md coherence
-**Example**: Section transition verification
-**Key techniques**:
-- Read before/after deleted section
-- Verify no orphaned headers
-- Check section numbering/hierarchy
-- Validate markdown rendering
+**Subagent**: `prp-exec-validator` runs gates, iterates on failures until pass (max 5 attempts per level)
 
-```bash
-# Check CLAUDE.md renders without errors
-# Visual inspection for:
-# - Clean section transitions
-# - No broken links
-# - No orphaned content
-# - Proper heading hierarchy
-```
-
-### Command Execution Test
-**Pattern**: Verify core workflows still function
-**Example**: Test /generate-prp and /execute-prp commands
-**Key techniques**:
-- Execute commands with test INITIAL.md
-- Verify subagent invocation works
-- Check output file generation
-- Validate no errors about missing agents
-
-```bash
-# Test workflow still works (after cleanup)
-# 1. Create test INITIAL.md
-# 2. Run: /generate-prp prps/INITIAL_test.md
-# 3. Verify PRP generated successfully
-# 4. Check all prp-gen-* agents invoked
-# 5. Run: /execute-prp prps/test.md
-# 6. Verify execution completes
-```
+---
 
 ## Anti-Patterns to Avoid
 
-### 1. Wildcard Deletion
-**What it is**: Using `rm .claude/agents/prp-initial-*` or `git rm` with wildcards
-**Why to avoid**:
-- Risk of deleting wrong files if glob expands unexpectedly
-- Harder to review staged changes
-- No explicit verification of each deletion
-**Found in**: Common shell practices (antipattern)
-**Better approach**:
-```bash
-# Delete explicitly, one by one
-git rm .claude/agents/prp-initial-feature-clarifier.md
-git rm .claude/agents/prp-initial-codebase-researcher.md
-# ... etc
-```
+### 1. Duplicating Archon Workflow Across Files
+**What it is**: Same health check, project creation, task management code in 6+ locations
+**Why to avoid**: Maintenance nightmare, inconsistency, token waste
+**Found in**:
+- `.claude/commands/generate-prp.md` (lines 38-77)
+- `.claude/commands/execute-prp.md` (lines 39-71)
+- `examples/prp_workflow_improvements/archon_integration_pattern.md`
+- Various subagent prompts
+**Better approach**: Consolidate to `.claude/patterns/archon-workflow.md`, reference from commands
 
-### 2. Documentation Without Verification
-**What it is**: Removing CLAUDE.md section without checking references
-**Why to avoid**:
-- May leave broken links to deleted agents
-- Can create orphaned subsections
-- Might remove too much or too little
-**Found in**: Rushed documentation updates
-**Better approach**:
-```python
-# 1. Grep for all references first
-grep -n "prp-initial-" CLAUDE.md
-grep -n "create-initial" CLAUDE.md
-grep -n "INITIAL.md Factory" CLAUDE.md
+### 2. Global Directory Pollution
+**What it is**: All features dump research to `prps/research/`, examples to `examples/{feature}/` (root)
+**Why to avoid**: Difficult cleanup, unclear scope, doesn't scale
+**Found in**: Current system (pre-refactoring)
+**Better approach**: Per-feature scoped directories `prps/{feature}/planning/`, `prps/{feature}/examples/`
 
-# 2. Read section boundaries
-Read("CLAUDE.md", offset=180, limit=210)
+### 3. Pseudocode in Command Files (80% of lines)
+**What it is**: Detailed implementation logic, error handling, parallel execution math in command files
+**Why to avoid**: Token waste, context bloat, violates progressive disclosure
+**Found in**:
+- `.claude/commands/generate-prp.md` (582 lines, should be 80-120)
+- `.claude/commands/execute-prp.md` (620 lines, should be 80-120)
+**Better approach**: Extract to `.claude/patterns/*.md`, reference from commands
 
-# 3. Delete precise line range
-# 4. Verify with grep again (should be zero matches)
-```
+### 4. Just References to Code (Not Extraction)
+**What it is**: Saying "See src/api/auth.py" instead of extracting actual code
+**Why to avoid**: PRP implementer has to hunt for examples, increases cognitive load
+**Found in**: Some early PRPs before example-curator was enhanced
+**Better approach**: Use `prp-gen-example-curator` to PHYSICALLY EXTRACT code to `examples/` with source attribution
 
-### 3. Assuming Agent Equivalence
-**What it is**: Deleting prp-initial-* agents without comparing to prp-gen-*
-**Why to avoid**:
-- Agents may have different tools or capabilities
-- Implementation details might differ
-- Risk of losing functionality
-**Found in**: Quick cleanup attempts
-**Better approach**:
-```python
-# Compare agents before deletion
-gen_tools = grep("^tools:", ".claude/agents/prp-gen-codebase-researcher.md")
-init_tools = grep("^tools:", ".claude/agents/prp-initial-codebase-researcher.md")
+### 5. Using TodoWrite for Task Tracking
+**What it is**: Using TodoWrite instead of Archon task management
+**Why to avoid**: Violates ARCHON-FIRST RULE in CLAUDE.md
+**Found in**: OLD execute-prp pattern (before Archon integration)
+**Better approach**: Always use Archon MCP if available, graceful fallback if not
 
-# Verify gen version has all needed tools
-# Read core sections to confirm equivalence
-# Then safely delete
-```
+### 6. Sequential Execution of Independent Tasks
+**What it is**: Running Phase 2 research sequentially: 5min + 4min + 5min = 14 minutes
+**Why to avoid**: Wastes time, no dependency between tasks
+**Found in**: Old generate-prp before parallel enhancement
+**Better approach**: Parallel invocation via multiple Task() calls in SINGLE response (5 minutes)
 
-### 4. Ignoring Git State
-**What it is**: Deleting files when uncommitted changes exist
-**Why to avoid**:
-- Harder to separate this change from others
-- Risk of conflicts with other work
-- Difficult to revert if needed
-**Found in**: Working in dirty git state
-**Better approach**:
-```bash
-# 1. Check git status first
-git status
-
-# 2. If dirty, commit or stash other changes
-git add <other files>
-git commit -m "Other changes"
-
-# 3. Then proceed with cleanup in clean state
-git status  # Should show "nothing to commit"
-```
-
-### 5. Incomplete Reference Cleanup
-**What it is**: Deleting files but leaving references in documentation/examples
-**Why to avoid**:
-- Confuses users who find references to deleted features
-- Breaks mental model of codebase
-- Creates maintenance burden
-**Found in**: Partial cleanup efforts
-**Better approach**:
-```bash
-# Comprehensive reference check across ALL file types
-grep -r "prp-initial-" . --include="*.md"
-grep -r "create-initial" . --include="*.md" --include="*.py"
-grep -r "INITIAL.md Factory" .
-
-# Update or remove ALL references found
-# Document intentional historical references (examples/)
-```
+---
 
 ## Implementation Hints from Existing Code
 
 ### Similar Features Found
 
-1. **Agent Cleanup Pattern** (Documentation Manager)
-   - **Location**: `.claude/agents/documentation-manager.md`
-   - **Similarity**: Proactive file updates after changes
-   - **Lessons**: Use systematic grep to find all affected files
-   - **Differences**: This is deletion, not update
+#### 1. **Context Engineering Intro (Original PRP System)**
+**Location**: Archon source `b8565aff9938938b` (GitHub: coleam00/context-engineering-intro)
+**Similarity**: Original inspiration for PRP system, shows command simplicity
+**Lessons**:
+- Commands were 40-69 lines (concise orchestration)
+- Commands define WHAT, not HOW
+- Progressive disclosure pattern (load details on-demand)
+- Template-based approach
+**Differences**:
+- No Archon integration (we added it)
+- No parallel execution (we added it)
+- No file organization scoping (we're adding it)
 
-2. **Multi-Phase Workflow Pattern** (generate-prp command)
-   - **Location**: `.claude/commands/generate-prp.md`
-   - **Similarity**: Orchestrates multiple subagents in sequence
-   - **Lessons**: Clear phase boundaries, explicit task updates
-   - **Differences**: We're removing a parallel workflow, not creating one
+#### 2. **Current PRP Workflow Improvements Examples**
+**Location**: `examples/prp_workflow_improvements/`
+**Similarity**: Shows exact patterns we're currently using
+**Lessons**:
+- Archon integration pattern works well
+- Parallel execution achieves 3x speedup
+- Physical code extraction better than references
+- Quality scoring (8+/10) ensures deliverable quality
+**Differences**: This refactoring will consolidate these patterns to `.claude/patterns/`
 
-3. **Documentation Section Structure** (CLAUDE.md sections)
-   - **Location**: `CLAUDE.md` various sections
-   - **Similarity**: Large markdown sections with clear boundaries
-   - **Lessons**: Preserve separators (`---`), verify next section starts clean
-   - **Differences**: Removing ~200 lines vs typical 20-50 line sections
+#### 3. **Factory Removal PRP (Just Completed)**
+**Location**: Git commit `7997cc4 chore: remove INITIAL.md factory workflow system`
+**Similarity**: Removed old factory system, similar to removing context duplication now
+**Lessons**:
+- Successful removal of deprecated workflow
+- Clean codebase, focused on current patterns
+- No breaking changes to existing PRPs
+**Differences**: This refactoring is about DRY and organization, not feature removal
 
-### Git Deletion Patterns from History
-
-**Pattern**: Explicit staging with descriptive commits
-```bash
-# From git history (inferred best practice)
-git rm path/to/deprecated/file.ext
-git add path/to/updated/file.ext
-git commit -m "Descriptive message
-
-- What was deleted
-- What was updated
-- Why the change was needed
-- Impact on users/workflow"
-```
+---
 
 ## Recommendations for PRP
 
 Based on pattern analysis:
 
-1. **Follow Git Safety Pattern** for clean deletion tracking
-   - Check `git status` before starting
-   - Use `git rm` for deletions (not `rm`)
-   - Stage changes separately (deletions, then CLAUDE.md)
-   - Verify with `git diff --staged`
-   - Write comprehensive commit message
+1. **Follow Phase-Based Workflow Orchestration** for command structure
+   - Keep Phase 0 and Phase 5 in commands (setup and reporting)
+   - Extract Phase 1-4 pseudocode to pattern docs
+   - Reference pattern docs instead of duplicating logic
 
-2. **Reuse Grep Verification Pattern** for reference checking
-   - Search for "prp-initial-" across all .md files
-   - Search for "create-initial" in commands and docs
-   - Search for "INITIAL.md Factory" in CLAUDE.md
-   - Verify zero matches after cleanup
+2. **Consolidate Archon Workflow to Single Pattern Doc**
+   - Extract to `.claude/patterns/archon-workflow.md`
+   - Include health check, project/task management, error handling
+   - Commands reference this pattern instead of duplicating
 
-3. **Mirror Documentation Update Pattern** for CLAUDE.md
-   - Read lines 180-390 to verify section boundaries
-   - Delete lines 185-378 (194 lines total)
-   - Preserve line 379 (`---` separator)
-   - Verify line 380 starts "## Development Patterns"
-   - Update agent count references (12+ → 10)
+3. **Preserve Parallel Execution Pattern**
+   - Extract timing math and invocation details to `.claude/patterns/parallel-subagents.md`
+   - Keep actual Task() invocations in commands (they're the action)
+   - Document 3x speedup for research, 30-50% for implementation
 
-4. **Adapt Agent Comparison Pattern** for duplicate verification
-   - Compare each prp-gen-* with corresponding prp-initial-*
-   - Verify tools, responsibilities, output patterns match
-   - Confirm prp-gen-* version is canonical
-   - Delete prp-initial-* version safely
+4. **Migrate to Per-Feature Scoped Directories**
+   - Update ALL path references: `prps/{feature}/planning/`, `prps/{feature}/examples/`
+   - Provide backward compatibility for old PRPs
+   - Document migration in CLAUDE.md
 
-5. **Avoid Wildcard Deletion Antipattern** based on best practices
-   - Delete files one by one with explicit paths
-   - Review each deletion before staging
-   - Prevents accidental deletion of wrong files
+5. **Extract Quality Gates to Pattern Doc**
+   - Reference `prps/templates/prp_base.md` checklist (already exists)
+   - Create `.claude/patterns/quality-gates.md` for scoring criteria
+   - Keep score enforcement in commands (workflow-specific)
+
+6. **Create Cleanup Command**
+   - New command: `.claude/commands/prp-cleanup.md`
+   - Interactive: offer archive/delete/cancel options
+   - Archive to `prps/archive/{feature}_{timestamp}/`
+
+7. **Update Subagent Prompts for New Paths**
+   - All 6 PRP generation subagents
+   - All 4 PRP execution subagents
+   - Only output path changes, core logic unchanged
+
+---
 
 ## Source References
 
 ### From Archon
-
-- **e9eb05e2bf38f125**: Mock generation infrastructure replacement (kubechain)
-  - Relevance: 7/10
-  - Pattern: Systematic cleanup of old infrastructure
-  - Application: Similar need to remove deprecated automation
-
-- **b8565aff9938938b**: Context engineering workflow intro
-  - Relevance: 9/10
-  - Pattern: Manual INITIAL.md → /generate-prp → /execute-prp
-  - Application: This is the workflow we're returning to
+- **Source c0e629a894699314** (Pydantic AI docs): Agent invocation patterns, dependency injection
+- **Source 9a7d4217c64c9a0a** (Claude Code docs): Hooks for tool execution
+- **Source d60a71d62eb201d5** (MCP docs): MCP integration, client concepts
+- **Source b8565aff9938938b** (Context Engineering Intro): Original PRP inspiration, command simplicity
 
 ### From Local Codebase
+- `.claude/commands/generate-prp.md:35-36` - Directory creation pattern
+- `.claude/commands/generate-prp.md:38-77` - Archon integration (to consolidate)
+- `.claude/commands/generate-prp.md:128-234` - Parallel execution Phase 2
+- `.claude/commands/execute-prp.md:39-71` - Archon integration (to consolidate)
+- `.claude/commands/execute-prp.md:123-234` - Parallel implementation groups
+- `examples/prp_workflow_improvements/archon_integration_pattern.md` - Consolidated Archon pattern
+- `.claude/agents/prp-gen-feature-analyzer.md` - Subagent prompt structure
+- `.claude/agents/prp-gen-example-curator.md:68-93` - Physical code extraction pattern
+- `prps/templates/prp_base.md` - Quality checklist (reference this, don't duplicate)
 
-- **.claude/agents/prp-gen-*.md**: Agent structure pattern (lines 1-10)
-  - Shows frontmatter format, tool permissions, naming convention
-
-- **.claude/commands/generate-prp.md**: Command orchestration pattern (lines 1-100)
-  - Shows phase-based workflow, Archon integration, subagent invocation
-
-- **CLAUDE.md**: Documentation section structure (lines 185-378)
-  - Shows section boundaries, separators, heading hierarchy
-
-- **examples/prp_workflow_improvements/**: Historical patterns (all files)
-  - Shows evolution of workflows, can remain as historical reference
-  - Documents why factory was created and why it's being removed
+---
 
 ## Next Steps for Assembler
 
 When generating the PRP:
 
-1. **Reference deletion patterns** in "Implementation Blueprint"
-   - Include exact git commands for safe deletion
-   - Show grep patterns for reference verification
-   - Document line ranges for CLAUDE.md edit
+1. **Reference these patterns in "Current Codebase Tree" section**:
+   - Phase-based workflow orchestration
+   - Archon MCP integration (currently duplicated)
+   - Parallel subagent execution
+   - File organization (current vs desired)
 
-2. **Include verification code snippets** in "Validation Gates"
-   - File existence checks (negative assertions)
-   - Grep verification (zero matches expected)
-   - Agent count validation (exactly 10)
-   - Documentation coherence check
+2. **Include key code snippets in "Implementation Blueprint"**:
+   - Health check pattern
+   - Parallel Task invocation
+   - Directory creation for scoped paths
+   - Feature name extraction logic
 
-3. **Add git antipatterns** to "Known Gotchas" section
-   - Wildcard deletion risks
-   - Uncommitted changes conflicts
-   - Incomplete reference cleanup
-   - Agent equivalence assumptions
+3. **Add anti-patterns to "Known Gotchas" section**:
+   - Don't duplicate Archon workflow across files
+   - Don't use global directories for feature artifacts
+   - Don't put 80% pseudocode in commands
+   - Don't use TodoWrite (violates ARCHON-FIRST RULE)
 
-4. **Use explicit file list** for "Desired Codebase Tree"
-   - Show before/after agent directory structure
-   - Document exact count: 12 agents → 10 agents
-   - Highlight preserved vs deleted agents
+4. **Use file organization for "Desired Codebase Tree"**:
+   - Show new `.claude/patterns/` directory
+   - Show per-feature scoped `prps/{feature}/` structure
+   - Show consolidated commands (80-120 lines)
 
-5. **Document simplified workflow** in "Integration Points"
-   - Manual INITIAL.md creation (10-20 min)
-   - /generate-prp for research & PRP creation
-   - /execute-prp for implementation
-   - No /create-initial command (removed)
+5. **Task breakdown should follow refactoring phases**:
+   - Phase 0: File organization (foundation)
+   - Phase 1-2: Pattern extraction
+   - Phase 3: Command refactoring
+   - Phase 4: Documentation updates
+   - Phase 5: Testing and validation
 
-## Quality Checklist
+---
 
-Before considering research complete, verify:
+**Analysis Quality**: 9/10
+- Comprehensive pattern extraction ✓
+- Concrete code examples included ✓
+- Archon references and local sources ✓
+- Clear anti-patterns identified ✓
+- Actionable recommendations ✓
+- Detailed file organization ✓
+- Backward compatibility considered ✓
 
-- ✅ 5 major architectural patterns documented
-- ✅ Each pattern has code examples and adaptation guidance
-- ✅ Naming conventions extracted (files, agents, sections)
-- ✅ File organization shows before/after structure
-- ✅ Git safety patterns documented with commands
-- ✅ 5 anti-patterns identified with solutions
-- ✅ Source references include Archon + local files
-- ✅ Clear recommendations for PRP assembler
-- ✅ Comprehensive at 250+ lines
-- ✅ Focused on cleanup/removal patterns specifically
-
-## Summary
-
-This codebase research reveals a clear cleanup pattern: **reversal of over-automation**. The INITIAL factory automated a creative thinking task (requirements gathering) that actually benefits from human judgment. The research shows:
-
-- **What to delete**: 6 prp-initial-* agents + 1 create-initial command + ~200 lines of docs
-- **What to preserve**: All prp-gen-* and prp-exec-* agents, core PRP workflow
-- **How to delete safely**: Git safety checks, explicit staging, reference verification, agent comparison
-- **Anti-patterns to avoid**: Wildcard deletion, incomplete cleanup, assumption of equivalence
-- **Result**: Simpler workflow (Manual INITIAL → /generate-prp → /execute-prp), 50% fewer agents, 10-20 min manual work vs complex automation
-
-The patterns emphasize **verification at every step**: check git state, compare agents, grep for references, validate documentation coherence. This is a textbook example of reducing complexity while preserving core value.
+**Output**: 800+ lines of comprehensive codebase pattern analysis
