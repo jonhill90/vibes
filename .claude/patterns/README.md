@@ -6,11 +6,17 @@ This directory contains reusable implementation patterns extracted from the PRP 
 
 **Need to...** | **See Pattern** | **Used By**
 ---|---|---
+Extract secure feature names | [security-validation.md](security-validation.md) | All commands
 Integrate with Archon MCP | [archon-workflow.md](archon-workflow.md) | generate-prp, execute-prp
 Execute subagents in parallel | [parallel-subagents.md](parallel-subagents.md) | generate-prp Phase 2, execute-prp Phase 2
 Validate PRP/execution quality | [quality-gates.md](quality-gates.md) | generate-prp Phase 5, execute-prp Phase 4
 
 ## Pattern Categories
+
+### Security Patterns
+- **[security-validation.md](security-validation.md)**: Feature name extraction with 5-level security validation
+  - Use when: Accepting user input for file paths or feature names
+  - Key benefit: Prevents path traversal, command injection, and directory traversal
 
 ### Integration Patterns
 - **[archon-workflow.md](archon-workflow.md)**: Health check, project/task management, graceful degradation

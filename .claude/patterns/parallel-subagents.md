@@ -1,387 +1,150 @@
-# Parallel Subagent Execution Pattern
+# Parallel Subagents - Quick Reference
 
-**Purpose**: Execute multiple independent subagents simultaneously for 3x speedup through parallel task invocation.
+Execute 3+ independent subagents simultaneously for 3x speedup (14min → 5min).
 
-**Use When**: 3+ independent tasks can run simultaneously without file conflicts or data dependencies.
-
-**Performance Impact**: Sequential execution takes 14 minutes, parallel takes 5 minutes = 64% faster.
-
----
-
-## The CRITICAL Rule: ALL in SINGLE Response
-
-The key to parallel execution is invoking ALL Task tools in ONE response before waiting for any results.
-
-### WRONG (Sequential - 14 minutes)
+## CRITICAL: ALL Task() Calls in SINGLE Response
 
 ```python
-# This executes tasks one at a time (SLOW)
-Task(subagent_type="prp-gen-codebase-researcher", ...)
-# [System waits for completion - 5 minutes]
-Task(subagent_type="prp-gen-documentation-hunter", ...)
-# [System waits for completion - 4 minutes]
-Task(subagent_type="prp-gen-example-curator", ...)
-# [System waits for completion - 5 minutes]
-# Total: 14 minutes
+# WRONG - Sequential (sum of task times)
+Task(subagent_type="researcher", ...)  # [waits]
+Task(subagent_type="hunter", ...)      # Total: 14 min
+
+# RIGHT - Parallel (max of task times)
+Task(subagent_type="researcher", ...)
+Task(subagent_type="hunter", ...)
+Task(subagent_type="curator", ...)
+# ALL in SAME response = parallel, Total: 5 min
 ```
 
-### CORRECT (Parallel - 5 minutes)
+## Core Pattern
 
 ```python
-# 1. Prepare ALL contexts first (don't invoke yet)
+# 1. Prepare contexts
 researcher_ctx = f'''
 You are searching for codebase patterns.
-**Your Task**: Search codebase, extract patterns
+**Task**: Search codebase, extract patterns
 **Output**: prps/{feature_name}/planning/codebase-patterns.md
 '''
+hunter_ctx = f'''[similar]'''
+curator_ctx = f'''[similar]'''
 
-hunter_ctx = f'''
-You are finding official documentation.
-**Your Task**: Search docs, find examples
-**Output**: prps/{feature_name}/planning/documentation-links.md
-'''
-
-curator_ctx = f'''
-You are extracting code examples.
-**Your Task**: Extract code, create README
-**Output**: prps/{feature_name}/examples/
-'''
-
-# 2. Invoke ALL THREE in THIS SAME RESPONSE (before any wait)
-print("Invoking 3 subagents in parallel...")
-
+# 2. Invoke ALL in SAME response
 Task(subagent_type="prp-gen-codebase-researcher",
      description="Search codebase patterns",
      prompt=researcher_ctx)
-
-Task(subagent_type="prp-gen-documentation-hunter",
-     description="Find official documentation",
-     prompt=hunter_ctx)
-
-Task(subagent_type="prp-gen-example-curator",
-     description="Extract code examples",
-     prompt=curator_ctx)
-
-# 3. System automatically waits for ALL to complete
-# Total: max(5, 4, 5) = 5 minutes
-```
-
-**Key Insight**: All three Task calls happen in the SAME message before Claude Code waits. This triggers parallel execution.
-
----
-
-## Performance Math (INCLUDE THIS!)
-
-**Always calculate and communicate time savings:**
-
-```
-Sequential Execution:
-- Researcher: 5 minutes
-- Hunter: 4 minutes
-- Curator: 5 minutes
-Total: 5 + 4 + 5 = 14 minutes
-
-Parallel Execution:
-- All three run simultaneously
-Total: max(5, 4, 5) = 5 minutes
-
-Speedup: (14 - 5) / 14 = 64% faster
-```
-
-**General formula:**
-- Sequential time = sum of all task times
-- Parallel time = max task time in group
-- Speedup % = (sequential - parallel) / sequential * 100
-
----
-
-## Archon Task Updates
-
-When using Archon task tracking with parallel execution:
-
-```python
-# BEFORE parallel invocation: Update ALL to "doing"
-if archon_available:
-    for task_id in [task_2a, task_2b, task_2c]:
-        mcp__archon__manage_task("update",
-            task_id=task_id,
-            status="doing"
-        )
-
-# [Invoke all tasks in parallel - see above]
-
-# AFTER ALL complete: Update ALL to "done"
-if archon_available:
-    for task_id in [task_2a, task_2b, task_2c]:
-        mcp__archon__manage_task("update",
-            task_id=task_id,
-            status="done"
-        )
-```
-
-**Important**: Don't interleave Archon updates with Task invocations. Do all Archon updates BEFORE parallel invocation, then all after completion.
-
----
-
-## Timing Validation
-
-Add timing checks to verify parallel execution is working:
-
-```python
-import time
-
-# Start timing
-phase2_start = time.time()
-
-# [Prepare contexts and invoke parallel tasks]
-
-# End timing
-phase2_duration = time.time() - phase2_start
-phase2_minutes = phase2_duration / 60
-
-print(f"⏱️ Phase 2 completed in {phase2_minutes:.1f} minutes")
-
-# Validate it was actually parallel
-expected_parallel_max = 7 * 60  # 7 minutes (with buffer)
-if phase2_duration > expected_parallel_max:
-    print(f"⚠️ WARNING: Phase 2 took {phase2_minutes:.1f}min (expected <7min)")
-    print("Possible issue: Tasks may have executed sequentially instead of parallel")
-    print("Check that all Task calls were in the SAME response")
-```
-
-**Why this matters**: If timing validation fails, it indicates the parallel pattern was broken and speedup was lost.
-
----
-
-## When to Use Parallel Execution
-
-Use parallel execution when tasks are:
-
-✅ **Independent**: No task depends on another's output
-✅ **No file conflicts**: Different output files
-✅ **Separate contexts**: No shared state
-
-### Examples
-
-**generate-prp Phase 2** - ALWAYS parallel:
-- Codebase researcher → `prps/{feature}/planning/codebase-patterns.md`
-- Documentation hunter → `prps/{feature}/planning/documentation-links.md`
-- Example curator → `prps/{feature}/examples/`
-- Result: 3 different outputs, no dependencies = safe to parallelize
-
-**execute-prp Phase 2** - CONDITIONAL (check dependencies):
-- Task A → creates `src/models/user.py`
-- Task B → creates `src/api/users.py`
-- Task C → creates `tests/test_users.py` (depends on A and B)
-- Result: A and B can run in parallel (Group 1), C runs after (Group 2)
-
-**Test generation** - NEVER parallel:
-- Single comprehensive task generating all tests
-- Not parallelizable
-
-**Validation** - NEVER parallel:
-- Sequential by nature (Level 1 → Level 2 → Level 3)
-- Not parallelizable
-
----
-
-## Common Patterns
-
-### Pattern 1: Research Phase (generate-prp)
-
-```python
-# 3 independent research tasks
-print("🚀 Phase 2: Parallel Research (3 subagents simultaneously)")
-
-# Prepare all contexts
-contexts = {
-    "researcher": create_researcher_context(feature_name),
-    "hunter": create_hunter_context(feature_name),
-    "curator": create_curator_context(feature_name)
-}
-
-# Update Archon tasks (before invocation)
-if archon_available:
-    for task_id in research_task_ids:
-        mcp__archon__manage_task("update", task_id=task_id, status="doing")
-
-# Invoke ALL in SINGLE response
-Task(subagent_type="prp-gen-codebase-researcher",
-     description="Search codebase patterns",
-     prompt=contexts["researcher"])
-
 Task(subagent_type="prp-gen-documentation-hunter",
      description="Find documentation",
-     prompt=contexts["hunter"])
-
+     prompt=hunter_ctx)
 Task(subagent_type="prp-gen-example-curator",
-     description="Extract code examples",
-     prompt=contexts["curator"])
+     description="Extract examples",
+     prompt=curator_ctx)
+```
 
-# Mark complete (after all finish)
+## With Archon
+
+```python
+# Update ALL to "doing" BEFORE
 if archon_available:
-    for task_id in research_task_ids:
+    for task_id in parallel_task_ids:
+        mcp__archon__manage_task("update", task_id=task_id, status="doing")
+
+# Invoke ALL in SAME response
+Task(subagent_type="researcher", prompt=researcher_ctx)
+Task(subagent_type="hunter", prompt=hunter_ctx)
+Task(subagent_type="curator", prompt=curator_ctx)
+
+# Update ALL to "done" AFTER
+if archon_available:
+    for task_id in parallel_task_ids:
         mcp__archon__manage_task("update", task_id=task_id, status="done")
 ```
 
-### Pattern 2: Implementation Groups (execute-prp)
+
+## Timing & Performance
 
 ```python
-# Execute tasks in groups based on dependencies
-for group_number, group in enumerate(execution_groups):
-    print(f"\n🔧 Group {group_number + 1}: {len(group['tasks'])} tasks ({group['mode']})")
+import time
+start = time.time()
+# [Invoke parallel tasks]
+duration = (time.time() - start) / 60
+if duration > 7: print("WARNING: Sequential execution")
 
-    if group['mode'] == "parallel":
-        # Update Archon
-        if archon_available:
-            for task in group['tasks']:
-                mcp__archon__manage_task("update",
-                    task_id=get_task_id(task),
-                    status="doing")
-
-        # Prepare contexts for all tasks in group
-        for task in group['tasks']:
-            ctx = create_implementer_context(task)
-
-            # Invoke implementer (all in same response)
-            Task(subagent_type="prp-exec-implementer",
-                 description=f"Implement {task['name']}",
-                 prompt=ctx)
-
-        # Mark complete
-        if archon_available:
-            for task in group['tasks']:
-                mcp__archon__manage_task("update",
-                    task_id=get_task_id(task),
-                    status="done")
-
-    elif group['mode'] == "sequential":
-        # Execute one at a time
-        for task in group['tasks']:
-            # [Single task invocation]
+# Performance calculation
+sequential = sum([5,4,5])  # 14min
+parallel = max([5,4,5])    # 5min
+speedup = (14-5)/14*100    # 64%
 ```
 
----
+## When to Use
 
-## Error Handling
+**Parallel when**:
+- Independent (no dependencies)
+- No file conflicts
+- No shared state
 
-### If One Parallel Task Fails
-
+**Examples**:
 ```python
-# After parallel execution completes
-results = check_task_results()
+# generate-prp Phase 2 - ALWAYS parallel
+Task(...) # → planning/codebase-patterns.md
+Task(...) # → planning/documentation-links.md
+Task(...) # → examples/
 
-failed_tasks = [t for t in results if t.status == "failed"]
-
-if failed_tasks:
-    print(f"⚠️ {len(failed_tasks)} parallel tasks failed:")
-    for task in failed_tasks:
-        print(f"  - {task.name}: {task.error}")
-
-    # Reset failed tasks in Archon
-    if archon_available:
-        for task in failed_tasks:
-            mcp__archon__manage_task("update",
-                task_id=task.archon_id,
-                status="todo",
-                description=f"ERROR: {task.error}"
-            )
-
-    print("\nOptions:")
-    print("1. Retry just the failed tasks")
-    print("2. Continue with partial results")
-    print("3. Abort workflow")
+# execute-prp - CONDITIONAL
+# Group 1 (parallel)
+Task(...) # → src/models/user.py
+Task(...) # → src/api/users.py
+# Group 2 (sequential after)
+Task(...) # → tests/ (needs both)
 ```
 
-### File Conflict Detection
+## Error Handling & Conflict Check
 
 ```python
-# Before parallelizing, check for conflicts
+# Reset failed tasks
+failed = [t for t in results if t.status == "failed"]
+if failed and archon_available:
+    for task in failed:
+        mcp__archon__manage_task("update", task_id=task.id,
+            status="todo", description=f"ERROR: {task.error}")
+
+# Check file conflicts before parallelizing
 def can_run_in_parallel(tasks):
     all_files = set()
     for task in tasks:
-        task_files = set(task.get('files', []))
-        if all_files & task_files:  # Intersection exists
-            return False  # File conflict!
-        all_files.update(task_files)
+        if all_files & set(task.get('files',[])): return False
+        all_files.update(task.get('files',[]))
     return True
-
-if can_run_in_parallel(group_tasks):
-    # Safe to parallelize
-else:
-    print("⚠️ File conflicts detected - executing sequentially")
-    group['mode'] = "sequential"
 ```
 
----
+## Rules
 
-## Validation Checklist
+**ALWAYS**:
+- Prepare contexts BEFORE invoking
+- Invoke ALL in SINGLE response
+- Update Archon in batches (before/after)
+- Validate timing (~max, not sum)
+- Limit to 3-6 tasks per group
 
-Before using parallel execution, verify:
+**NEVER**:
+- Invoke in separate responses
+- Interleave Archon updates
+- Parallelize dependent tasks
+- Parallelize same file writes
+- Exceed 6 parallel tasks
 
-- [ ] All tasks are truly independent (no hidden dependencies)
-- [ ] No file conflicts (each task modifies different files)
-- [ ] All Task calls are in SINGLE response (not in loop with waits)
-- [ ] Archon updates happen BEFORE and AFTER (not interleaved)
-- [ ] Timing validation added (check duration < expected parallel max)
-- [ ] Error handling accounts for partial failures
-
----
-
-## Maximum Parallelization
-
-**Practical limits:**
-- generate-prp Phase 2: 3 parallel tasks (optimal)
-- execute-prp Phase 2: Up to 5-6 parallel tasks per group
-- More than 6 parallel tasks may be overwhelming
-
-**Why limit?**: Too many parallel tasks can:
-- Overwhelm system resources
-- Make error tracking difficult
-- Reduce individual task quality
-- Complicate debugging
-
-**Recommendation**: Group tasks into batches of 3-6 for best results.
-
----
-
-## Success Metrics
-
-After parallel execution, report:
+## Anti-Pattern
 
 ```python
-print(f"""
-✅ Parallel Execution Complete
+# WRONG - Loop = sequential
+for subagent in ["researcher", "hunter", "curator"]:
+    Task(subagent_type=f"prp-gen-{subagent}", ...)
+# 14 minutes
 
-Group {group_num}: {len(tasks)} tasks
-- Mode: PARALLEL
-- Sequential time estimate: {sequential_time:.1f} min
-- Actual parallel time: {parallel_time:.1f} min
-- Speedup achieved: {speedup_percent:.0f}%
-- All tasks completed: {success_rate}%
-""")
+# RIGHT - All together = parallel
+Task(subagent_type="prp-gen-researcher", ...)
+Task(subagent_type="prp-gen-hunter", ...)
+Task(subagent_type="prp-gen-curator", ...)
+# 5 minutes
 ```
 
----
-
-## Related Patterns
-
-- **archon-workflow.md**: Task management and status updates
-- **error-handling.md**: Subagent failure recovery
-- **quality-gates.md**: Validation after parallel execution
-
----
-
-## Quick Reference
-
-**Need to parallelize?**
-
-1. Check tasks are independent (no dependencies, no file conflicts)
-2. Prepare ALL contexts first
-3. Update ALL Archon tasks to "doing"
-4. Invoke ALL Task tools in SINGLE response
-5. Wait for completion (automatic)
-6. Update ALL Archon tasks to "done"
-7. Validate timing (should be ~max task time, not sum)
-
-**Key insight**: The SINGLE response is what triggers parallelism. If you invoke tasks in separate responses, they execute sequentially.
+Working example: `.claude/commands/generate-prp.md` Phase 2
