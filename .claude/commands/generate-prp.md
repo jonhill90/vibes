@@ -262,10 +262,10 @@ if archon_available:
 ```
 
 **Expected Outputs**:
-- `prps/research/codebase-patterns.md`
-- `prps/research/documentation-links.md`
-- `prps/research/examples-to-include.md`
-- `examples/{feature_name}/` directory with 2-4 code files + README.md
+- `prps/{feature_name}/planning/codebase-patterns.md`
+- `prps/{feature_name}/planning/documentation-links.md`
+- `prps/{feature_name}/planning/examples-to-include.md`
+- `prps/{feature_name}/examples/` directory with 2-4 code files + README.md
 
 ---
 

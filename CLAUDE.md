@@ -63,7 +63,7 @@ vibes/
 - `prp-gen-feature-analyzer`: Analyzes INITIAL.md, extracts requirements, searches Archon for similar PRPs
 - `prp-gen-codebase-researcher`: Searches codebase for patterns, naming conventions, architectural approaches
 - `prp-gen-documentation-hunter`: Finds official docs, searches Archon knowledge base first
-- `prp-gen-example-curator`: **EXTRACTS actual code** to examples/ directory (not just references)
+- `prp-gen-example-curator`: **EXTRACTS actual code** to `prps/{feature}/examples/` directory (not just references)
 - `prp-gen-gotcha-detective`: Identifies security/performance pitfalls, documents solutions
 - `prp-gen-assembler`: Synthesizes all research into final PRP, scores quality (8+/10)
 
@@ -90,9 +90,9 @@ vibes/
 - **Phase 0**: Setup (directories, Archon project)
 - **Phase 1**: Feature analysis (requirements extraction)
 - **Phase 2**: **Parallel research** (codebase, docs, examples - 3 subagents simultaneously)
-  - Extracts actual code files to `examples/<feature>/`
+  - Extracts actual code files to `prps/<feature>/examples/`
   - Searches Archon knowledge base first
-  - Creates comprehensive research documents
+  - Creates comprehensive research documents in `prps/<feature>/planning/`
 - **Phase 3**: Gotcha detection (security, performance, pitfalls)
 - **Phase 4**: PRP assembly (synthesizes all research)
 - **Phase 5**: Quality check (requires 8+/10 score)
