@@ -182,6 +182,32 @@ else
 fi
 
 echo
+#── Vibesbox Integration ─────────────────────────────────────────────
+info "🖥️  Setting up vibesbox automation..."
+
+# Install CLI helper functions (makes vibesbox-* commands available)
+if [ -f /workspace/vibes/.devcontainer/scripts/install-vibesbox-cli.sh ]; then
+  bash /workspace/vibes/.devcontainer/scripts/install-vibesbox-cli.sh || {
+    warn "CLI helper installation failed - functions may not be auto-loaded"
+    warn "You can manually source: source /workspace/vibes/.devcontainer/scripts/vibesbox-cli.sh"
+  }
+else
+  warn "install-vibesbox-cli.sh not found - skipping CLI setup"
+fi
+
+echo
+# Ensure vibesbox is running (with graceful degradation)
+if [ -f /workspace/vibes/.devcontainer/scripts/ensure-vibesbox.sh ]; then
+  bash /workspace/vibes/.devcontainer/scripts/ensure-vibesbox.sh || {
+    warn "Vibesbox setup encountered issues - GUI automation may be unavailable"
+    warn "Devcontainer will continue without vibesbox"
+    warn "To troubleshoot: vibesbox-status"
+  }
+else
+  warn "ensure-vibesbox.sh not found - skipping vibesbox setup"
+fi
+
+echo
 success "🎉 Vibes development environment setup complete!"
 echo
 info "Available commands:"
@@ -193,6 +219,13 @@ fi
 if command -v az &>/dev/null; then
   info "  • az --help - Azure CLI help"
 fi
+echo
+info "Vibesbox CLI commands:"
+info "  • vibesbox-status - Show vibesbox status and health"
+info "  • vibesbox-start - Start vibesbox container"
+info "  • vibesbox-stop - Stop vibesbox container"
+info "  • vibesbox-logs - Follow vibesbox logs"
+info "  • vibesbox-vnc - Display VNC connection info"
 echo
 info "To test functionality:"
 info "  • bash /usr/local/share/test-docker.sh - Test Docker access"
