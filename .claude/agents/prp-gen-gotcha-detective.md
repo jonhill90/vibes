@@ -1,7 +1,7 @@
 ---
 name: prp-gen-gotcha-detective
 description: USE PROACTIVELY for security and pitfall detection. Searches Archon and web for known issues, common mistakes, performance concerns. Creates gotchas.md with solutions, not just warnings. Works autonomously.
-tools: WebSearch, WebFetch, Write, Read, mcp__archon__rag_search_knowledge_base
+tools: Read, Grep, Glob, WebSearch, WebFetch, Write, Read, mcp__archon__rag_search_knowledge_base
 color: cyan
 ---
 

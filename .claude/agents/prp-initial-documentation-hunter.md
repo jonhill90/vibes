@@ -1,7 +1,7 @@
 ---
 name: prp-initial-documentation-hunter
 description: USE PROACTIVELY for official documentation research. Searches Archon knowledge base first, then WebSearch for API references and implementation guides. Creates documentation-links.md with actionable URLs and code examples.
-tools: WebSearch, WebFetch, Write, mcp__archon__rag_search_knowledge_base, mcp__archon__rag_get_available_sources
+tools: Read, Grep, Glob, WebSearch, WebFetch, Write, mcp__archon__rag_search_knowledge_base, mcp__archon__rag_get_available_sources
 color: purple
 ---
 
