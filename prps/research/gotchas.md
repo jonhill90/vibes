@@ -1,1530 +1,730 @@
-# Gotchas & Pitfalls: Devcontainer-Vibesbox Integration
+# Known Gotchas: devcontainer_vibesbox_fixes
 
-## Research Summary
+## Overview
 
-**Technologies Analyzed**: Docker, Docker Compose, Devcontainers, VNC, Bash scripting, Container networking
-**Risk Categories**: Security, Performance, Reliability, Edge Cases, User Experience
-**Sources Consulted**: Archon: 5 searches, Web: 6 searches, OWASP Docker Security, Docker Official Docs
-**Gotchas Identified**: 18
-**Research Date**: 2025-10-04
+Five critical configuration fixes for devcontainer vibesbox integration introduce security, performance, and reliability considerations. This document identifies 12 gotchas across path normalization, Docker networking, socket permissions, volume persistence, and privileged containers. Each gotcha includes detection methods, solutions with code examples, prevention strategies, and severity ratings tied to specific fixes (1-5).
+
+**Key Risk Areas**:
+- **CRITICAL**: Host network mode security trade-offs, privileged container escape risks, Docker socket root-level access
+- **HIGH**: Path mismatch causing silent failures, VNC exposure if misconfigured, socket ownership resets
+- **MEDIUM**: Named volume data lifecycle, postCreateCommand debugging challenges, platform limitations
+- **LOW**: Build time expectations, one-time manual setup requirements
 
 ---
 
-## Security Considerations
+## Critical Gotchas
 
-### Issue 1: Docker Socket Exposure - Critical Root Access Risk
+### 1. Docker Host Network Mode Removes Network Isolation
+
 **Severity**: CRITICAL
-**Impact**: Complete host system compromise - attackers can escape container and control Docker daemon
-**Affected Component**: postCreateCommand.sh Docker socket mounting
+**Category**: Security / Network Isolation
+**Affects**: Fix #2 (VNC Network Connectivity) - `mcp-vibesbox-server/docker-compose.yml`
+**Source**: https://stackoverflow.com/questions/35230321/, https://docs.docker.com/engine/network/drivers/host/
 
-**Vulnerable Code**:
+**What it is**:
+When using `network_mode: host`, the container shares the Docker host's network namespace directly, eliminating network isolation between container and host. All containers using host mode can communicate with each other without firewall restrictions.
+
+**Why it's a problem**:
+- **Reduced container isolation**: Container's network stack isn't isolated from Docker host
+- **Increased inter-container attack surface**: Malicious containers can exploit non-malicious containers on same host
+- **Service discovery unavailable**: Cannot use Docker DNS for service names (containers must use localhost)
+- **Port conflicts**: Container ports directly conflict with host services (no port mapping protection)
+- **Container breakout amplification**: If container escape occurs, attacker has direct access to host network
+
+**How to detect it**:
 ```bash
-# ❌ WRONG - exposes Docker daemon to container
-docker run -v /var/run/docker.sock:/var/run/docker.sock vibesbox-server
+# Check if vibesbox using host network mode
+docker inspect mcp-vibesbox-server | jq '.[0].HostConfig.NetworkMode'
+# Should show: "host"
 
-# ❌ WRONG - in docker-compose.yml
-volumes:
-  - /var/run/docker.sock:/var/run/docker.sock
+# Verify VNC port binding on host (not container namespace)
+sudo netstat -tlnp | grep 5901
+# Should show direct host binding: 127.0.0.1:5901 or 0.0.0.0:5901
+
+# Check network isolation (should see host interfaces, not isolated namespace)
+docker exec mcp-vibesbox-server ip addr show
+# Should match host network interfaces
 ```
 
-**Why This is Dangerous**:
-- Mounting `/var/run/docker.sock` gives container FULL control over Docker daemon
-- Malicious code can start privileged containers, mount host filesystem, escape isolation
-- Equivalent to giving root access to the host machine
-- OWASP classifies this as critical security risk
-
-**Secure Code**:
-```bash
-# ✅ RIGHT - use Docker-in-Docker with isolated daemon
-# In docker-compose.yml
+**How to avoid/fix**:
+```yaml
+# ❌ WRONG - Exposes VNC to all network interfaces
 services:
-  vibesbox-server:
-    image: vibesbox-server
+  mcp-vibesbox-server:
+    network_mode: host
+    # VNC server configured with: Xvnc :1 -rfbport 5901 -rfbaddr 0.0.0.0
+
+# ✅ RIGHT - Secure host mode with localhost binding
+services:
+  mcp-vibesbox-server:
+    network_mode: host
+    # VNC server configured with: Xvnc :1 -rfbport 5901 -rfbaddr 127.0.0.1
+    # This binds VNC ONLY to localhost, preventing external access
+
+# Verification that VNC binds to localhost only:
+# Inside vibesbox container, check VNC binding
+docker exec mcp-vibesbox-server netstat -tlnp | grep 5901
+# MUST show: 127.0.0.1:5901 (localhost only)
+# NOT: 0.0.0.0:5901 (all interfaces - INSECURE)
+```
+
+**Prevention strategy**:
+1. **Validate VNC localhost binding**: Add health check to verify `127.0.0.1:5901` not `0.0.0.0:5901`
+2. **Document security trade-off**: This is acceptable ONLY because:
+   - Vibesbox already runs privileged (container escape possible anyway)
+   - VNC explicitly binds to localhost (no external network exposure)
+   - Simplifies devcontainer integration (alternative requires complex bridge networking)
+3. **Regular security audits**: Verify no additional services exposed via host network
+4. **Host firewall configured**: Ensure host firewall blocks external access to VNC port
+
+**Testing/validation command**:
+```bash
+# From devcontainer, verify VNC accessible via localhost
+nc -z localhost 5901 && echo "✅ VNC accessible" || echo "❌ VNC not accessible"
+
+# From outside host, verify VNC NOT accessible externally (should timeout)
+nc -z -w 2 <host_ip> 5901 && echo "❌ SECURITY ISSUE: VNC externally accessible!" || echo "✅ VNC properly restricted"
+
+# Verify localhost-only binding
+docker exec mcp-vibesbox-server bash -c "netstat -tlnp | grep 5901 | grep -q '127.0.0.1:5901' && echo '✅ Localhost only' || echo '❌ WARNING: Not localhost only'"
+```
+
+**Relevance to specific fixes**: Fix #2 (VNC Network Connectivity)
+
+**Additional Resources**:
+- Docker security implications: https://docs.docker.com/engine/security/
+- OWASP Docker security cheat sheet: https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
+- VNC localhost binding best practices: https://www.mit.edu/~avp/lqcd/ssh-vnc.html
+
+---
+
+### 2. Privileged Container Enables Container Escape
+
+**Severity**: CRITICAL
+**Category**: Security / Container Isolation
+**Affects**: Existing vibesbox configuration (no changes in this PRP, but important context)
+**Source**: https://www.startupdefense.io/cyberattacks/docker-escape, https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
+
+**What it is**:
+Vibesbox runs with `privileged: true`, which gives the container ALL Linux kernel capabilities and complete access to host devices. This effectively disables all Docker isolation features.
+
+**Why it's a problem**:
+- **Root-level host access**: Privileged containers can mount host filesystem and modify it without restrictions
+- **Kernel vulnerability exposure**: Exploits like CVE-2019-5736 (runc escape) can lead to host compromise
+- **Bypassed security mechanisms**: AppArmor, SELinux, seccomp profiles all bypassed
+- **Device access**: Container can access `/dev/sda1` and other host devices directly
+- **Docker socket exposure risk**: Combined with `/var/run/docker.sock` mount, attacker can control entire Docker daemon
+
+**How to detect it**:
+```bash
+# Check if container running privileged
+docker inspect mcp-vibesbox-server | jq '.[0].HostConfig.Privileged'
+# Should show: true (required for systemd)
+
+# Check capabilities (privileged containers have ALL)
+docker exec mcp-vibesbox-server capsh --print
+# Should show: Current: = cap_chown,cap_dac_override,... (all capabilities)
+
+# Verify host filesystem access possible
+docker exec mcp-vibesbox-server fdisk -l
+# Should show host disk devices (confirms privileged access)
+```
+
+**How to avoid/fix**:
+```yaml
+# ❌ CURRENT - Privileged mode required for systemd
+services:
+  mcp-vibesbox-server:
     privileged: true
-    # NO socket mounting
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker.sock
-    # Use Docker's built-in DinD support instead
-```
-
-**Alternative Secure Approach - Socket Proxy**:
-```yaml
-# ✅ RIGHT - use socket proxy to filter dangerous requests
-services:
-  docker-socket-proxy:
-    image: tecnativa/docker-socket-proxy
-    environment:
-      CONTAINERS: 1
-      IMAGES: 1
-      NETWORKS: 1
-      VOLUMES: 0  # Deny volume operations
-      EXEC: 0     # Deny exec commands
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-
-  vibesbox-server:
-    environment:
-      - DOCKER_HOST=tcp://docker-socket-proxy:2375
-    depends_on:
-      - docker-socket-proxy
-```
-
-**Additional Mitigations**:
-- Use Docker Content Trust to verify image signatures
-- Enable Docker rootless mode if possible
-- Implement AppArmor or SELinux policies
-- Monitor Docker API calls for suspicious activity
-
-**Detection**:
-```bash
-# Check if socket is mounted in running containers
-docker inspect CONTAINER_ID | grep -A 5 "Mounts" | grep docker.sock
-
-# List containers with privileged access
-docker ps --filter "label=com.docker.compose.project" --format "table {{.ID}}\t{{.Names}}\t{{.Status}}" | \
-  xargs -I {} docker inspect {} | grep -i privileged
-```
-
-**Testing**:
-```bash
-# Test that socket is NOT accessible from container
-docker exec vibesbox-server ls -la /var/run/docker.sock 2>&1 | grep "No such file"
-
-# Expected: should fail or show file doesn't exist
-```
-
-**Source**: OWASP Docker Security Cheat Sheet, Docker Security Best Practices 2024
-**Related**: https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
-
----
-
-### Issue 2: VNC Server Exposed Without Authentication
-**Severity**: HIGH
-**Impact**: Unauthorized GUI access, session hijacking, data exfiltration
-**Affected Component**: VNC server on port 5901
-
-**Vulnerable Code**:
-```bash
-# ❌ WRONG - VNC without password
-x11vnc -display :1 -forever -shared -rfbport 5901
-
-# ❌ WRONG - binding to all interfaces
-x11vnc -display :1 -rfbport 0.0.0.0:5901
-```
-
-**Secure Code**:
-```bash
-# ✅ RIGHT - VNC with password authentication
-# 1. Create VNC password file
-mkdir -p ~/.vnc
-x11vnc -storepasswd YourSecurePassword ~/.vnc/passwd
-
-# 2. Start VNC with authentication and localhost binding
-x11vnc -display :1 \
-  -forever \
-  -shared \
-  -rfbport 5901 \
-  -rfbauth ~/.vnc/passwd \
-  -localhost \  # Only bind to localhost
-  -ssl \        # Use SSL/TLS encryption
-  -sslonly      # Require SSL/TLS
-```
-
-**Docker Compose with SSH Tunnel**:
-```yaml
-# ✅ RIGHT - VNC only accessible via SSH tunnel
-services:
-  vibesbox-server:
-    image: vibesbox-server
-    ports:
-      # Expose SSH for tunneling, NOT VNC directly
-      - "2222:22"
-    # VNC port NOT exposed to host
-    expose:
-      - "5901"
-    environment:
-      - VNC_PASSWORD=${VNC_PASSWORD}
-```
-
-**Connect via SSH Tunnel**:
-```bash
-# ✅ RIGHT - Secure VNC access
-# 1. Create SSH tunnel
-ssh -L 5901:localhost:5901 -p 2222 user@devcontainer-host
-
-# 2. Connect VNC client to localhost:5901
-vncviewer localhost:5901
-```
-
-**Additional Mitigations**:
-- Implement rate limiting for VNC connections (5 attempts/minute)
-- Use certificate-based authentication where possible
-- Enable VNC audit logging
-- Rotate VNC passwords regularly (30 days)
-- Use strong passwords (16+ characters, mixed case, symbols)
-
-**Detection**:
-```bash
-# Check if VNC is exposed on public interface
-netstat -tlnp | grep 5901
-
-# Should only show 127.0.0.1:5901, NOT 0.0.0.0:5901
-```
-
-**Testing**:
-```bash
-# Test VNC authentication is required
-timeout 5 bash -c "echo '' | nc localhost 5901" || echo "Connection rejected - good!"
-
-# Test password is required
-vncviewer localhost:5901 -passwd /dev/null 2>&1 | grep -i "authentication failed"
-```
-
-**Source**: RealVNC Security Best Practices 2024, Information Security Stack Exchange
-**Related**: https://help.realvnc.com/hc/en-us/articles/360002253278-Setting-up-VNC-Connect-for-Maximum-Security
-
----
-
-### Issue 3: Privileged Container Requirement
-**Severity**: HIGH
-**Impact**: Container escape, host kernel compromise, reduced isolation
-**Affected Component**: vibesbox-server container configuration
-
-**Problem**:
-Vibesbox requires `privileged: true` for systemd and Docker-in-Docker, which disables most security features.
-
-**Why Privileged is Dangerous**:
-```yaml
-# ❌ NECESSARY BUT DANGEROUS
-privileged: true
-# Disables:
-# - Seccomp filtering
-# - AppArmor/SELinux policies
-# - Capability restrictions
-# - Device cgroup controls
-# Grants access to ALL host devices
-```
-
-**Mitigation Strategy - Least Privilege Approach**:
-```yaml
-# ✅ BETTER - Explicitly grant only needed capabilities
-services:
-  vibesbox-server:
-    # Don't use privileged: true
+    security_opt:
+      - seccomp:unconfined
     cap_add:
-      - SYS_ADMIN      # For systemd
-      - NET_ADMIN      # For networking
-      - SYS_PTRACE     # For debugging
+      - SYS_ADMIN
+      - SYS_RESOURCE
+
+# ✅ ALTERNATIVE (if systemd not required) - Drop all, add only needed
+services:
+  mcp-vibesbox-server:
+    privileged: false
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - NET_BIND_SERVICE
     security_opt:
-      - apparmor:unconfined  # Only if systemd requires
-      - seccomp:unconfined   # Only if systemd requires
-    devices:
-      - /dev/fuse      # Only specific devices needed
+      - no-new-privileges:true
+
+# ⚠️ MITIGATION (current approach) - Accept risk with compensating controls
+# Since systemd REQUIRES privileged mode, we mitigate with:
+# 1. Run container as non-root user where possible
+# 2. Minimize exposed ports (VNC localhost-only)
+# 3. Regular security updates
+# 4. Network isolation (host mode with localhost binding)
+# 5. Audit container logs for suspicious activity
 ```
 
-**If Privileged is Absolutely Required**:
-```yaml
-# ✅ DAMAGE CONTROL - Add security layers
-services:
-  vibesbox-server:
-    privileged: true  # Required for systemd
-    security_opt:
-      - no-new-privileges:true  # Prevent privilege escalation
-    read_only: true             # Read-only root filesystem
-    tmpfs:
-      - /tmp
-      - /run
-      - /var/run
-    volumes:
-      - vibesbox-data:/data:ro  # Mount volumes read-only where possible
-```
+**Prevention strategy**:
+1. **Accept documented risk**: Privileged mode required for systemd-based vibesbox
+2. **Compensating controls**:
+   - VNC binds to localhost only (reduces external attack surface)
+   - Regular security updates for base image
+   - Monitor container logs for suspicious activity
+   - Host firewall configured to block unauthorized access
+3. **Document trade-off**: This is acceptable ONLY because:
+   - Development environment (not production)
+   - Systemd required for MCP server architecture
+   - Alternative approaches significantly more complex
+4. **Future improvement**: Consider systemd-less architecture in v2
 
-**Additional Mitigations**:
-- Run container in isolated network namespace
-- Use user namespace remapping (`--userns-remap`)
-- Enable Docker Content Trust
-- Regular vulnerability scanning
-- Monitor container for escape attempts
-
-**Detection**:
+**Testing/validation command**:
 ```bash
-# Check if container is privileged
-docker inspect vibesbox-server | jq '.[0].HostConfig.Privileged'
+# Verify privileged mode (expected for vibesbox)
+docker inspect mcp-vibesbox-server --format='{{.HostConfig.Privileged}}' && echo "⚠️ Privileged mode enabled (expected)" || echo "✅ Not privileged"
 
-# List all privileged containers
-docker ps -q | xargs docker inspect | jq '.[] | select(.HostConfig.Privileged==true) | .Name'
+# Test if container can access host devices (expected to work)
+docker exec mcp-vibesbox-server ls -la /dev/sda* 2>/dev/null && echo "⚠️ Host device access enabled (expected for privileged)" || echo "✅ No host device access"
+
+# Verify non-root user where possible
+docker exec mcp-vibesbox-server whoami
+# Should show: vscode (not root) for most operations
+
+# Check security opt configuration
+docker inspect mcp-vibesbox-server | jq '.[0].HostConfig.SecurityOpt'
+# Should show: ["seccomp:unconfined"] (required for systemd)
 ```
 
-**Testing**:
-```bash
-# Test that container cannot access host devices unnecessarily
-docker exec vibesbox-server ls /dev/ | wc -l
+**Relevance to specific fixes**: Context for Fix #2 (network mode security assessment)
 
-# Privileged container will show 100+ devices
-# Restricted container should show <20
-```
-
-**Source**: Docker Security Best Practices, OWASP Docker Security
-**Related**: https://docs.docker.com/engine/security/
+**Additional Resources**:
+- Container escape techniques: https://unit42.paloaltonetworks.com/container-escape-techniques/
+- Escaping privileged containers: https://vickieli.dev/system%20security/escape-docker/
+- Docker privilege escalation: https://book.hacktricks.wiki/en/linux-hardening/privilege-escalation/docker-security/
 
 ---
 
-### Issue 4: Secrets in Environment Variables
-**Severity**: MEDIUM
-**Impact**: Credential leakage via logs, container inspection, process listings
-**Affected Component**: VNC passwords, API tokens, Docker credentials
+### 3. Docker Socket Access Grants Root-Level Privileges
 
-**Vulnerable Code**:
+**Severity**: CRITICAL
+**Category**: Security / Privilege Escalation
+**Affects**: Fix #3 (Docker Socket Permissions) - `.devcontainer/scripts/postCreate.sh`
+**Source**: https://docs.docker.com/engine/security/protect-access/, https://docs.docker.com/engine/install/linux-postinstall/
+
+**What it is**:
+Anyone who can access the Docker socket (`/var/run/docker.sock`) can trivially root the entire host. Docker allows containers to mount host directories without restriction, enabling full filesystem access.
+
+**Why it's a problem**:
+- **Equivalent to sudo**: Docker group membership grants root-level privileges
+- **Host filesystem accessible**: Can start containers with `-v /:/host` to access entire host filesystem
+- **No audit trail**: Docker socket access doesn't require password (unlike sudo)
+- **Container escape vector**: Malicious code can spawn privileged containers to escape isolation
+- **chmod 777 catastrophic**: Opening socket to everyone defeats all system security
+
+**How to detect it**:
 ```bash
-# ❌ WRONG - secrets in .env file or docker-compose.yml
-docker run -e VNC_PASSWORD=mypassword vibesbox-server
+# Check socket ownership and permissions
+ls -la /var/run/docker.sock
+# Should show: srw-rw---- 1 root docker (GID 999)
+# BAD: srw-rw---- 1 root root (GID 0) - wrong group
+# CATASTROPHIC: srwxrwxrwx (777) - everyone has access
 
-# ❌ WRONG - hardcoded in scripts
-export VNC_PASSWORD="secretpassword"
+# Verify user in docker group
+groups | grep -q docker && echo "✅ In docker group" || echo "❌ Not in docker group"
+
+# Test Docker access without sudo
+docker ps &>/dev/null && echo "✅ Docker accessible" || echo "❌ Permission denied"
+
+# Check for insecure permissions
+[ "$(stat -c '%a' /var/run/docker.sock 2>/dev/null)" = "660" ] && echo "✅ Secure permissions" || echo "❌ WARNING: Insecure permissions"
 ```
 
-**Secure Code**:
+**How to avoid/fix**:
 ```bash
-# ✅ RIGHT - use Docker secrets (Swarm mode)
-echo "my_vnc_password" | docker secret create vnc_password -
-
-docker service create \
-  --secret vnc_password \
-  --name vibesbox-server \
-  vibesbox-server:latest
-```
-
-**For Docker Compose (without Swarm)**:
-```yaml
-# ✅ RIGHT - use secrets with file-based source
-services:
-  vibesbox-server:
-    image: vibesbox-server
-    secrets:
-      - vnc_password
-
-secrets:
-  vnc_password:
-    file: ./secrets/vnc_password.txt  # Outside git, chmod 600
-```
-
-**Access in Container**:
-```bash
-# ✅ RIGHT - read from mounted secret
-VNC_PASSWORD=$(cat /run/secrets/vnc_password)
-x11vnc -rfbauth /run/secrets/vnc_password
-```
-
-**Alternative - External Secrets Manager**:
-```bash
-# ✅ RIGHT - use HashiCorp Vault or similar
-# 1. Retrieve from Vault
-export VNC_PASSWORD=$(vault kv get -field=password secret/vibesbox/vnc)
-
-# 2. Pass to container without logging
-docker run --env-file <(echo "VNC_PASSWORD=$VNC_PASSWORD") vibesbox-server
-```
-
-**Additional Mitigations**:
-- Add secrets files to `.gitignore`
-- Rotate secrets regularly (30-90 days)
-- Use environment-specific secret stores
-- Enable Docker secret encryption at rest
-- Audit secret access patterns
-
-**Detection**:
-```bash
-# Check for secrets in environment variables
-docker exec vibesbox-server env | grep -i "password\|secret\|token\|key"
-
-# Check for secrets in logs
-docker logs vibesbox-server 2>&1 | grep -i "password\|secret"
-```
-
-**Testing**:
-```bash
-# Test that secrets are NOT in environment
-docker exec vibesbox-server env | grep VNC_PASSWORD && echo "FAIL: Secret exposed!" || echo "PASS"
-
-# Test that secrets ARE accessible from /run/secrets
-docker exec vibesbox-server cat /run/secrets/vnc_password > /dev/null && echo "PASS" || echo "FAIL"
-```
-
-**Source**: Docker Secrets Documentation, Security Best Practices
-**Related**: https://docs.docker.com/engine/swarm/secrets/
-
----
-
-## Performance Concerns
-
-### Concern 1: Container Startup Race Conditions
-**Impact**: Failed service initialization, connection errors, crashed containers
-**Scenario**: Web service starts before database is ready
-**Likelihood**: Common (without proper healthchecks)
-
-**Problem Code**:
-```yaml
-# ❌ WRONG - no health checks, just basic depends_on
-services:
-  vibesbox-server:
-    depends_on:
-      - postgres  # Only waits for container to START, not be READY
-
-  postgres:
-    image: postgres:15
-    # No healthcheck defined
-```
-
-**Why This Fails**:
-- `depends_on` only ensures container STARTED, not that service is READY
-- PostgreSQL takes 5-10 seconds to initialize after container starts
-- vibesbox-server tries to connect immediately and fails
-- Race condition causes intermittent failures
-
-**Optimized Code**:
-```yaml
-# ✅ RIGHT - proper health checks with service_healthy condition
-services:
-  vibesbox-server:
-    depends_on:
-      postgres:
-        condition: service_healthy  # Wait for healthy status
-        restart: true               # Restart if dependency becomes unhealthy
-      redis:
-        condition: service_started  # Just wait for start
-
-  postgres:
-    image: postgres:15
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s      # Check every 5 seconds
-      timeout: 3s       # Timeout after 3 seconds
-      retries: 5        # Try 5 times before marking unhealthy
-      start_period: 10s # Grace period for initialization
-    environment:
-      - POSTGRES_USER=vibesbox
-      - POSTGRES_DB=vibesbox
-```
-
-**Application-Level Retry Logic**:
-```bash
-# ✅ RIGHT - retry connection in startup script
-#!/bin/bash
-MAX_RETRIES=30
-RETRY_INTERVAL=2
-
-for i in $(seq 1 $MAX_RETRIES); do
-  if pg_isready -h postgres -U vibesbox; then
-    echo "Database ready!"
-    break
-  fi
-
-  if [ $i -eq $MAX_RETRIES ]; then
-    echo "ERROR: Database not ready after $MAX_RETRIES attempts"
-    exit 1
-  fi
-
-  echo "Waiting for database... attempt $i/$MAX_RETRIES"
-  sleep $RETRY_INTERVAL
-done
-
-# Continue with application startup
-exec "$@"
-```
-
-**Benchmarks**:
-- **Before (no healthcheck)**: 30-50% failure rate on cold starts
-- **After (with healthcheck)**: <1% failure rate
-- **Improvement**: 30-50x more reliable startup
-
-**Trade-offs**:
-- Added complexity in docker-compose.yml configuration
-- Slightly longer startup time (5-10 seconds) for proper initialization
-- More resource usage during startup (health check processes)
-
-**When to Optimize**:
-- Multi-service applications with dependencies (databases, caches)
-- Production environments requiring reliability
-- CI/CD pipelines where failure is costly
-- Automated deployment scenarios
-
-**Source**: Docker Compose Documentation, Container Startup Best Practices
-**Related**: https://docs.docker.com/compose/how-tos/startup-order/
-
----
-
-### Concern 2: Resource Exhaustion - Memory and CPU
-**Impact**: System crashes, OOM kills, degraded host performance
-**Scenario**: Vibesbox container consumes all host resources
-**Likelihood**: Common (without resource limits)
-
-**Problem Code**:
-```yaml
-# ❌ WRONG - no resource limits
-services:
-  vibesbox-server:
-    image: vibesbox-server
-    # Container can use unlimited memory and CPU
-```
-
-**Why This is Dangerous**:
-- Container can consume ALL host memory
-- OOM killer may terminate critical processes
-- CPU starvation affects other containers/host
-- Host system becomes unresponsive
-
-**Optimized Code**:
-```yaml
-# ✅ RIGHT - enforce resource limits
-services:
-  vibesbox-server:
-    image: vibesbox-server
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'        # Max 2 CPU cores
-          memory: 4G         # Max 4GB RAM
-        reservations:
-          cpus: '0.5'        # Guaranteed 0.5 cores
-          memory: 1G         # Guaranteed 1GB RAM
-    mem_swappiness: 0        # Disable swap (prefer OOM over swap)
-    oom_kill_disable: false  # Allow OOM killer (default)
-```
-
-**For docker run**:
-```bash
-# ✅ RIGHT - CLI resource limits
-docker run \
-  --memory=4g \
-  --memory-swap=4g \       # Total memory+swap (prevents swap usage)
-  --cpus=2.0 \
-  --cpu-shares=1024 \      # Relative CPU priority
-  --pids-limit=200 \       # Limit number of processes
-  --ulimit nofile=1024 \   # Limit open files
-  vibesbox-server
-```
-
-**Monitoring Script**:
-```bash
-# ✅ RIGHT - monitor resource usage
-#!/bin/bash
-while true; do
-  docker stats --no-stream --format \
-    "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" \
-    vibesbox-server
-
-  # Alert if memory > 90%
-  MEM_USAGE=$(docker stats --no-stream --format "{{.MemPerc}}" vibesbox-server | sed 's/%//')
-  if (( $(echo "$MEM_USAGE > 90" | bc -l) )); then
-    echo "ALERT: High memory usage: ${MEM_USAGE}%"
-    # Send alert, restart container, etc.
-  fi
-
-  sleep 30
-done
-```
-
-**Benchmarks**:
-- **Before**: Container consumed 12GB RAM (all available), 400% CPU
-- **After**: Capped at 4GB RAM, 200% CPU (2 cores)
-- **Improvement**: Protected host system, predictable performance
-
-**Trade-offs**:
-- May need to tune limits based on workload
-- Could hit limits during peak usage
-- Need monitoring to detect limit hits
-- Balance between safety and performance
-
-**When to Optimize**:
-- Multi-tenant environments
-- Shared infrastructure
-- Production deployments
-- Resource-constrained hosts
-- Cost optimization scenarios
-
-**Source**: Docker Resource Constraints Documentation, Performance Best Practices
-**Related**: https://docs.docker.com/engine/containers/resource_constraints/
-
----
-
-### Concern 3: Build Cache Invalidation on postCreateCommand Changes
-**Impact**: 10+ minute rebuild times, slow iteration cycles, developer frustration
-**Scenario**: Changing postCreateCommand forces full rebuild
-**Likelihood**: Very Common (every time script changes)
-
-**Problem**:
-```json
-// ❌ INEFFICIENT - postCreateCommand runs AFTER build
-{
-  "name": "Vibesbox DevContainer",
-  "dockerComposeFile": "docker-compose.yml",
-  "postCreateCommand": "bash /workspace/.devcontainer/postCreateCommand.sh",
-  // Every change to this script = full rebuild
-}
-```
-
-**Why This is Slow**:
-- postCreateCommand runs when container is CREATED, not built
-- Cannot use Docker layer caching
-- 10-15 minute setup repeated on every rebuild
-- No incremental updates possible
-
-**Optimized Approach - Move to Dockerfile**:
-```dockerfile
-# ✅ RIGHT - use Dockerfile for setup (cached layers)
-FROM vibesbox-server:latest
-
-# Layer 1: Install base dependencies (rarely changes)
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    vim \
- && rm -rf /var/lib/apt/lists/*
-
-# Layer 2: Install Python packages (occasionally changes)
-COPY requirements.txt /tmp/
-RUN pip install -r /tmp/requirements.txt
-
-# Layer 3: Setup vibesbox (rarely changes)
-COPY setup-vibesbox.sh /tmp/
-RUN bash /tmp/setup-vibesbox.sh
-
-# Layer 4: Project-specific setup (changes more frequently)
-COPY project-setup.sh /tmp/
-RUN bash /tmp/project-setup.sh
-```
-
-**Use postCreateCommand for Dynamic Tasks**:
-```json
-// ✅ RIGHT - only use postCreateCommand for truly dynamic tasks
-{
-  "postCreateCommand": "git config --global user.name \"${GIT_USER}\" && git pull",
-  // Fast operations that MUST run at container creation time
-}
-```
-
-**Multi-Stage Build for Speed**:
-```dockerfile
-# ✅ RIGHT - use multi-stage builds for better caching
-FROM vibesbox-server:latest as base
-RUN apt-get update && apt-get install -y common-deps
-
-FROM base as development
-COPY dev-requirements.txt /tmp/
-RUN pip install -r /tmp/dev-requirements.txt
-
-FROM base as production
-COPY requirements.txt /tmp/
-RUN pip install -r /tmp/requirements.txt
-```
-
-**Benchmarks**:
-- **Before (postCreateCommand)**: 12-15 minutes per rebuild
-- **After (Dockerfile)**: 30 seconds (cached), 3 minutes (full rebuild)
-- **Improvement**: 24-30x faster with cache hits
-
-**Trade-offs**:
-- Dockerfile is less flexible than bash scripts
-- Requires rebuild to change setup steps
-- Need to understand Docker layer caching
-- Balance between build-time and run-time operations
-
-**When to Optimize**:
-- Development environments with frequent rebuilds
-- CI/CD pipelines building multiple times daily
-- Teams with >3 developers
-- Any scenario where iteration speed matters
-
-**Source**: VS Code DevContainer Documentation, Docker Build Best Practices
-**Related**: https://code.visualstudio.com/docs/devcontainers/create-dev-container
-
----
-
-## Reliability Concerns
-
-### Concern 1: Container Name Conflicts
-**Problem**: Multiple devcontainers can't run simultaneously
-**Symptoms**: "Container name already in use" errors
-**Root Cause**: Hardcoded container names in docker-compose.yml
-
-**Wrong Approach**:
-```yaml
-# ❌ WRONG - hardcoded container name
-services:
-  vibesbox-server:
-    container_name: vibesbox-server  # Only ONE instance possible
-    image: vibesbox-server
-```
-
-**Correct Approach**:
-```yaml
-# ✅ RIGHT - use project name for uniqueness
-services:
-  vibesbox-server:
-    # No container_name specified - Docker generates unique name
-    # Format: {project_name}_vibesbox-server_1
-    image: vibesbox-server
-```
-
-**Even Better - Dynamic Naming**:
-```yaml
-# ✅ BETTER - use COMPOSE_PROJECT_NAME environment variable
-# In .env file
-COMPOSE_PROJECT_NAME=vibesbox_${USER}_${PROJECT_HASH}
-
-# Or in docker-compose.yml
-services:
-  vibesbox-server:
-    container_name: vibesbox-${COMPOSE_PROJECT_NAME:-default}
-    image: vibesbox-server
-```
-
-**Detection Strategy**:
-```bash
-# Check for running containers with same name
-docker ps -a --filter "name=vibesbox-server" --format "{{.Names}}"
-
-# If more than one line, you have a conflict
-```
-
-**Prevention**:
-- Never hardcode container names unless necessary
-- Use COMPOSE_PROJECT_NAME for isolation
-- Include username or workspace hash in names
-- Document naming conventions in README
-
-**Source**: Docker Compose Naming Documentation
-**Related**: https://docs.docker.com/compose/
-
----
-
-### Concern 2: Network Port Conflicts
-**Problem**: Port 5901 (VNC) or 2375 (Docker) already in use
-**Symptoms**: "Bind for 0.0.0.0:5901 failed: port is already allocated"
-**Root Cause**: Multiple containers or host services using same ports
-
-**Wrong Approach**:
-```yaml
-# ❌ WRONG - hardcoded ports
-services:
-  vibesbox-server:
-    ports:
-      - "5901:5901"  # Fails if port already used
-      - "2375:2375"
-```
-
-**Correct Approach**:
-```yaml
-# ✅ RIGHT - use dynamic port allocation
-services:
-  vibesbox-server:
-    ports:
-      - "5901"  # Docker assigns random host port
-      - "2375"
-    # Or use range
-    ports:
-      - "5901-5910:5901"  # Try ports 5901-5910
-```
-
-**Better - Use Environment Variables**:
-```yaml
-# ✅ BETTER - configurable ports
-services:
-  vibesbox-server:
-    ports:
-      - "${VNC_PORT:-5901}:5901"
-      - "${DOCKER_PORT:-2375}:2375"
-```
-
-**In .env file**:
-```bash
-# User can customize if needed
-VNC_PORT=5902
-DOCKER_PORT=2376
-```
-
-**Detection**:
-```bash
-# Check if port is in use
-lsof -i :5901 || echo "Port 5901 is free"
-netstat -tlnp | grep 5901
-
-# Find which process is using the port
-lsof -i :5901 | awk 'NR>1 {print $2}' | xargs ps -p
-```
-
-**Auto-Discovery Script**:
-```bash
-#!/bin/bash
-# ✅ RIGHT - find available port automatically
-find_available_port() {
-  local start_port=$1
-  local max_attempts=100
-
-  for ((port=start_port; port<start_port+max_attempts; port++)); do
-    if ! lsof -i :$port >/dev/null 2>&1; then
-      echo $port
-      return 0
+# ❌ WRONG - Security nightmare
+sudo chmod 777 /var/run/docker.sock
+# Opens socket to EVERYONE - defeats all security
+
+# ❌ WRONG - Still insecure
+sudo chmod 666 /var/run/docker.sock
+# All users can access Docker daemon
+
+# ✅ RIGHT - Docker group with proper permissions
+# Step 1: Ensure docker group exists with correct GID
+sudo groupadd -g 999 docker 2>/dev/null || true
+
+# Step 2: Add user to docker group (in Dockerfile)
+RUN usermod -aG docker vscode
+
+# Step 3: Fix socket group ownership (in postCreate.sh)
+if [ -S /var/run/docker.sock ]; then
+  if sudo chgrp docker /var/run/docker.sock 2>/dev/null; then
+    success "Docker socket group set to 'docker'"
+
+    # Verify permissions (should be 660 or more restrictive)
+    PERMS=$(stat -c '%a' /var/run/docker.sock)
+    if [ "$PERMS" -le 660 ]; then
+      success "Docker socket permissions secure: $PERMS"
+    else
+      warn "Docker socket permissions too open: $PERMS (should be 660 or less)"
     fi
-  done
-
-  echo "ERROR: No available ports found" >&2
-  return 1
-}
-
-VNC_PORT=$(find_available_port 5901)
-echo "Using VNC port: $VNC_PORT"
-export VNC_PORT
-```
-
-**Prevention**:
-- Use environment variables for all ports
-- Implement port discovery logic
-- Document default ports and alternatives
-- Use Docker's dynamic port allocation
-- Check for conflicts before starting
-
-**Source**: Docker Networking Documentation
-**Related**: https://docs.docker.com/config/containers/container-networking/
-
----
-
-### Concern 3: VNC Display Race Condition
-**Problem**: x11vnc starts before Xvfb display is ready
-**Symptoms**: "Can't open display :1" errors
-**Root Cause**: No synchronization between Xvfb and x11vnc startup
-
-**Wrong Approach**:
-```bash
-# ❌ WRONG - no coordination
-Xvfb :1 -screen 0 1920x1080x24 &
-x11vnc -display :1 -forever  # Starts immediately, display not ready
-```
-
-**Correct Approach**:
-```bash
-# ✅ RIGHT - wait for display to be ready
-#!/bin/bash
-set -e
-
-# Start Xvfb in background
-Xvfb :1 -screen 0 1920x1080x24 &
-XVFB_PID=$!
-
-# Wait for display to be ready
-MAX_WAIT=30
-for i in $(seq 1 $MAX_WAIT); do
-  if xdpyinfo -display :1 >/dev/null 2>&1; then
-    echo "Display :1 is ready"
-    break
-  fi
-
-  if [ $i -eq $MAX_WAIT ]; then
-    echo "ERROR: Display :1 not ready after ${MAX_WAIT} seconds"
-    kill $XVFB_PID 2>/dev/null || true
-    exit 1
-  fi
-
-  echo "Waiting for display :1... ($i/$MAX_WAIT)"
-  sleep 1
-done
-
-# Now safe to start VNC
-x11vnc -display :1 -forever -shared -rfbport 5901
-```
-
-**Using systemd for Proper Ordering**:
-```ini
-# ✅ RIGHT - systemd dependencies
-# /etc/systemd/system/xvfb.service
-[Unit]
-Description=Xvfb Virtual Display
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/Xvfb :1 -screen 0 1920x1080x24
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-
-# /etc/systemd/system/x11vnc.service
-[Unit]
-Description=x11vnc VNC Server
-After=xvfb.service
-Requires=xvfb.service  # Depends on Xvfb
-
-[Service]
-Type=simple
-ExecStartPre=/bin/bash -c 'until xdpyinfo -display :1 >/dev/null 2>&1; do sleep 1; done'
-ExecStart=/usr/bin/x11vnc -display :1 -forever -shared -rfbport 5901
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-**Detection**:
-```bash
-# Test if display is accessible
-xdpyinfo -display :1 && echo "Display OK" || echo "Display NOT ready"
-
-# Check if VNC can connect to display
-timeout 5 x11vnc -display :1 -bg -nopw 2>&1 | grep -i "error\|can't open"
-```
-
-**Testing**:
-```bash
-# Test race condition handling
-for i in {1..10}; do
-  echo "Test iteration $i"
-  docker-compose down
-  docker-compose up -d
-  sleep 2
-
-  # Check if VNC is responsive
-  if timeout 5 vncviewer localhost:5901 -passwd <(echo test) 2>&1 | grep -i "connected"; then
-    echo "SUCCESS: VNC ready"
   else
-    echo "FAIL: VNC not ready"
-    exit 1
-  fi
-done
-```
-
-**Source**: x11vnc documentation, systemd ordering
-**Related**: https://github.com/LibVNC/x11vnc
-
----
-
-## Edge Cases & UX Concerns
-
-### Edge Case 1: postCreateCommand Fails Silently
-**Problem**: Errors in postCreateCommand don't stop container startup
-**Impact**: Container appears healthy but missing critical setup
-**Likelihood**: Common during development
-
-**Wrong Approach**:
-```bash
-# ❌ WRONG - no error handling
-#!/bin/bash
-cd /workspace
-docker network create vibes-network
-docker-compose up -d
-# If these fail, container still starts "successfully"
-```
-
-**Correct Approach**:
-```bash
-# ✅ RIGHT - proper error handling
-#!/bin/bash
-set -euo pipefail  # Exit on error, undefined vars, pipe failures
-
-# Function for error handling
-handle_error() {
-  local line=$1
-  echo "ERROR: postCreateCommand failed at line $line"
-  echo "Check logs: docker logs vibesbox-server"
-  # Optionally stop container on failure
-  exit 1
-}
-
-trap 'handle_error $LINENO' ERR
-
-# Log all output
-exec > >(tee -a /tmp/postcreate.log)
-exec 2>&1
-
-echo "Starting postCreateCommand..."
-
-# Check prerequisites
-if ! command -v docker &> /dev/null; then
-  echo "ERROR: Docker not found in PATH"
-  exit 1
-fi
-
-# Create network (ignore if exists)
-docker network create vibes-network 2>/dev/null || \
-  echo "Network vibes-network already exists"
-
-# Start services with health check
-cd /workspace
-docker-compose up -d
-
-# Wait for services to be healthy
-echo "Waiting for services to be healthy..."
-timeout 120 bash -c '
-  until docker-compose ps | grep -q "healthy"; do
-    echo "Waiting for healthy status..."
-    sleep 5
-  done
-' || {
-  echo "ERROR: Services did not become healthy"
-  docker-compose logs
-  exit 1
-}
-
-echo "postCreateCommand completed successfully"
-```
-
-**Validation in devcontainer.json**:
-```json
-{
-  "postCreateCommand": "bash /workspace/.devcontainer/postCreateCommand.sh",
-  "postStartCommand": "bash /workspace/.devcontainer/validate.sh",
-  "waitFor": "postStartCommand"  // Don't mark ready until validation passes
-}
-```
-
-**Validation Script**:
-```bash
-# ✅ RIGHT - validate setup completed
-#!/bin/bash
-set -e
-
-echo "Validating environment setup..."
-
-# Check Docker is accessible
-if ! docker ps > /dev/null 2>&1; then
-  echo "FAIL: Cannot access Docker"
-  exit 1
-fi
-
-# Check network exists
-if ! docker network ls | grep -q vibes-network; then
-  echo "FAIL: vibes-network not created"
-  exit 1
-fi
-
-# Check vibesbox-server is running
-if ! docker ps | grep -q vibesbox-server; then
-  echo "FAIL: vibesbox-server not running"
-  docker-compose logs vibesbox-server
-  exit 1
-fi
-
-# Check VNC is responding
-if ! timeout 5 bash -c "echo '' | nc localhost 5901" > /dev/null 2>&1; then
-  echo "FAIL: VNC server not responding"
-  exit 1
-fi
-
-echo "✓ All validations passed"
-```
-
-**Source**: VS Code DevContainer docs, Bash error handling best practices
-**Related**: https://code.visualstudio.com/docs/devcontainers/create-dev-container
-
----
-
-### Edge Case 2: Docker Network Already Exists (Different Subnet)
-**Problem**: Network exists but with different configuration
-**Symptoms**: Containers can't communicate, IP conflicts
-**Root Cause**: Network created manually or by another project
-
-**Wrong Approach**:
-```bash
-# ❌ WRONG - assumes network doesn't exist or is correct
-docker network create vibes-network
-# Fails if exists, succeeds if subnet is different
-```
-
-**Correct Approach**:
-```bash
-# ✅ RIGHT - idempotent network creation
-#!/bin/bash
-
-NETWORK_NAME="vibes-network"
-EXPECTED_SUBNET="172.20.0.0/16"
-
-# Check if network exists
-if docker network ls | grep -q "$NETWORK_NAME"; then
-  # Verify subnet matches
-  ACTUAL_SUBNET=$(docker network inspect "$NETWORK_NAME" \
-    --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}')
-
-  if [ "$ACTUAL_SUBNET" != "$EXPECTED_SUBNET" ]; then
-    echo "WARNING: Network $NETWORK_NAME exists with different subnet"
-    echo "Expected: $EXPECTED_SUBNET, Actual: $ACTUAL_SUBNET"
-    echo "Recreating network..."
-
-    # Check if any containers are using it
-    USING_CONTAINERS=$(docker network inspect "$NETWORK_NAME" \
-      --format '{{range .Containers}}{{.Name}} {{end}}')
-
-    if [ -n "$USING_CONTAINERS" ]; then
-      echo "ERROR: Cannot recreate network, in use by: $USING_CONTAINERS"
-      echo "Please stop these containers first"
-      exit 1
-    fi
-
-    # Safe to recreate
-    docker network rm "$NETWORK_NAME"
-    docker network create --subnet "$EXPECTED_SUBNET" "$NETWORK_NAME"
-  else
-    echo "Network $NETWORK_NAME already exists with correct subnet"
+    warn "Failed to set Docker socket group - may need manual fix"
+    warn "Run manually: sudo chgrp docker /var/run/docker.sock"
   fi
 else
-  # Create network
-  echo "Creating network $NETWORK_NAME with subnet $EXPECTED_SUBNET"
-  docker network create --subnet "$EXPECTED_SUBNET" "$NETWORK_NAME"
+  warn "Docker socket not found - Docker access may not work"
+fi
+
+# Step 4: Verify access immediately
+if docker ps &>/dev/null; then
+  success "Docker access verified"
+else
+  error "Docker access failed - check socket permissions and group membership"
 fi
 ```
 
-**Docker Compose Approach**:
-```yaml
-# ✅ RIGHT - let Docker Compose manage network
-networks:
-  vibes-network:
-    external: false  # Don't require pre-existing network
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-```
+**Prevention strategy**:
+1. **Automated permission fix**: Always run `sudo chgrp docker /var/run/docker.sock` in postCreate.sh
+2. **Idempotent operations**: Use `|| true` pattern so safe to run multiple times
+3. **Security awareness**: Document that docker group = root-level privileges
+4. **Alternative for production**: Consider Docker Rootless mode for production environments
+5. **Principle of least privilege**: Only grant Docker access to users who absolutely need it
+6. **Audit logging**: Enable Docker daemon audit logging for security-sensitive environments
 
-**Detection**:
+**Testing/validation command**:
 ```bash
-# Check network configuration
-docker network inspect vibes-network --format '{{json .IPAM.Config}}' | jq
+# Comprehensive socket permission check
+check_docker_socket() {
+  echo "Checking Docker socket permissions..."
 
-# List all containers on network
-docker network inspect vibes-network --format '{{range .Containers}}{{.Name}}: {{.IPv4Address}}{{println}}{{end}}'
-```
+  # Check existence
+  if [ ! -S /var/run/docker.sock ]; then
+    echo "❌ ERROR: Docker socket not found"
+    return 1
+  fi
 
-**Source**: Docker networking documentation
-**Related**: https://docs.docker.com/network/
-
----
-
-### Edge Case 3: Missing Dependencies in postCreateCommand
-**Problem**: Script assumes tools exist (git, curl, docker-compose)
-**Symptoms**: "command not found" errors
-**Root Cause**: Base image doesn't include all required tools
-
-**Wrong Approach**:
-```bash
-# ❌ WRONG - assumes tools exist
-#!/bin/bash
-git clone https://example.com/repo.git
-curl -o file.txt https://example.com/file.txt
-docker-compose up -d
-```
-
-**Correct Approach**:
-```bash
-# ✅ RIGHT - check and install dependencies
-#!/bin/bash
-set -euo pipefail
-
-# Function to check if command exists
-command_exists() {
-  command -v "$1" >/dev/null 2>&1
-}
-
-# Function to install package
-install_package() {
-  local package=$1
-  echo "Installing $package..."
-
-  if command_exists apt-get; then
-    apt-get update -qq && apt-get install -y -qq "$package"
-  elif command_exists yum; then
-    yum install -y -q "$package"
-  elif command_exists apk; then
-    apk add --no-cache "$package"
+  # Check ownership
+  local owner_group=$(ls -l /var/run/docker.sock | awk '{print $3":"$4}')
+  if [ "$owner_group" = "root:docker" ]; then
+    echo "✅ Socket ownership correct: $owner_group"
   else
-    echo "ERROR: No package manager found"
+    echo "❌ WARNING: Socket ownership incorrect: $owner_group (should be root:docker)"
+  fi
+
+  # Check permissions
+  local perms=$(stat -c '%a' /var/run/docker.sock)
+  if [ "$perms" -le 660 ]; then
+    echo "✅ Socket permissions secure: $perms"
+  else
+    echo "❌ WARNING: Socket permissions too open: $perms (should be 660 or less)"
+  fi
+
+  # Check group membership
+  if groups | grep -q docker; then
+    echo "✅ User in docker group"
+  else
+    echo "❌ ERROR: User not in docker group"
+  fi
+
+  # Test access
+  if docker ps &>/dev/null; then
+    echo "✅ Docker access works"
+    return 0
+  else
+    echo "❌ ERROR: Docker access denied"
     return 1
   fi
 }
 
-# Ensure required commands exist
-REQUIRED_COMMANDS=(git curl docker docker-compose jq)
-
-for cmd in "${REQUIRED_COMMANDS[@]}"; do
-  if ! command_exists "$cmd"; then
-    echo "Missing required command: $cmd"
-    install_package "$cmd" || {
-      echo "ERROR: Failed to install $cmd"
-      exit 1
-    }
-  fi
-done
-
-echo "All dependencies satisfied"
-
-# Now safe to proceed with script
-git clone https://example.com/repo.git
-curl -o file.txt https://example.com/file.txt
-docker-compose up -d
+check_docker_socket
 ```
 
-**Better - Use Dockerfile for Dependencies**:
-```dockerfile
-# ✅ BETTER - install in Dockerfile (cached)
-FROM vibesbox-server:latest
+**Relevance to specific fixes**: Fix #3 (Docker Socket Permissions)
 
-# Install all dependencies upfront
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    docker-compose \
-    jq \
- && rm -rf /var/lib/apt/lists/*
-```
-
-**Source**: Bash scripting best practices
-**Related**: https://google.github.io/styleguide/shellguide.html
+**Additional Resources**:
+- Docker socket protection: https://docs.docker.com/engine/security/protect-access/
+- Docker post-install security: https://docs.docker.com/engine/install/linux-postinstall/
+- Datadog socket security rule: https://docs.datadoghq.com/security/default_rules/2vc-udv-9at/
+- Rootless Docker alternative: https://docs.docker.com/engine/security/rootless/
 
 ---
 
-### UX Concern 1: No Visual Feedback During Long Operations
-**Problem**: User doesn't know if setup is progressing or stuck
-**Impact**: User interrupts setup, causing partial configuration
-**Likelihood**: Very Common
+## High Priority Gotchas
 
-**Wrong Approach**:
+### 4. Path Mismatch Causes Silent postCreateCommand Failures
+
+**Severity**: HIGH
+**Category**: Configuration / Debugging
+**Affects**: Fix #1 (Path Normalization) - All `.devcontainer/` files
+**Source**: https://github.com/microsoft/vscode-remote-release/issues/6206, https://stackoverflow.com/questions/65909781/
+
+**What it is**:
+When `working_dir` is `/workspace/vibes` but volume mount is `../:/workspace`, scripts reference non-existent paths like `/workspace/vibes/.devcontainer/scripts/postCreate.sh`. postCreateCommand fails but container still starts, appearing healthy with incomplete setup.
+
+**Why it's a problem**:
+- **Silent failures**: Container appears healthy but vibesbox setup incomplete
+- **Hard to debug**: Logs don't clearly indicate postCreateCommand failure (exit code 127 "file not found")
+- **Subsequent commands skipped**: If postCreateCommand fails, postStartCommand never runs
+- **Manual workarounds required**: User must run setup scripts manually after container starts
+- **Inconsistent state**: Some features work (devcontainer opens) but others don't (vibesbox unavailable)
+
+**How to detect it**:
 ```bash
-# ❌ WRONG - silent operation
-docker-compose up -d
-# User sees nothing for 2-3 minutes
+# Check if working_dir matches volume mount structure
+docker inspect devcontainer | jq '.[0].Config.WorkingDir'
+# Should show: "/workspace" (matches volume mount target)
+# BAD: "/workspace/vibes" (doesn't exist - volume is at /workspace)
+
+# Verify actual directory structure
+docker exec devcontainer pwd
+# Should show: /workspace
+
+# Check if .devcontainer accessible at expected path
+docker exec devcontainer ls -la /workspace/.devcontainer/scripts/postCreate.sh
+# Should succeed (file exists)
+# BAD: "No such file or directory" (path mismatch)
+
+# Check postCreateCommand logs for exit code 127 (file not found)
+# VS Code: "Dev Containers Developer: Show all logs..." → search "postCreateCommand"
+# Look for: "postCreateCommand failed with exit code 127"
 ```
 
-**Correct Approach**:
-```bash
-# ✅ RIGHT - progress indicators
-#!/bin/bash
+**How to avoid/fix**:
+```yaml
+# ❌ WRONG - working_dir doesn't match volume mount structure
+# docker-compose.yml
+services:
+  devcontainer:
+    volumes:
+      - ../:/workspace:cached  # Repository root mounted to /workspace
+    working_dir: /workspace/vibes  # ERROR: /workspace/vibes doesn't exist!
 
-# Progress spinner
-show_spinner() {
-  local pid=$1
-  local message=$2
-  local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-
-  while kill -0 $pid 2>/dev/null; do
-    local temp=${spinstr#?}
-    printf "\r[%c] %s" "$spinstr" "$message"
-    spinstr=$temp${spinstr%"$temp"}
-    sleep 0.1
-  done
-  printf "\r[✓] %s\n" "$message"
-}
-
-# Example usage
-echo "Setting up Vibesbox environment..."
-
-echo "[1/5] Creating Docker network..."
-docker network create vibes-network 2>/dev/null || echo "  ↳ Network already exists"
-
-echo "[2/5] Pulling Docker images (this may take 2-3 minutes)..."
-docker-compose pull &
-show_spinner $! "Downloading vibesbox-server image"
-
-echo "[3/5] Building containers..."
-docker-compose build &
-show_spinner $! "Building custom layers"
-
-echo "[4/5] Starting services..."
-docker-compose up -d
-
-echo "[5/5] Waiting for services to be healthy..."
-timeout 120 bash -c '
-  while true; do
-    STATUS=$(docker-compose ps --format json | jq -r ".[0].Health")
-    if [ "$STATUS" = "healthy" ]; then
-      break
-    fi
-    echo "  ↳ Current status: $STATUS"
-    sleep 5
-  done
-'
-
-echo ""
-echo "✨ Setup complete!"
-echo "VNC available at: localhost:5901"
-echo "Docker API: localhost:2375"
+# ✅ RIGHT - working_dir matches volume mount
+services:
+  devcontainer:
+    volumes:
+      - ../:/workspace:cached  # Repository root mounted to /workspace
+    working_dir: /workspace  # Matches volume mount target
 ```
 
-**With Estimated Time**:
 ```bash
-# ✅ BETTER - show estimated time remaining
-#!/bin/bash
+# ❌ WRONG - postCreate.sh with incorrect paths
+if [ -f /workspace/vibes/.devcontainer/scripts/install-vibesbox-cli.sh ]; then
+  source /workspace/vibes/.devcontainer/scripts/install-vibesbox-cli.sh
+fi
 
-start_time=$(date +%s)
-
-log_with_time() {
-  local current_time=$(date +%s)
-  local elapsed=$((current_time - start_time))
-  printf "[%02d:%02d] %s\n" $((elapsed/60)) $((elapsed%60)) "$1"
-}
-
-log_with_time "Starting setup..."
-# Estimate: 3-5 minutes total
-
-log_with_time "[1/5] Creating network (5s)..."
-docker network create vibes-network
-
-log_with_time "[2/5] Pulling images (60-120s)..."
-docker-compose pull
-
-log_with_time "[3/5] Building containers (30-60s)..."
-docker-compose build
-
-log_with_time "[4/5] Starting services (10s)..."
-docker-compose up -d
-
-log_with_time "[5/5] Health checks (30-60s)..."
-# ... health check logic
-
-log_with_time "✓ Complete! Total time: $(($(date +%s) - start_time))s"
-```
-
-**Source**: User experience best practices, CLI design patterns
-**Related**: https://clig.dev/
-
----
-
-### UX Concern 2: Cryptic Error Messages
-**Problem**: Technical error messages don't explain what to do
-**Impact**: User can't resolve issues, abandons setup
-**Likelihood**: Common
-
-**Wrong Approach**:
-```bash
-# ❌ WRONG - raw error output
-docker-compose up -d
-# Error: "Bind for 0.0.0.0:5901 failed: port is already allocated"
-# User doesn't know how to fix this
-```
-
-**Correct Approach**:
-```bash
-# ✅ RIGHT - user-friendly error messages
-#!/bin/bash
-
-# Wrap docker-compose with error handling
-if ! docker-compose up -d 2>&1; then
-  echo ""
-  echo "❌ Failed to start containers"
-  echo ""
-  echo "Common issues and solutions:"
-  echo ""
-  echo "1. Port conflict (5901 or 2375 already in use):"
-  echo "   → Check what's using the port: lsof -i :5901"
-  echo "   → Stop the conflicting service"
-  echo "   → Or change VNC_PORT in .env file"
-  echo ""
-  echo "2. Docker daemon not running:"
-  echo "   → Start Docker Desktop"
-  echo "   → Or run: sudo systemctl start docker"
-  echo ""
-  echo "3. Permission denied:"
-  echo "   → Add user to docker group: sudo usermod -aG docker $USER"
-  echo "   → Log out and back in"
-  echo ""
-  echo "For more help, check logs:"
-  echo "   docker-compose logs"
-  echo ""
+# ✅ RIGHT - postCreate.sh with correct paths
+if [ -f /workspace/.devcontainer/scripts/install-vibesbox-cli.sh ]; then
+  source /workspace/.devcontainer/scripts/install-vibesbox-cli.sh
+else
+  error "ERROR: install-vibesbox-cli.sh not found at expected path"
+  error "Expected: /workspace/.devcontainer/scripts/install-vibesbox-cli.sh"
+  error "Current working directory: $(pwd)"
+  error "Available files: $(ls -la /workspace/.devcontainer/scripts/ 2>&1)"
   exit 1
 fi
 ```
 
-**Error Code Mapping**:
-```bash
-# ✅ RIGHT - translate error codes to user actions
-handle_docker_error() {
-  local exit_code=$1
+**Prevention strategy**:
+1. **Validate paths early**: Add existence checks before sourcing scripts
+2. **Explicit error messages**: Show expected vs actual paths when files not found
+3. **Debug output**: Print working directory and file listings when errors occur
+4. **Test configuration**: Use `docker-compose config` to verify resolved paths
+5. **Document mount structure**: Clearly document volume mount → working_dir relationship
 
-  case $exit_code in
-    125)
-      echo "ERROR: Docker daemon not accessible"
-      echo "Solution: Make sure Docker is running"
-      echo "  → Docker Desktop: Check if app is running"
-      echo "  → Linux: sudo systemctl start docker"
-      ;;
-    126)
-      echo "ERROR: Permission denied"
-      echo "Solution: Add your user to docker group"
-      echo "  → sudo usermod -aG docker $USER"
-      echo "  → Log out and log back in"
-      ;;
-    127)
-      echo "ERROR: Docker command not found"
-      echo "Solution: Install Docker"
-      echo "  → Visit: https://docs.docker.com/get-docker/"
-      ;;
-    *)
-      echo "ERROR: Unexpected error (code $exit_code)"
-      echo "Check detailed logs: docker-compose logs"
-      ;;
-  esac
-}
+**Testing/validation command**: See comprehensive validation function in documentation-links.md
 
-docker-compose up -d || handle_docker_error $?
-```
+**Example from codebase**:
+See DEVCONTAINER_TEST_RESULTS.md lines 162-177 showing exact error from path mismatch
 
-**Source**: CLI UX design, error message best practices
-**Related**: https://clig.dev/#errors
+**Relevance to specific fixes**: Fix #1 (Path Normalization)
 
 ---
 
-## Recommendations Summary
+### 5. Docker Socket Group Ownership Resets After Daemon Restart
 
-### DO These Things:
+**Severity**: HIGH
+**Category**: Permissions / Configuration
+**Affects**: Fix #3 (Docker Socket Permissions) - postCreate.sh automation
+**Source**: https://askubuntu.com/questions/1194205/, https://stackoverflow.com/questions/48568172/
 
-✅ **Use Docker Secrets for Credentials**
-- **Why**: Prevents password leakage via logs and container inspection
-- **How**: Mount secrets from files, never use environment variables for passwords
-- **Impact**: Significantly reduces credential exposure risk
+**What it is**:
+Docker socket may be owned by `root:root` (GID 0) instead of `root:docker` (GID 999) after Docker daemon restart or system reboot. This breaks non-root Docker access until manually fixed with `sudo chgrp docker /var/run/docker.sock`.
 
-✅ **Implement Health Checks for All Services**
-- **Why**: Eliminates race conditions, ensures proper startup order
-- **How**: Add healthcheck to docker-compose.yml with service_healthy condition
-- **Impact**: 30-50x more reliable container startup
+**Why it's a problem**:
+- **Manual intervention required**: User must run `sudo chgrp` after every devcontainer rebuild or daemon restart
+- **Permission denied errors**: All Docker commands fail with "permission denied" until fixed
+- **Inconsistent state**: Works initially, breaks after restart
+- **Poor user experience**: Frustrating for developers who don't understand root cause
+- **Not well documented**: Docker documentation doesn't explain why this happens
 
-✅ **Enforce Resource Limits on Containers**
-- **Why**: Prevents resource exhaustion and system crashes
-- **How**: Set memory and CPU limits in deploy.resources section
-- **Impact**: Protects host system from runaway containers
+**How to detect it**: See codebase-patterns.md for detection commands
 
-✅ **Use Least Privilege for Container Permissions**
-- **Why**: Reduces attack surface, limits container escape damage
-- **How**: Drop capabilities, use cap_add only for required caps
-- **Impact**: Limits damage from compromised containers
+**How to avoid/fix**: See comprehensive fix in codebase-patterns.md lines 99-147
 
-✅ **Secure VNC with Authentication and SSH Tunneling**
-- **Why**: Prevents unauthorized GUI access and session hijacking
-- **How**: Use x11vnc -rfbauth and SSH tunnel for remote access
-- **Impact**: Eliminates most VNC-related security risks
+**Prevention strategy**: Automated fix in postCreate.sh with idempotent design
 
-✅ **Move Setup from postCreateCommand to Dockerfile**
-- **Why**: Enables Docker layer caching, 24-30x faster rebuilds
-- **How**: Put installations and setup in Dockerfile, only dynamic tasks in postCreateCommand
-- **Impact**: Minutes instead of hours over development lifecycle
+**Testing/validation command**: Socket permission automation test provided in codebase-patterns.md
 
-✅ **Add Comprehensive Error Handling to Scripts**
-- **Why**: Catches failures early, prevents partial configurations
-- **How**: Use set -euo pipefail, trap ERR, validate prerequisites
-- **Impact**: More reliable deployments, easier troubleshooting
-
-✅ **Provide User-Friendly Progress Feedback**
-- **Why**: Users don't interrupt long operations, better experience
-- **How**: Progress spinners, step indicators, estimated time
-- **Impact**: Fewer abandoned setups, happier developers
-
-### DON'T Do These Things:
-
-❌ **Don't Mount Docker Socket into Containers**
-- **Why**: Equivalent to giving root access to host
-- **Instead**: Use Docker-in-Docker with isolated daemon or socket proxy
-- **Risk**: Complete host compromise
-
-❌ **Don't Expose VNC Without Authentication**
-- **Why**: Allows unauthorized GUI access and data theft
-- **Instead**: Use password authentication + SSH tunneling
-- **Risk**: Session hijacking, data exfiltration
-
-❌ **Don't Run Containers Without Resource Limits**
-- **Why**: Can exhaust all host resources and crash system
-- **Instead**: Set memory and CPU limits in docker-compose.yml
-- **Risk**: System-wide outages
-
-❌ **Don't Use depends_on Without Health Checks**
-- **Why**: Only waits for start, not ready status - causes race conditions
-- **Instead**: Use condition: service_healthy with proper healthcheck
-- **Risk**: 30-50% startup failure rate
-
-❌ **Don't Hardcode Container Names or Ports**
-- **Why**: Prevents multiple instances, causes conflicts
-- **Instead**: Use COMPOSE_PROJECT_NAME and dynamic port allocation
-- **Risk**: "Already in use" errors
-
-❌ **Don't Put Secrets in Environment Variables**
-- **Why**: Visible in logs, process listings, container inspection
-- **Instead**: Use Docker secrets or external secret managers
-- **Risk**: Credential leakage
-
-❌ **Don't Ignore postCreateCommand Failures**
-- **Why**: Container appears healthy but missing critical setup
-- **Instead**: Use set -e, validate setup, check exit codes
-- **Risk**: Broken environments, wasted debugging time
-
-❌ **Don't Use privileged: true Without Mitigation**
-- **Why**: Disables all container security features
-- **Instead**: Use specific cap_add, or add no-new-privileges if privileged required
-- **Risk**: Container escape, kernel compromise
+**Relevance to specific fixes**: Fix #3 (Docker Socket Permissions)
 
 ---
 
-## Validation Checklist
+### 6. network_mode: host Conflicts with ports and networks Sections
 
-Before deploying devcontainer-vibesbox integration, verify:
+**Severity**: HIGH
+**Category**: Configuration / Docker Compose
+**Affects**: Fix #2 (VNC Network Connectivity) - `mcp-vibesbox-server/docker-compose.yml`
+**Source**: https://forums.docker.com/t/option-network-mode-host-in-docker-compose-file-not-working-as-expected/51682
 
-- [ ] **Security**: Docker socket NOT mounted in containers
-- [ ] **Security**: VNC requires password authentication
-- [ ] **Security**: VNC bound to localhost only (or SSH tunnel)
-- [ ] **Security**: Secrets stored in Docker secrets or external vault
-- [ ] **Security**: Containers use cap_drop/cap_add, not privileged
-- [ ] **Performance**: Resource limits set (memory, CPU, PIDs)
-- [ ] **Performance**: Health checks configured for all services
-- [ ] **Performance**: Docker layer caching optimized
-- [ ] **Reliability**: Error handling in all scripts (set -euo pipefail)
-- [ ] **Reliability**: Network creation is idempotent
-- [ ] **Reliability**: Port conflicts handled gracefully
-- [ ] **UX**: Progress indicators for long operations
-- [ ] **UX**: User-friendly error messages with solutions
-- [ ] **UX**: Validation script runs after postCreateCommand
-- [ ] **Testing**: Integration tests verify VNC accessibility
-- [ ] **Testing**: Tests verify Docker API works without socket mount
-- [ ] **Monitoring**: Resource usage monitored (docker stats)
-- [ ] **Monitoring**: Health status checked periodically
-- [ ] **Documentation**: README explains security model
-- [ ] **Documentation**: Troubleshooting guide for common errors
+**What it is**:
+Docker Compose validation error occurs when `network_mode: host` is combined with `ports:` or `networks:` sections. These options are mutually exclusive because host mode bypasses Docker's network stack entirely.
+
+**Why it's a problem**:
+- **Compose startup fails**: Docker Compose refuses to start with validation error
+- **Non-obvious error message**: Error doesn't clearly explain incompatibility
+- **Configuration confusion**: Users expect port mapping to work with host mode
+- **Breaking change**: Migration from bridge to host requires removing multiple sections
+- **Documentation sparse**: Docker Compose docs don't emphasize this restriction clearly
+
+**How to detect it**: See validation script in codebase-patterns.md lines 307-352
+
+**How to avoid/fix**: See migration pattern in codebase-patterns.md lines 268-326
+
+**Prevention strategy**: Pre-migration validation with `docker compose config`
+
+**Relevance to specific fixes**: Fix #2 (VNC Network Connectivity)
 
 ---
 
-## Resources & References
+## Medium Priority Gotchas
 
-### Archon Sources
-| Source ID | Topic | Relevance |
-|-----------|-------|-----------|
-| d60a71d62eb201d5 | MCP Protocol Security | 7/10 |
-| b8565aff9938938b | Context Engineering & GitHub | 5/10 |
-| c0e629a894699314 | Pydantic AI MCP Servers | 6/10 |
+### 7. Named Volumes Persist Independently of Containers
 
-### External Resources
-| Resource | Type | URL |
-|----------|------|-----|
-| OWASP Docker Security Cheat Sheet | Security Guide | https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html |
-| Docker Security Best Practices | Official Docs | https://docs.docker.com/engine/security/ |
-| Docker Compose Startup Order | Official Docs | https://docs.docker.com/compose/how-tos/startup-order/ |
-| Docker Resource Constraints | Official Docs | https://docs.docker.com/engine/containers/resource_constraints/ |
-| VNC Security Best Practices | Security Guide | https://help.realvnc.com/hc/en-us/articles/360002253278 |
-| Better Stack Docker Security | Tutorial | https://betterstack.com/community/guides/scaling-docker/docker-security-best-practices/ |
-| DevContainer Documentation | Official Docs | https://code.visualstudio.com/docs/devcontainers/create-dev-container |
+**Severity**: MEDIUM
+**Category**: Data Lifecycle / Storage
+**Affects**: Fix #4 (Claude Auth Persistence) - claude-auth volume
+**Source**: https://docs.docker.com/engine/storage/volumes/, https://stackoverflow.com/questions/79246538/
 
-### Critical CVEs Referenced
-- CVE-2025-9074: Docker Desktop container escape (CVSS 9.3)
-- CVE-2024-41110: Docker Engine AuthZ plugin bypass (Critical)
-- CVE-2024-21626: runc container escape vulnerability
+**What it is**:
+Named volumes persist beyond container lifecycle. Data remains even after `docker compose down` or container deletion. Requires explicit `docker volume rm` to delete.
 
-### Security Advisories
-- Docker Security Advisory (2024): Multiple vulnerabilities in runc, BuildKit, Moby
-- VNC Security Guide (2024): Authentication and encryption requirements
-- Container Security Best Practices (2025): Resource isolation and least privilege
+**Why it's confusing**:
+- **Unexpected persistence**: Developers expect `docker compose down` to clean up everything
+- **Storage accumulation**: Old volumes accumulate over time, consuming disk space
+- **Credential leakage**: Sensitive data (like Claude auth tokens) persists across projects
+- **Debugging challenges**: Stale data in volumes can cause confusing behavior
+- **No automatic cleanup**: Must manually track and remove unused volumes
+
+**How to handle it**: See comprehensive volume management in documentation-links.md
+
+**Workaround for credential management**: Named volume with one-time setup process
+
+**Prevention strategy**: Document persistence, provide cleanup instructions, backup strategy
+
+**Relevance to specific fixes**: Fix #4 (Claude Auth Persistence)
+
+---
+
+### 8. postCreateCommand Failures Are Silent and Hard to Debug
+
+**Severity**: MEDIUM
+**Category**: Debugging / Developer Experience
+**Affects**: Fix #1 (Path Normalization) - postCreate.sh failures
+**Source**: https://github.com/microsoft/vscode-remote-release/issues/6206
+
+**What it is**:
+If postCreateCommand has non-zero exit code, VS Code Dev Containers still opens but setup is incomplete. Logs don't prominently show the failure. postStartCommand and subsequent lifecycle scripts are skipped.
+
+**Why it's confusing**:
+- **Container appears healthy**: Dev Container opens normally, hiding failure
+- **Subtle error indicators**: Logs show failure but not in obvious location
+- **Subsequent scripts skipped**: postStartCommand never runs if postCreateCommand fails
+- **Manual workarounds needed**: Developer must re-run failed scripts manually
+- **Scripts work when run manually**: Confusing when same script works outside lifecycle
+
+**How to detect it**: View VS Code Dev Container logs, look for exit code indicators
+
+**How to handle it**: See comprehensive error handling pattern in codebase-patterns.md
+
+**Prevention strategy**: Validate paths early, explicit error messages, completion marker
+
+**Relevance to specific fixes**: Fix #1 (Path Normalization), Fix #5 (Validation)
+
+---
+
+### 9. VNC Display Race Condition (ALREADY SOLVED)
+
+**Severity**: MEDIUM
+**Category**: Timing / Initialization
+**Affects**: Existing vibesbox implementation (no changes needed)
+**Source**: Previous PRP implementation, vibesbox-functions.sh health checks
+
+**What it is**:
+x11vnc starts before Xvfb display ready, causing "Can't open display :1" errors. VNC server fails to bind until X11 display socket exists.
+
+**Why it's documented**:
+This gotcha is **ALREADY SOLVED** in existing implementation via polling loop in ensure-vibesbox.sh. Documenting here to prevent regression.
+
+**How it was solved**: See wait_for_condition pattern in codebase-patterns.md
+
+**DO NOT CHANGE**: This implementation works correctly - keep as-is.
+
+**Relevance to specific fixes**: Reference only - no changes needed
+
+---
+
+## Low Priority Gotchas
+
+### 10. Platform Limitations - Host Network Mode Linux-Only
+
+**Severity**: LOW
+**Category**: Platform Compatibility
+**Affects**: Fix #2 (VNC Network Connectivity)
+**Source**: https://docs.docker.com/engine/network/tutorials/host/
+
+**What it is**:
+Host networking "only works on Linux hosts" according to Docker docs. Mac/Windows require Docker Desktop 4.34+ with explicit opt-in.
+
+**Why it's a minor concern**:
+- Development environments typically Linux
+- Docker Desktop support added in 4.34+
+- Workaround exists (bridge networking)
+- Documentation clear on limitation
+
+**How to handle**: Use bridge networking on non-Linux if needed
+
+**Relevance to specific fixes**: Fix #2 (VNC Network Connectivity)
+
+---
+
+### 11. ARM64 Build Time Longer Than Expected
+
+**Severity**: LOW
+**Category**: Performance / Documentation
+**Affects**: User expectations
+**Source**: DEVCONTAINER_TEST_RESULTS.md
+
+**What it is**:
+Vibesbox image build takes >180s on ARM64 (Apple Silicon), not 120s as originally estimated.
+
+**How to handle**: Update documentation with accurate build times, increase health check timeouts on ARM64
+
+**Relevance to specific fixes**: Documentation update for Fix #5
+
+---
+
+### 12. One-Time Claude Auth Setup Required After First Rebuild
+
+**Severity**: LOW
+**Category**: User Experience / Manual Setup
+**Affects**: Fix #4 (Claude Auth Persistence)
+**Source**: CLAUDE_AUTH_CROSS_PLATFORM.md
+
+**What it is**:
+After first devcontainer rebuild with claude-auth volume, user must manually run `claude auth login` once. Credentials persist in named volume for subsequent rebuilds.
+
+**Why it's acceptable**:
+- One-time operation only
+- Industry standard practice
+- Better than alternatives (env vars insecure, host mounts have path issues)
+- Clear documentation via postCreate.sh output
+
+**How to handle**: Document setup steps in postCreate.sh output
+
+**Relevance to specific fixes**: Fix #4 (Claude Auth Persistence)
+
+---
+
+## Gotcha Checklist for Implementation
+
+Before marking PRP complete, verify these gotchas are addressed:
+
+### Critical Security Issues
+- [ ] **VNC localhost binding verified**: `netstat -tlnp | grep 5901` shows `127.0.0.1:5901`
+- [ ] **Privileged mode documented**: Security trade-offs clearly documented
+- [ ] **Docker socket permissions secure**: `ls -la /var/run/docker.sock` shows `root:docker 660`
+- [ ] **No chmod 777 used**: Socket permissions use chgrp, not chmod 777
+
+### Configuration Issues
+- [ ] **Path references corrected**: All `/workspace/vibes/` replaced with `/workspace/`
+- [ ] **network_mode conflicts resolved**: No `ports:` or `networks:` with `network_mode: host`
+- [ ] **working_dir matches volume mount**: `/workspace` in both places
+- [ ] **postCreateCommand validated**: Script runs successfully in isolation
+
+### Data Persistence
+- [ ] **claude-auth volume declared**: Named volume in docker-compose.yml
+- [ ] **Volume lifecycle documented**: Instructions for backup/restore/cleanup
+- [ ] **One-time setup documented**: Clear instructions for initial Claude auth
+
+### Validation & Testing
+- [ ] **Health checks passing**: 4-layer progressive checks all pass
+- [ ] **Docker access works**: `docker ps` succeeds without sudo
+- [ ] **VNC accessible from devcontainer**: `nc -z localhost 5901` succeeds
+- [ ] **postCreate.sh completes**: Completion marker file created
+- [ ] **All 11 validation tests passing**: Per DEVCONTAINER_TEST_RESULTS.md
+
+---
+
+## Sources Referenced
+
+### From Web Research
+
+**Docker Security**:
+- Stack Overflow host networking: https://stackoverflow.com/questions/35230321/
+- OWASP Docker cheat sheet: https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
+- Container escape techniques: https://www.startupdefense.io/cyberattacks/docker-escape
+- VNC localhost binding: https://unix.stackexchange.com/questions/398905/
+- Socket permissions: https://docs.docker.com/engine/install/linux-postinstall/
+- Socket ownership resets: https://askubuntu.com/questions/1194205/
+
+**DevContainer & Docker Compose**:
+- postCreateCommand failures: https://github.com/microsoft/vscode-remote-release/issues/6206
+- network_mode conflicts: https://forums.docker.com/t/option-network-mode-host-in-docker-compose-file-not-working-as-expected/51682
+- Volume persistence: https://docs.docker.com/engine/storage/volumes/
+
+### From Local Codebase
+
+- DEVCONTAINER_TEST_RESULTS.md: Lines 39-54 (socket permissions), 162-177 (path issues)
+- CLAUDE_AUTH_CROSS_PLATFORM.md: Named volume approach
+- prps/research/feature-analysis.md: Gotcha requirements
+- prps/research/codebase-patterns.md: Non-blocking error patterns
+- prps/research/documentation-links.md: postCreateCommand gotchas
+
+---
+
+## Recommendations for PRP Assembly
+
+When generating the PRP:
+
+1. **Include in "Known Gotchas & Library Quirks" Section**: Critical (#1-3), High (#4-6), Medium (#7-9), Low (#10-12)
+
+2. **Reference Solutions in "Implementation Blueprint"**: Include detection methods and mitigation code
+
+3. **Add Detection Tests to Validation Gates**: Security, configuration, and data persistence validation
+
+4. **Warn About Version Issues**: Docker Desktop 4.34+ for host mode on Mac/Windows
+
+5. **Highlight Anti-Patterns**: chmod 777, network_mode conflicts, working_dir mismatch
+
+---
+
+## Confidence Assessment
+
+**Gotcha Coverage**: 9/10
+
+- **Security**: 9/10 - Major risks identified and mitigated
+- **Performance**: 8/10 - No critical issues found
+- **Common Mistakes**: 10/10 - All major bugs documented with solutions
+
+**Gaps**: Docker socket GID reset root cause, postCreateCommand silent failures (Microsoft acknowledged)
+
+**Overall Confidence**: High - major gotchas identified and addressed
 
 ---
 
 **Generated**: 2025-10-04
-**Security Issues**: 4 Critical, 0 High
-**Performance Concerns**: 3
-**Reliability Concerns**: 3
-**Edge Cases**: 3
-**UX Concerns**: 2
-**Total Gotchas**: 18
-**Total Sources**: Archon (5), Web (6), Official Docs (7)
-**Feature**: devcontainer_vibesbox_integration
-**Archon Project**: 9b46c8e3-d6d6-41aa-91fb-ff681a67f413
+**Feature Name**: devcontainer_vibesbox_fixes
+**Total Gotchas Documented**: 12 (3 critical, 3 high, 4 medium, 2 low)
+**Code Examples**: 25+ with explanations
+**Quality**: 9/10 (comprehensive coverage with solutions)
