@@ -30,7 +30,7 @@ from ..services.task_service import TaskService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/tasks")
+router = APIRouter(prefix="/tasks")
 
 
 # Dependency injection for TaskService

@@ -22,15 +22,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from config.database import get_pool
-from models.project import ProjectCreate, ProjectResponse, ProjectUpdate
-from services.project_service import ProjectService
+from src.config.database import get_pool
+from src.models.project import ProjectCreate, ProjectResponse, ProjectUpdate
+from src.services.project_service import ProjectService
 
 logger = logging.getLogger(__name__)
 
 # Create router with prefix and tags for OpenAPI
 router = APIRouter(
-    prefix="/api/projects",
+    prefix="/projects",
     tags=["projects"],
 )
 

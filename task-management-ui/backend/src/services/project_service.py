@@ -21,7 +21,7 @@ from typing import Any
 
 import asyncpg
 
-from models.project import ProjectCreate, ProjectUpdate
+from src.models.project import ProjectCreate, ProjectUpdate
 
 logger = logging.getLogger(__name__)
 

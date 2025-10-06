@@ -24,11 +24,11 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from config.database import get_pool
-from services.task_service import TaskService
-from services.project_service import ProjectService
-from models.task import TaskCreate, TaskUpdate
-from models.project import ProjectCreate, ProjectUpdate
+from src.config.database import get_pool
+from src.services.task_service import TaskService
+from src.services.project_service import ProjectService
+from src.models.task import TaskCreate, TaskUpdate
+from src.models.project import ProjectCreate, ProjectUpdate
 
 logger = logging.getLogger(__name__)
 

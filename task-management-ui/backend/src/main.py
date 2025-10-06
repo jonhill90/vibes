@@ -24,8 +24,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import projects_router, tasks_router
-from config.database import init_db_pool, close_db_pool
+from src.api import projects_router, tasks_router
+from src.config.database import init_db_pool, close_db_pool
 
 logger = logging.getLogger(__name__)
 

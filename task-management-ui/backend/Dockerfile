@@ -35,6 +35,7 @@ COPY --from=builder /venv /venv
 # Copy application source code
 COPY src/ src/
 COPY alembic/ alembic/
+COPY start.sh start.sh
 
 # Set up Python environment
 ENV PYTHONPATH="/app:$PYTHONPATH"
@@ -50,7 +51,6 @@ EXPOSE 8000 8051
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
-# Start FastAPI application with uvicorn
-# --host 0.0.0.0 makes it accessible from outside the container
-# --port 8000 is the main API port
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start both FastAPI and MCP servers
+# Using startup script to run both services
+CMD ["./start.sh"]
