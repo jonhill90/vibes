@@ -18,6 +18,9 @@ Vibes runs as a distributed system of specialized MCP servers, each handling spe
 |--------|---------|--------|------------|
 | `mcp-vibes-server` | Shell access, container management | ✅ Active | Docker exec |
 | `mcp-vibesbox-server` | Unified shell + VNC GUI | ✅ Active | Docker exec |
+| `basic-memory` | Persistent memory across Claude sessions | ✅ Active | Docker exec |
+| `MCP_DOCKER` | Container orchestration gateway | ✅ Active | docker mcp |
+| `archon` | Task/knowledge management, RAG search | ✅ Active | npx mcp-remote |
 
 ## Quick Start
 
@@ -48,9 +51,21 @@ cd ..
 ```json
 {
   "mcpServers": {
-    "vibes": {
+    "vibesbox": {
       "command": "docker",
-      "args": ["exec", "-i", "mcp-vibes-server", "python3", "/workspace/server.py"]
+      "args": ["exec", "-i", "mcp-vibesbox-server", "python3", "/workspace/server.py"]
+    },
+    "basic-memory": {
+      "command": "docker",
+      "args": ["exec", "-i", "basic-memory-mcp", "/app/start.sh"]
+    },
+    "MCP_DOCKER": {
+      "command": "docker",
+      "args": ["mcp", "gateway", "run"]
+    },
+    "archon": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8051/mcp"]
     }
   }
 }
@@ -62,13 +77,50 @@ After updating the configuration, restart Claude Desktop to load the MCP servers
 
 ## Current Capabilities
 
-- **Execute code** in safe, isolated environments
-- **Remember conversations** and build knowledge over time
-- **Analyze repositories** from GitHub
-- **Manage cloud infrastructure** with Azure and Terraform
-- **Persistent knowledge** across sessions
-- **Browser automation** and screenshot capture (optional)
-- **Learn through conversation** rather than documentation
+- **Shell execution & container management** via `mcp-vibes-server` MCP
+  - Run bash commands in isolated environments
+  - Docker container lifecycle management
+  - Network access to vibes-network
+
+- **Desktop automation & visual feedback** via `mcp-vibesbox-server` MCP
+  - VNC desktop environment (XFCE4, 1920x1080)
+  - Screenshot capture for Claude's vision
+  - Mouse/keyboard control (click, drag, type)
+  - ARM64 Chromium browser automation
+
+- **Task & knowledge management** via `archon` MCP
+  - Task tracking (find_tasks, manage_task)
+  - RAG search across documentation (2-5 keyword queries)
+  - Project management and organization
+
+- **Persistent memory** via `basic-memory` MCP
+  - Local Markdown-based knowledge storage
+  - Conversation context across sessions
+  - Semantic linking and knowledge graphs
+
+- **Container orchestration** via `MCP_DOCKER` gateway
+  - Unified MCP server management
+  - Security isolation and secrets management
+  - Enterprise observability
+
+## Context Optimization
+
+We compressed the context Claude sees by **59-70%** without losing functionality.
+
+**File Sizes Achieved**:
+- **CLAUDE.md**: 107 lines (from 143, 25% reduction)
+- **Patterns**: 47-150 lines each (target ≤150)
+- **Commands**: 202-320 lines each (target ≤350)
+
+**Context Per Command**:
+- `/generate-prp`: 427 lines (59% reduction from 1044 baseline)
+- `/execute-prp`: 309 lines (70% reduction from 1044 baseline)
+
+**Impact**: ~320,400 tokens saved annually (assuming 10 PRP workflows/month)
+
+**Why this matters**: Claude has an "attention budget"—more tokens doesn't mean better results. By compressing context, we improved both speed and accuracy.
+
+See [validation report](prps/prp_context_refactor/execution/validation-report.md) for detailed methodology.
 
 ## Context Engineering & PRPs
 
@@ -98,19 +150,34 @@ A PRP is a context engineering artifact that treats Claude like a competent juni
 
 ```
 vibes/
-├── prps/
-│   ├── templates/        # PRP templates for different types
-│   │   ├── prp_base.md          # Comprehensive base template
-│   │   ├── feature_template.md  # Standard features
-│   │   ├── tool_template.md     # API integrations
-│   │   └── documentation_template.md  # Documentation
-│   ├── active/           # In-progress PRPs
-│   ├── completed/        # Finished PRPs
-│   └── archived/         # Old reference PRPs
-└── examples/             # Reference patterns and examples
-    ├── prp-workflow/     # Example PRPs
-    ├── tools/            # Code patterns (API, files, etc.)
-    └── documentation/    # Doc templates
+├── .claude/              # Context-engineered components (59-70% reduction)
+│   ├── commands/         # Slash commands for Claude Code
+│   │   ├── generate-prp.md    # 320 lines (59% reduction)
+│   │   ├── execute-prp.md     # 202 lines (70% reduction)
+│   │   ├── list-prps.md
+│   │   └── prep-parallel.md
+│   ├── patterns/         # Reusable implementation patterns
+│   │   ├── README.md          # Pattern library index
+│   │   ├── archon-workflow.md
+│   │   ├── parallel-subagents.md
+│   │   ├── quality-gates.md
+│   │   └── security-validation.md
+│   ├── agents/           # Subagent specifications
+│   └── templates/        # Report templates
+├── prps/                 # Per-feature PRP artifacts
+│   ├── {feature_name}/   # Feature-specific directory
+│   │   ├── planning/     # Research outputs
+│   │   ├── examples/     # Concrete examples
+│   │   └── execution/    # Implementation artifacts
+│   └── templates/        # PRP templates
+│       ├── prp_base.md          # Comprehensive base
+│       ├── feature_template.md  # Standard features
+│       ├── tool_template.md     # API integrations
+│       └── documentation_template.md
+├── CLAUDE.md             # 107 lines (project rules only)
+└── mcp/                  # MCP server implementations
+    ├── mcp-vibesbox-server/
+    └── mcp-vibes-server/
 ```
 
 ### Core Principles
@@ -138,10 +205,23 @@ Choose the right template for your task:
 ### Learn More
 
 - [PRP Base Template](prps/templates/prp_base.md) - Comprehensive template with all sections
-- [Examples Directory](examples/README.md) - Reference patterns for common tasks
+- [Pattern Library](.claude/patterns/README.md) - Reusable implementation patterns
 - [Context Engineering Intro](https://github.com/coleam00/context-engineering-intro) - Original philosophy
 
 **Philosophy**: Context engineering is 10x better than prompt engineering and 100x better than vibe coding. Give Claude the context it needs to succeed.
+
+## Pattern Library
+
+The `.claude/patterns/` directory contains reusable implementation patterns extracted from the PRP system. These patterns enable consistent, high-quality implementations across all features.
+
+| Pattern | Purpose | Link |
+|---------|---------|------|
+| archon-workflow | Archon MCP integration, health checks, graceful degradation | [View](.claude/patterns/archon-workflow.md) |
+| parallel-subagents | 3x speedup through multi-task parallelization | [View](.claude/patterns/parallel-subagents.md) |
+| quality-gates | Validation loops ensuring 8+/10 PRP scores | [View](.claude/patterns/quality-gates.md) |
+| security-validation | 5-level security checks for user input | [View](.claude/patterns/security-validation.md) |
+
+See [.claude/patterns/README.md](.claude/patterns/README.md) for complete pattern documentation and usage guidelines.
 
 ## Future Vision
 
