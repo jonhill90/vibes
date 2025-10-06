@@ -1,0 +1,106 @@
+# Task Management UI - Docker Compose Configuration
+# Multi-service deployment with health checks and hot reload support
+# Services: PostgreSQL database, FastAPI backend, React frontend
+
+services:
+  # PostgreSQL Database Service
+  db:
+    image: postgres:16
+    container_name: taskmanager-db
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-taskmanager}
+      - POSTGRES_USER=${POSTGRES_USER:-taskuser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-taskpass123}
+    volumes:
+      # CRITICAL: Use named volume (not bind mount) to avoid permission issues (Gotcha #5)
+      - taskmanager-db-data:/var/lib/postgresql/data
+      # Mount init script if needed
+      - ./database:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    networks:
+      - taskmanager-network
+    # Health check ensures database is ready before backend starts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-taskuser} -d ${POSTGRES_DB:-taskmanager}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s  # Give database time to initialize (Gotcha #13)
+
+  # FastAPI Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: taskmanager-backend
+    ports:
+      - "${API_PORT:-8000}:8000"  # FastAPI server
+      - "${MCP_PORT:-8051}:8051"  # MCP server
+    environment:
+      # Database connection
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://taskuser:taskpass123@db:5432/taskmanager}
+      # Service configuration
+      - MCP_PORT=${MCP_PORT:-8051}
+      - API_PORT=${API_PORT:-8000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      # Hot reload for development
+      - ./backend:/app
+      # Prevent overwriting node_modules if present
+      - /app/__pycache__
+    networks:
+      - taskmanager-network
+    # CRITICAL: Wait for database health check before starting (Gotcha #13)
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # React Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: taskmanager-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      # API connection
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    volumes:
+      # Hot reload for development
+      - ./frontend:/app
+      # CRITICAL: Exclude node_modules to avoid permission issues
+      - /app/node_modules
+    networks:
+      - taskmanager-network
+    # Wait for backend to be available
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Named volume for PostgreSQL data persistence
+volumes:
+  taskmanager-db-data:
+    driver: local
+
+# Custom bridge network for inter-service communication
+networks:
+  taskmanager-network:
+    driver: bridge
