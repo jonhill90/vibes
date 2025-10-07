@@ -50,7 +50,7 @@ Establish and enforce a consistent naming convention for PRPs that eliminates re
    - Examples:
      - ✅ `prps/task_management_ui.md` → `prps/task_management_ui/`
      - ✅ `prps/execution_reliability.md` → `prps/execution_reliability/`
-     - ❌ `prps/prp_execution_reliability.md` (redundant prefix)
+     - ❌ `prps/execution_reliability.md` (redundant prefix)
 
 2. **Strip Prefix Rules**
    - Use `strip_prefix="INITIAL_"` for initial PRPs only
@@ -374,7 +374,7 @@ python3 << 'EOF'
 test_cases = [
     ("prps/INITIAL_user_auth.md", "INITIAL_", "user_auth"),
     ("prps/user_auth.md", None, "user_auth"),
-    ("prps/prp_execution_reliability.md", None, "should_warn"),
+    ("prps/execution_reliability.md", None, "should_warn"),
 ]
 # Verify correct feature names extracted
 EOF

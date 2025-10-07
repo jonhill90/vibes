@@ -23,7 +23,7 @@ Verify that the PRP execution reliability validation gates work correctly by exe
 ## Why
 
 **Testing Need**:
-- Validate that validation gates from prp_execution_reliability work as designed
+- Validate that validation gates from execution_reliability work as designed
 - Confirm error messages are actionable and helpful
 - Verify report coverage calculation is accurate
 - Test fail-fast behavior when reports are missing
@@ -58,7 +58,7 @@ Verify that the PRP execution reliability validation gates work correctly by exe
 
 ```yaml
 # Test-Specific Context
-- PRP to test: prps/prp_execution_reliability.md (Tasks 1-7 must be complete)
+- PRP to test: prps/execution_reliability.md (Tasks 1-7 must be complete)
 - Templates used:
   - .claude/templates/task-completion-report.md
 - Validation functions:

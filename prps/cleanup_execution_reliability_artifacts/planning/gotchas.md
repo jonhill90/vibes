@@ -44,19 +44,19 @@ git log --follow -M50% prps/execution_reliability.md
 
 ```bash
 # ❌ WRONG - Combines rename + content change (breaks detection)
-git mv prps/prp_execution_reliability.md prps/execution_reliability.md
-sed -i 's/prp_execution_reliability/execution_reliability/g' prps/execution_reliability.md
+git mv prps/execution_reliability.md prps/execution_reliability.md
+sed -i 's/execution_reliability/execution_reliability/g' prps/execution_reliability.md
 git add prps/execution_reliability.md
 git commit -m "Rename and update PRP file"
 # Result: Git sees "deleted + added", not "renamed"
 
 # ✅ RIGHT - Separate commits: rename first, then content changes
 # Commit 1: Pure rename (no content changes)
-git mv prps/prp_execution_reliability.md prps/execution_reliability.md
-git commit -m "Rename: prp_execution_reliability.md → execution_reliability.md"
+git mv prps/execution_reliability.md prps/execution_reliability.md
+git commit -m "Rename: execution_reliability.md → execution_reliability.md"
 
 # Commit 2: Content updates (after rename is committed)
-sed -i 's/prp_execution_reliability/execution_reliability/g' prps/execution_reliability.md
+sed -i 's/execution_reliability/execution_reliability/g' prps/execution_reliability.md
 git commit -am "Update internal references to new name"
 
 # Verification: Check rename was detected
@@ -112,7 +112,7 @@ if Path("source").exists():
 from pathlib import Path
 import shutil
 
-source = Path("prps/prp_execution_reliability/examples")
+source = Path("prps/execution_reliability/examples")
 dest = Path("prps/execution_reliability/examples")
 
 # Check 1: Source exists?
@@ -162,7 +162,7 @@ def safe_git_move(source, dest):
 
 # Usage: Attempt operation directly, handle errors
 safe_git_move(
-    Path("prps/prp_execution_reliability/examples"),
+    Path("prps/execution_reliability/examples"),
     Path("prps/execution_reliability/examples")
 )
 ```
@@ -178,9 +178,9 @@ def validate_consolidation_preconditions():
     errors = []
 
     sources = [
-        Path("prps/prp_execution_reliability/examples"),
-        Path("prps/prp_execution_reliability/planning"),
-        Path("prps/prp_execution_reliability.md")
+        Path("prps/execution_reliability/examples"),
+        Path("prps/execution_reliability/planning"),
+        Path("prps/execution_reliability.md")
     ]
 
     for source in sources:
@@ -236,15 +236,15 @@ Using `rm -rf` or `shutil.rmtree()` to delete directories without verifying they
 **How to detect it**:
 ```bash
 # Symptom: Directory deletion succeeds when you expected failure
-rm -rf prps/prp_execution_reliability/
+rm -rf prps/execution_reliability/
 # No error even though directory wasn't empty!
 
 # Check if directory truly empty (catches hidden files)
-find prps/prp_execution_reliability -mindepth 1 -maxdepth 1 | wc -l
+find prps/execution_reliability -mindepth 1 -maxdepth 1 | wc -l
 # Returns: 3 (not empty!)
 
 # ls misses hidden files
-ls -la prps/prp_execution_reliability
+ls -la prps/execution_reliability
 # Shows: .DS_Store, .gitkeep (hidden files)
 ```
 
@@ -252,17 +252,17 @@ ls -la prps/prp_execution_reliability
 
 ```bash
 # ❌ DANGEROUS - Deletes everything without verification
-rm -rf prps/prp_execution_reliability/
+rm -rf prps/execution_reliability/
 # Problem: No error if directory has files. SILENT DATA LOSS.
 
 # ❌ DANGEROUS - Python equivalent
 import shutil
-shutil.rmtree("prps/prp_execution_reliability")
+shutil.rmtree("prps/execution_reliability")
 # Problem: Deletes non-empty directories without warning
 
 # ✅ SAFE - Use rmdir (fails if not empty)
-rmdir prps/prp_execution_reliability/
-# Output: "rmdir: prps/prp_execution_reliability/: Directory not empty"
+rmdir prps/execution_reliability/
+# Output: "rmdir: prps/execution_reliability/: Directory not empty"
 # Forces you to investigate before deleting
 
 # ✅ SAFER - Verify empty before deletion (bash)
@@ -299,7 +299,7 @@ delete_empty_directory() {
 }
 
 # Usage
-delete_empty_directory "prps/prp_execution_reliability"
+delete_empty_directory "prps/execution_reliability"
 ```
 
 **Python safe deletion**:
@@ -338,7 +338,7 @@ def delete_empty_directory(dir_path: Path) -> bool:
         return False
 
 # Usage
-delete_empty_directory(Path("prps/prp_execution_reliability"))
+delete_empty_directory(Path("prps/execution_reliability"))
 ```
 
 **Why rmdir is safer than rm -rf**:
@@ -376,12 +376,12 @@ Updating only known or obvious files without comprehensive grep to find ALL inst
 **How to detect it**:
 ```bash
 # After "completing" find/replace
-grep -r "prp_execution_reliability" prps/
+grep -r "execution_reliability" prps/
 
 # Output shows missed files:
-prps/execution_reliability/execution/TASK3_COMPLETION.md:45: in prp_execution_reliability
-prps/test_validation_gates.md:12: See prps/prp_execution_reliability.md
-.claude/commands/execute-prp.md:89: Example: prp_execution_reliability
+prps/execution_reliability/execution/TASK3_COMPLETION.md:45: in execution_reliability
+prps/test_validation_gates.md:12: See prps/execution_reliability.md
+.claude/commands/execute-prp.md:89: Example: execution_reliability
 
 # Symptom: Files you forgot to update still reference old naming
 ```
@@ -390,14 +390,14 @@ prps/test_validation_gates.md:12: See prps/prp_execution_reliability.md
 
 ```bash
 # ❌ WRONG - Manual file list (misses files)
-sed -i 's/prp_execution_reliability/execution_reliability/g' prps/execution_reliability.md
-sed -i 's/prp_execution_reliability/execution_reliability/g' prps/execution_reliability/execution/EXECUTION_SUMMARY.md
+sed -i 's/execution_reliability/execution_reliability/g' prps/execution_reliability.md
+sed -i 's/execution_reliability/execution_reliability/g' prps/execution_reliability/execution/EXECUTION_SUMMARY.md
 # Problem: What about TASK*_COMPLETION.md? .claude/commands/execute-prp.md?
 
 # ✅ RIGHT - Comprehensive grep first, then update ALL files
 #!/bin/bash
 
-OLD_TEXT="prp_execution_reliability"
+OLD_TEXT="execution_reliability"
 NEW_TEXT="execution_reliability"
 SEARCH_DIR="prps/"
 
@@ -542,7 +542,7 @@ def comprehensive_find_replace(
 # Usage
 comprehensive_find_replace(
     directory=Path("prps/"),
-    old_text="prp_execution_reliability",
+    old_text="execution_reliability",
     new_text="execution_reliability",
     dry_run=True  # Preview first
 )
@@ -570,19 +570,19 @@ Using forward slash `/` as sed delimiter when replacing file paths causes syntax
 
 **Why it's a problem**:
 - **Syntax errors**: sed fails with "unterminated s command"
-- **Escaping hell**: Every `/` in path must be escaped: `prps\/prp_execution_reliability\/examples`
-- **Unreadable**: `sed 's/prps\/prp_execution_reliability/prps\/execution_reliability/g'`
+- **Escaping hell**: Every `/` in path must be escaped: `prps\/execution_reliability\/examples`
+- **Unreadable**: `sed 's/prps\/execution_reliability/prps\/execution_reliability/g'`
 - **Error-prone**: Easy to miss one slash, breaking the command
 - **Debugging nightmare**: Complex escaping obscures actual replacement
 
 **How to detect it**:
 ```bash
 # Symptom: sed command fails with cryptic error
-sed 's/prps/prp_execution_reliability/prps/execution_reliability/g' file.md
+sed 's/prps/execution_reliability/prps/execution_reliability/g' file.md
 # Error: sed: 1: "s/prps/prp_execution_rel ...": bad flag in substitute command: 'p'
 
 # Or escaping errors
-sed 's/prps\/prp_execution_reliability/prps\/execution_reliability/g' file.md
+sed 's/prps\/execution_reliability/prps\/execution_reliability/g' file.md
 # Works but unreadable and fragile
 ```
 
@@ -590,22 +590,22 @@ sed 's/prps\/prp_execution_reliability/prps\/execution_reliability/g' file.md
 
 ```bash
 # ❌ WRONG - Forward slash delimiter (requires escaping)
-sed 's/prps\/prp_execution_reliability\/examples/prps\/execution_reliability\/examples/g' file.md
+sed 's/prps\/execution_reliability\/examples/prps\/execution_reliability\/examples/g' file.md
 # Unreadable, error-prone
 
 # ❌ WORSE - Forgot to escape one slash (breaks)
-sed 's/prps/prp_execution_reliability/examples/prps/execution_reliability/examples/g' file.md
+sed 's/prps/execution_reliability/examples/prps/execution_reliability/examples/g' file.md
 # Error: bad flag in substitute command
 
 # ✅ RIGHT - Use alternative delimiter (| : # @)
 # No escaping needed!
-sed 's|prps/prp_execution_reliability/examples|prps/execution_reliability/examples|g' file.md
+sed 's|prps/execution_reliability/examples|prps/execution_reliability/examples|g' file.md
 
 # ✅ ALSO GOOD - Colon delimiter
-sed 's:prps/prp_execution_reliability/examples:prps/execution_reliability/examples:g' file.md
+sed 's:prps/execution_reliability/examples:prps/execution_reliability/examples:g' file.md
 
 # ✅ ALSO GOOD - Hash delimiter
-sed 's#prps/prp_execution_reliability/examples#prps/execution_reliability/examples#g' file.md
+sed 's#prps/execution_reliability/examples#prps/execution_reliability/examples#g' file.md
 
 # All three are equivalent and readable
 ```
@@ -613,7 +613,7 @@ sed 's#prps/prp_execution_reliability/examples#prps/execution_reliability/exampl
 **Complete example for this cleanup**:
 ```bash
 # Replace directory paths in markdown files
-OLD_PATH="prps/prp_execution_reliability"
+OLD_PATH="prps/execution_reliability"
 NEW_PATH="prps/execution_reliability"
 
 # ❌ WRONG
@@ -621,7 +621,7 @@ sed "s/${OLD_PATH}/${NEW_PATH}/g" file.md
 # Fails because OLD_PATH contains slashes
 
 # ❌ WRONG - Manual escaping
-sed "s/prps\/prp_execution_reliability/prps\/execution_reliability/g" file.md
+sed "s/prps\/execution_reliability/prps\/execution_reliability/g" file.md
 # Works but fragile
 
 # ✅ RIGHT - Use | delimiter (clean and readable)
@@ -634,7 +634,7 @@ find prps/execution_reliability -name "*.md" -exec sed -i '' "s|${OLD_PATH}|${NE
 **Handle multiple path variations**:
 ```bash
 #!/bin/bash
-OLD_BASE="prp_execution_reliability"
+OLD_BASE="execution_reliability"
 NEW_BASE="execution_reliability"
 
 # Update all path variations in one pass
@@ -646,10 +646,10 @@ find prps/ -name "*.md" -exec sed -i '' \
     {} \;
 
 # Explanation:
-# -e 1: With trailing slash: prps/prp_execution_reliability/
-# -e 2: Without trailing slash: prps/prp_execution_reliability
-# -e 3: In inline code: `prp_execution_reliability`
-# -e 4: Standalone name: prp_execution_reliability
+# -e 1: With trailing slash: prps/execution_reliability/
+# -e 2: Without trailing slash: prps/execution_reliability
+# -e 3: In inline code: `execution_reliability`
+# -e 4: Standalone name: execution_reliability
 ```
 
 **Delimiter choice guide**:
@@ -698,20 +698,20 @@ ls -la
 
 ```bash
 # ❌ WRONG - Works on Linux, fails on macOS
-sed -i 's/prp_execution_reliability/execution_reliability/g' file.md
+sed -i 's/execution_reliability/execution_reliability/g' file.md
 # macOS error: "invalid command code"
 
 # ❌ WRONG - Creates file.mde backup (not file.md.bak)
-sed -ie 's/prp_execution_reliability/execution_reliability/g' file.md
+sed -ie 's/execution_reliability/execution_reliability/g' file.md
 # Result: file.md (modified), file.mde (backup) - confusing!
 
 # ✅ RIGHT - Portable across macOS and Linux
 # Option 1: Explicit backup with extension (works on both)
-sed -i.bak 's/prp_execution_reliability/execution_reliability/g' file.md
+sed -i.bak 's/execution_reliability/execution_reliability/g' file.md
 # Creates: file.md.bak (both macOS and Linux)
 
 # Option 2: Empty string for no backup (macOS)
-sed -i '' 's/prp_execution_reliability/execution_reliability/g' file.md
+sed -i '' 's/execution_reliability/execution_reliability/g' file.md
 # Works on macOS, needs adjustment for Linux
 
 # ✅ BEST - Platform detection for full portability
@@ -725,7 +725,7 @@ else
 fi
 
 # Use detected flags
-sed "${SED_BACKUP[@]}" 's/prp_execution_reliability/execution_reliability/g' file.md
+sed "${SED_BACKUP[@]}" 's/execution_reliability/execution_reliability/g' file.md
 
 # For backups:
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -769,7 +769,7 @@ portable_sed_replace() {
 
 # Usage
 portable_sed_replace \
-    "prp_execution_reliability" \
+    "execution_reliability" \
     "execution_reliability" \
     "prps/execution_reliability.md" \
     true  # Create backup
@@ -783,12 +783,12 @@ done
 **Using Perl instead (fully portable)**:
 ```bash
 # Perl is available on both macOS and Linux with consistent syntax
-perl -i.bak -pe 's/prp_execution_reliability/execution_reliability/g' file.md
+perl -i.bak -pe 's/execution_reliability/execution_reliability/g' file.md
 # Works identically on macOS and Linux
 # Creates file.md.bak backup
 
 # No backup version
-perl -i -pe 's/prp_execution_reliability/execution_reliability/g' file.md
+perl -i -pe 's/execution_reliability/execution_reliability/g' file.md
 
 # In find command
 find prps/ -name "*.md" -exec perl -i.bak -pe 's|old|new|g' {} \;
@@ -823,14 +823,14 @@ Markdown supports multiple link syntax variations: `[text](path)`, `[text](path/
 **How to detect it**:
 ```bash
 # Search reveals multiple path variations in markdown
-grep -r "prp_execution_reliability" prps/*.md
+grep -r "execution_reliability" prps/*.md
 
 # Output shows different formats:
-# [docs](prps/prp_execution_reliability/planning/feature-analysis.md)
-# [docs](prps/prp_execution_reliability/planning/)
-# See prps/prp_execution_reliability.md
-# `prps/prp_execution_reliability/`
-# ../prp_execution_reliability/examples/
+# [docs](prps/execution_reliability/planning/feature-analysis.md)
+# [docs](prps/execution_reliability/planning/)
+# See prps/execution_reliability.md
+# `prps/execution_reliability/`
+# ../execution_reliability/examples/
 
 # Simple find/replace misses variations with/without trailing slashes
 ```
@@ -839,13 +839,13 @@ grep -r "prp_execution_reliability" prps/*.md
 
 ```bash
 # ❌ WRONG - Only catches one variation
-sed 's/prp_execution_reliability/execution_reliability/g' file.md
+sed 's/execution_reliability/execution_reliability/g' file.md
 # Misses: trailing slashes, relative paths, inline code
 
 # ✅ RIGHT - Update all variations
 #!/bin/bash
 
-OLD_NAME="prp_execution_reliability"
+OLD_NAME="execution_reliability"
 NEW_NAME="execution_reliability"
 
 # Multiple sed expressions to catch all variations
@@ -861,14 +861,14 @@ find prps/ -name "*.md" -exec sed -i '' \
     {} \;
 
 # Explanation of each pattern:
-# 1. With trailing slash: prps/prp_execution_reliability/
-# 2. Before closing paren: prps/prp_execution_reliability)
-# 3. Without trailing slash: prps/prp_execution_reliability
-# 4. Relative parent: ../prp_execution_reliability/
-# 5. Relative current: ./prp_execution_reliability/
-# 6. In inline code: `prp_execution_reliability`
-# 7. Filename references: prp_execution_reliability.md
-# 8. Standalone (last, most general): prp_execution_reliability
+# 1. With trailing slash: prps/execution_reliability/
+# 2. Before closing paren: prps/execution_reliability)
+# 3. Without trailing slash: prps/execution_reliability
+# 4. Relative parent: ../execution_reliability/
+# 5. Relative current: ./execution_reliability/
+# 6. In inline code: `execution_reliability`
+# 7. Filename references: execution_reliability.md
+# 8. Standalone (last, most general): execution_reliability
 ```
 
 **Python approach with regex**:
@@ -921,7 +921,7 @@ def update_markdown_references(file_path: Path, old_name: str, new_name: str):
 for md_file in Path("prps/").rglob("*.md"):
     update_markdown_references(
         md_file,
-        "prp_execution_reliability",
+        "execution_reliability",
         "execution_reliability"
     )
 ```
@@ -998,14 +998,14 @@ git status
 
 # ❌ BAD - Shows as delete + add (not rename)
 # Changes not staged for commit:
-#   deleted:    prps/prp_execution_reliability.md
+#   deleted:    prps/execution_reliability.md
 #
 # Untracked files:
 #   prps/execution_reliability.md
 
 # ✅ GOOD - Shows as rename
 # Changes to be committed:
-#   renamed:    prps/prp_execution_reliability.md -> prps/execution_reliability.md
+#   renamed:    prps/execution_reliability.md -> prps/execution_reliability.md
 
 # Check if history follows across rename
 git log --follow prps/execution_reliability.md
@@ -1016,22 +1016,22 @@ git log --follow prps/execution_reliability.md
 
 ```bash
 # ❌ WRONG - Shell mv (loses history tracking)
-mv prps/prp_execution_reliability.md prps/execution_reliability.md
+mv prps/execution_reliability.md prps/execution_reliability.md
 git add prps/execution_reliability.md
-git rm prps/prp_execution_reliability.md
+git rm prps/execution_reliability.md
 # Result: Git sees "deleted + added", not "renamed"
 
 # ❌ WRONG - Python shutil (same problem)
 import shutil
-shutil.move("prps/prp_execution_reliability.md", "prps/execution_reliability.md")
+shutil.move("prps/execution_reliability.md", "prps/execution_reliability.md")
 # Then: git add/rm (breaks history)
 
 # ✅ RIGHT - Use git mv
-git mv prps/prp_execution_reliability.md prps/execution_reliability.md
+git mv prps/execution_reliability.md prps/execution_reliability.md
 # Git immediately records this as a rename in the index
 
 # ✅ RIGHT - Directory moves
-git mv prps/prp_execution_reliability/examples prps/execution_reliability/
+git mv prps/execution_reliability/examples prps/execution_reliability/
 # Note: Destination should be parent directory, not full path
 
 # ✅ RIGHT - Python subprocess calling git mv
@@ -1055,7 +1055,7 @@ def git_move(source: Path, dest: Path) -> bool:
 
 # Usage
 git_move(
-    Path("prps/prp_execution_reliability.md"),
+    Path("prps/execution_reliability.md"),
     Path("prps/execution_reliability.md")
 )
 ```
@@ -1071,8 +1071,8 @@ git restore --staged .  # Unstage all
 git restore prps/  # Restore files to before move
 
 # Now use git mv correctly
-git mv prps/prp_execution_reliability.md prps/execution_reliability.md
-git commit -m "Rename: prp_execution_reliability.md → execution_reliability.md"
+git mv prps/execution_reliability.md prps/execution_reliability.md
+git commit -m "Rename: execution_reliability.md → execution_reliability.md"
 
 # Option 2: If already pushed, lower similarity threshold
 # Helps git detect rename with less stringent requirements
@@ -1305,16 +1305,16 @@ Before marking cleanup complete, verify these gotchas are addressed:
 **Pre-flight validation**:
 ```bash
 # All sources exist
-[ -d "prps/prp_execution_reliability/examples" ] && echo "✅" || echo "❌"
-[ -d "prps/prp_execution_reliability/planning" ] && echo "✅" || echo "❌"
-[ -f "prps/prp_execution_reliability.md" ] && echo "✅" || echo "❌"
+[ -d "prps/execution_reliability/examples" ] && echo "✅" || echo "❌"
+[ -d "prps/execution_reliability/planning" ] && echo "✅" || echo "❌"
+[ -f "prps/execution_reliability.md" ] && echo "✅" || echo "❌"
 [ -f "test_validation_gates_script.py" ] && echo "✅" || echo "❌"
 ```
 
 **Post-operation validation**:
 ```bash
 # Old directories/files removed
-[ ! -d "prps/prp_execution_reliability" ] && echo "✅ Old dir removed" || echo "❌ Still exists"
+[ ! -d "prps/execution_reliability" ] && echo "✅ Old dir removed" || echo "❌ Still exists"
 [ ! -f "test_validation_gates_script.py" ] && echo "✅ Test script moved" || echo "❌ Still in root"
 
 # New structure exists
@@ -1323,7 +1323,7 @@ Before marking cleanup complete, verify these gotchas are addressed:
 [ -f "prps/execution_reliability.md" ] && echo "✅" || echo "❌"
 
 # No old references
-REFS=$(grep -r "prp_execution_reliability" prps/ 2>/dev/null | wc -l)
+REFS=$(grep -r "execution_reliability" prps/ 2>/dev/null | wc -l)
 [ "${REFS}" -eq "0" ] && echo "✅ 0 old references" || echo "❌ Found ${REFS} references"
 
 # Git status shows renames

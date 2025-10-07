@@ -16,7 +16,7 @@ from typing import List, Dict, Tuple
 # PATTERN 1: Safe Find and Replace in Single File
 # =============================================================================
 # Use Case: Update references in documentation files
-# Example: Replace "prp_execution_reliability" → "execution_reliability"
+# Example: Replace "execution_reliability" → "execution_reliability"
 
 def find_replace_in_file(
     file_path: Path,
@@ -95,7 +95,7 @@ def find_replace_in_file(
 # PATTERN 2: Multi-File Find and Replace with Batch Processing
 # =============================================================================
 # Use Case: Update references across multiple documentation files
-# Example: Update all 10 files referencing "prp_execution_reliability"
+# Example: Update all 10 files referencing "execution_reliability"
 
 def find_replace_in_files(
     file_paths: List[Path],
@@ -154,7 +154,7 @@ def find_replace_in_files(
 # PATTERN 3: File Path Updates (Special Case)
 # =============================================================================
 # Use Case: Update file paths in documentation
-# Example: "prps/prp_execution_reliability/examples/" → "prps/execution_reliability/examples/"
+# Example: "prps/execution_reliability/examples/" → "prps/execution_reliability/examples/"
 
 def update_file_paths(
     file_path: Path,
@@ -173,7 +173,7 @@ def update_file_paths(
 
     Args:
         file_path: File to update
-        old_path_segment: Old path segment (e.g., "prp_execution_reliability")
+        old_path_segment: Old path segment (e.g., "execution_reliability")
         new_path_segment: New path segment (e.g., "execution_reliability")
         dry_run: If True, only report changes
 
@@ -318,7 +318,7 @@ def restore_from_backups(backup_paths: List[Path], backup_suffix: str = ".bak") 
 
 def update_execution_reliability_references_example():
     """
-    Example: Update all references from prp_execution_reliability → execution_reliability
+    Example: Update all references from execution_reliability → execution_reliability
     """
     print("=" * 80)
     print("Example: Update execution_reliability References")
@@ -347,7 +347,7 @@ def update_execution_reliability_references_example():
 
     dry_run_results = find_replace_in_files(
         existing_files,
-        old_text="prp_execution_reliability",
+        old_text="execution_reliability",
         new_text="execution_reliability",
         dry_run=True
     )
@@ -383,7 +383,7 @@ def update_execution_reliability_references_example():
     try:
         actual_results = find_replace_in_files(
             existing_files,
-            old_text="prp_execution_reliability",
+            old_text="execution_reliability",
             new_text="execution_reliability",
             dry_run=False
         )
@@ -398,7 +398,7 @@ def update_execution_reliability_references_example():
 
         all_clean, remaining_refs = validate_no_old_references(
             feature_dir,
-            "prp_execution_reliability"
+            "execution_reliability"
         )
 
         if all_clean:

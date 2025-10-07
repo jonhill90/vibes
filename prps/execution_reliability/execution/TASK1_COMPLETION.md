@@ -96,9 +96,9 @@ template.format(**test_vars)  # Success
 ## Dependencies Verified
 
 ### Completed Dependencies:
-- **Gold Standard Example**: Successfully read and analyzed `prps/prp_execution_reliability/examples/example_task_completion_report.md`
+- **Gold Standard Example**: Successfully read and analyzed `prps/execution_reliability/examples/example_task_completion_report.md`
 - **Reference Template**: Successfully read `/.claude/templates/validation-report.md` for markdown conventions
-- **PRP Context**: Successfully read and understood `prps/prp_execution_reliability.md` for all requirements
+- **PRP Context**: Successfully read and understood `prps/execution_reliability.md` for all requirements
 
 ### External Dependencies:
 - **Python pathlib**: Standard library - used for Path operations

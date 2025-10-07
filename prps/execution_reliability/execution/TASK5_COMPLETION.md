@@ -101,7 +101,7 @@ except ValidationError as e:
 - Task status reset to "todo" for retry
 
 #### Pattern from validation_gate_pattern.py PATTERN 2
-**Source**: prps/prp_execution_reliability/examples/validation_gate_pattern.py lines 74-126
+**Source**: prps/execution_reliability/examples/validation_gate_pattern.py lines 74-126
 **Implementation**: Correctly calls validate_report_exists() with:
 - `feature_name`: Validated feature name from Phase 0
 - `task['number']`: Task number from execution plan

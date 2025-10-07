@@ -1,6 +1,6 @@
 # Execution Plan: execution_reliability
 
-**PRP**: prps/prp_execution_reliability.md
+**PRP**: prps/execution_reliability.md
 **Generated**: 2025-10-07
 **Total Tasks**: 8
 **Execution Groups**: 3
@@ -513,7 +513,7 @@ files_to_modify: {from PRP}
 pattern_to_follow: {from PRP}
 specific_steps: {from PRP}
 validation: {from PRP}
-prp_file: prps/prp_execution_reliability.md
+prp_file: prps/execution_reliability.md
 dependencies_complete:
   - {list of completed tasks this depends on}
 group_number: {1, 2, or 3}
@@ -540,7 +540,7 @@ validation:
   - Template contains all required sections
   - All variables use {variable_name} syntax
   - Template can be loaded and formatted successfully
-prp_file: prps/prp_execution_reliability.md
+prp_file: prps/execution_reliability.md
 dependencies_complete: []
 group_number: 1
 execution_mode: parallel
@@ -563,7 +563,7 @@ validation:
   - Validation gate added after each task group
   - Fails fast on first missing report
   - Updates Archon status if available
-prp_file: prps/prp_execution_reliability.md
+prp_file: prps/execution_reliability.md
 dependencies_complete:
   - Task 1: task-completion-report.md template created
   - Task 4: validate_report_exists() function available

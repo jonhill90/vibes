@@ -32,13 +32,13 @@ This documentation hunt focused on finding official resources for safe file oper
 ```bash
 # Example 1: Preview move operation (dry-run)
 # Source: https://git-scm.com/docs/git-mv
-git mv -n prps/prp_execution_reliability.md prps/execution_reliability.md
+git mv -n prps/execution_reliability.md prps/execution_reliability.md
 
 # Example 2: Execute move with verbose output
-git mv -v prps/prp_execution_reliability.md prps/execution_reliability.md
+git mv -v prps/execution_reliability.md prps/execution_reliability.md
 
 # Example 3: Move directory contents
-git mv prps/prp_execution_reliability/examples prps/execution_reliability/
+git mv prps/execution_reliability/examples prps/execution_reliability/
 
 # Example 4: View file history after rename
 git log --follow prps/execution_reliability.md
@@ -92,7 +92,7 @@ git log --follow -M50% prps/execution_reliability.md
 # Source: https://docs.python.org/3/library/pathlib.html
 from pathlib import Path
 
-source = Path("prps/prp_execution_reliability.md")
+source = Path("prps/execution_reliability.md")
 target = Path("prps/execution_reliability.md")
 
 if source.exists() and not target.exists():
@@ -101,14 +101,14 @@ else:
     print(f"Precondition failed: source exists={source.exists()}, target exists={target.exists()}")
 
 # Example 2: Move directory with validation
-source_dir = Path("prps/prp_execution_reliability/examples")
+source_dir = Path("prps/execution_reliability/examples")
 target_dir = Path("prps/execution_reliability/examples")
 
 if source_dir.is_dir() and not target_dir.exists():
     source_dir.rename(target_dir)
 
 # Example 3: Check if directory is empty before deletion
-empty_dir = Path("prps/prp_execution_reliability")
+empty_dir = Path("prps/execution_reliability")
 if empty_dir.is_dir():
     contents = list(empty_dir.iterdir())
     if len(contents) == 0:
@@ -148,16 +148,16 @@ source.replace(target)  # Always replaces, no OS-specific behavior
   - **Example**:
   ```bash
   # Find all instances before replacing
-  rg "prp_execution_reliability" prps/
+  rg "execution_reliability" prps/
 
   # Preview replacement (doesn't modify files)
-  rg "prp_execution_reliability" -r "execution_reliability" prps/
+  rg "execution_reliability" -r "execution_reliability" prps/
 
   # Count occurrences
-  rg "prp_execution_reliability" --count prps/
+  rg "execution_reliability" --count prps/
 
   # Verify zero instances remain after replacement
-  rg "prp_execution_reliability" prps/ && echo "ERROR: Old name still exists!" || echo "SUCCESS: All updated"
+  rg "execution_reliability" prps/ && echo "ERROR: Old name still exists!" || echo "SUCCESS: All updated"
   ```
 
 **API Reference**:
@@ -167,13 +167,13 @@ source.replace(target)  # Always replaces, no OS-specific behavior
   - **Example**:
   ```bash
   # Search only markdown files
-  rg "prp_execution_reliability" --type md
+  rg "execution_reliability" --type md
 
   # Search with glob pattern
-  rg "prp_execution_reliability" -g '*.md' prps/
+  rg "execution_reliability" -g '*.md' prps/
 
   # Files with matches only (for scripting)
-  rg "prp_execution_reliability" --files-with-matches prps/
+  rg "execution_reliability" --files-with-matches prps/
   ```
 
 ---
@@ -190,13 +190,13 @@ source.replace(target)  # Always replaces, no OS-specific behavior
   - **Example**:
   ```bash
   # Create backup before replace (safe pattern)
-  sed -i.bak 's/prp_execution_reliability/execution_reliability/g' prps/execution_reliability.md
+  sed -i.bak 's/execution_reliability/execution_reliability/g' prps/execution_reliability.md
 
   # Replace in multiple files
-  find prps/execution_reliability/execution/ -name "*.md" -exec sed -i.bak 's/prp_execution_reliability/execution_reliability/g' {} \;
+  find prps/execution_reliability/execution/ -name "*.md" -exec sed -i.bak 's/execution_reliability/execution_reliability/g' {} \;
 
   # Dry-run: preview without modifying
-  sed 's/prp_execution_reliability/execution_reliability/g' file.md
+  sed 's/execution_reliability/execution_reliability/g' file.md
   ```
 
 **Best Practices**:
@@ -205,10 +205,10 @@ source.replace(target)  # Always replaces, no OS-specific behavior
 3. **Alternative delimiters**: Use `|` or `#` when pattern contains `/`
    ```bash
    # Instead of escaping slashes
-   sed 's/prps\/prp_execution_reliability/prps\/execution_reliability/g'
+   sed 's/prps\/execution_reliability/prps\/execution_reliability/g'
 
    # Use alternative delimiter
-   sed 's|prps/prp_execution_reliability|prps/execution_reliability|g'
+   sed 's|prps/execution_reliability|prps/execution_reliability|g'
    ```
 4. **Test on sample first**: Run on single file before bulk operation
 5. **Verify before committing**: Use `rg` to confirm all replacements successful
@@ -232,8 +232,8 @@ source.replace(target)  # Always replaces, no OS-specific behavior
 **Code examples**:
 ```bash
 # Best practice: Move files with git mv
-git mv prps/prp_execution_reliability.md prps/execution_reliability.md
-git commit -m "Rename: prp_execution_reliability.md → execution_reliability.md"
+git mv prps/execution_reliability.md prps/execution_reliability.md
+git commit -m "Rename: execution_reliability.md → execution_reliability.md"
 
 # View history across rename
 git log --follow prps/execution_reliability.md
@@ -270,7 +270,7 @@ def consolidate_directories():
     """Move contents from split directory to consolidated location."""
 
     # Define paths
-    source_base = Path("prps/prp_execution_reliability")
+    source_base = Path("prps/execution_reliability")
     target_base = Path("prps/execution_reliability")
 
     # Pre-flight checks
@@ -336,11 +336,11 @@ consolidate_directories()
    - **Example**:
    ```bash
    # Step 1: Rename only
-   git mv prp_execution_reliability.md execution_reliability.md
+   git mv execution_reliability.md execution_reliability.md
    git commit -m "Rename PRP file to remove redundant prefix"
 
    # Step 2: Update contents in separate commit
-   sed -i 's/prp_execution_reliability/execution_reliability/g' execution_reliability.md
+   sed -i 's/execution_reliability/execution_reliability/g' execution_reliability.md
    git commit -m "Update internal references to new name"
    ```
 
@@ -367,19 +367,19 @@ consolidate_directories()
    - **Example**:
    ```bash
    # Step 1: Find all instances
-   rg "prp_execution_reliability" prps/ --files-with-matches
+   rg "execution_reliability" prps/ --files-with-matches
 
    # Step 2: Count occurrences
-   rg "prp_execution_reliability" prps/ --count
+   rg "execution_reliability" prps/ --count
 
    # Step 3: Preview replacements
-   rg "prp_execution_reliability" -r "execution_reliability" prps/
+   rg "execution_reliability" -r "execution_reliability" prps/
 
    # Step 4: Execute replacement with backup
-   find prps/ -name "*.md" -exec sed -i.bak 's/prp_execution_reliability/execution_reliability/g' {} \;
+   find prps/ -name "*.md" -exec sed -i.bak 's/execution_reliability/execution_reliability/g' {} \;
 
    # Step 5: Verify completion
-   rg "prp_execution_reliability" prps/  # Should return 0 results
+   rg "execution_reliability" prps/  # Should return 0 results
    ```
 
 2. **Create backups before bulk operations**:
@@ -397,10 +397,10 @@ consolidate_directories()
    - **Example**:
    ```bash
    # Hard to read (escaped slashes)
-   sed 's/prps\/prp_execution_reliability/prps\/execution_reliability/g'
+   sed 's/prps\/execution_reliability/prps\/execution_reliability/g'
 
    # Easy to read (alternative delimiter)
-   sed 's|prps/prp_execution_reliability|prps/execution_reliability|g'
+   sed 's|prps/execution_reliability|prps/execution_reliability|g'
    ```
 
 ---
@@ -426,9 +426,9 @@ consolidate_directories()
    - **Why**: Prevent broken references
    - **Example**:
    ```bash
-   # When moving prps/prp_execution_reliability.md → prps/execution_reliability.md
+   # When moving prps/execution_reliability.md → prps/execution_reliability.md
    # Update all links in other files:
-   find . -name "*.md" -exec sed -i.bak 's|prps/prp_execution_reliability\.md|prps/execution_reliability.md|g' {} \;
+   find . -name "*.md" -exec sed -i.bak 's|prps/execution_reliability\.md|prps/execution_reliability.md|g' {} \;
    ```
 
 3. **Validate links after bulk operations**:
@@ -461,19 +461,19 @@ consolidate_directories()
 ```bash
 # Validation Pattern 1: Pre-flight checks
 echo "=== Pre-flight Validation ==="
-[ -d "prps/prp_execution_reliability" ] && echo "✓ Source directory exists" || echo "✗ Source missing"
+[ -d "prps/execution_reliability" ] && echo "✓ Source directory exists" || echo "✗ Source missing"
 [ -d "prps/execution_reliability" ] && echo "✓ Target directory exists" || echo "✗ Target missing"
-[ -f "prps/prp_execution_reliability.md" ] && echo "✓ PRP file exists" || echo "✗ PRP file missing"
+[ -f "prps/execution_reliability.md" ] && echo "✓ PRP file exists" || echo "✗ PRP file missing"
 
 # Validation Pattern 2: Count-based verification
 echo "=== File Count Validation ==="
-source_count=$(find prps/prp_execution_reliability -type f | wc -l)
+source_count=$(find prps/execution_reliability -type f | wc -l)
 echo "Files to move: $source_count"
 
 # Validation Pattern 3: Post-operation verification
 echo "=== Post-operation Checks ==="
-if [ -d "prps/prp_execution_reliability" ]; then
-    remaining=$(find prps/prp_execution_reliability -type f | wc -l)
+if [ -d "prps/execution_reliability" ]; then
+    remaining=$(find prps/execution_reliability -type f | wc -l)
     if [ "$remaining" -eq 0 ]; then
         echo "✓ Source directory empty"
     else
@@ -483,7 +483,7 @@ fi
 
 # Validation Pattern 4: Reference integrity check
 echo "=== Reference Integrity ==="
-old_refs=$(rg "prp_execution_reliability" prps/ --count-matches | wc -l)
+old_refs=$(rg "execution_reliability" prps/ --count-matches | wc -l)
 if [ "$old_refs" -eq 0 ]; then
     echo "✓ No old references found"
 else
@@ -520,7 +520,7 @@ def validate_consolidation():
     errors = []
 
     # Check 1: Old directory is gone
-    old_dir = Path("prps/prp_execution_reliability")
+    old_dir = Path("prps/execution_reliability")
     if old_dir.exists():
         errors.append(f"Old directory still exists: {old_dir}")
 
@@ -534,7 +534,7 @@ def validate_consolidation():
             errors.append(f"Missing expected directory: {path}")
 
     # Check 3: PRP file renamed
-    old_prp = Path("prps/prp_execution_reliability.md")
+    old_prp = Path("prps/execution_reliability.md")
     new_prp = Path("prps/execution_reliability.md")
 
     if old_prp.exists():

@@ -1,4 +1,4 @@
-# Examples Curated: prp_execution_reliability
+# Examples Curated: execution_reliability
 
 ## Summary
 
@@ -280,25 +280,25 @@ Add to PRP under "All Needed Context" → "Code Examples":
 
 **Primary References** (MUST READ before implementation):
 
-1. **prps/prp_execution_reliability/examples/example_task_completion_report.md**
+1. **prps/execution_reliability/examples/example_task_completion_report.md**
    - Gold standard for task completion reports
    - Shows all required sections with real examples
    - Pattern: Comprehensive file tracking, gotcha verification, dependency checks
    - Use this structure for new task-completion-report.md template
 
-2. **prps/prp_execution_reliability/examples/validation_gate_pattern.py**
+2. **prps/execution_reliability/examples/validation_gate_pattern.py**
    - Complete validation logic patterns (5 patterns)
    - PATTERN 2 (validate_report_exists) is the CORE validation gate
    - PATTERN 5 (calculate_report_coverage) enables metrics display
    - Copy these functions into execute-prp.md workflow
 
-3. **prps/prp_execution_reliability/examples/error_message_pattern.py**
+3. **prps/execution_reliability/examples/error_message_pattern.py**
    - Actionable error message design (5 formats)
    - format_missing_report_error() is the PRIMARY error format
    - Use structured format: Problem → Impact → Troubleshooting → Resolution
    - Enables self-service debugging
 
-4. **prps/prp_execution_reliability/examples/README.md**
+4. **prps/execution_reliability/examples/README.md**
    - Comprehensive "what to mimic" guidance
    - Pattern highlights with code snippets
    - Usage instructions for study → application
@@ -306,13 +306,13 @@ Add to PRP under "All Needed Context" → "Code Examples":
 
 **Templates for Enhancement**:
 
-5. **prps/prp_execution_reliability/examples/template_validation_report.md**
+5. **prps/execution_reliability/examples/template_validation_report.md**
    - Current validation-report.md structure
    - Shows iteration tracking table (critical for fix attempts)
    - Multi-level validation format
    - Enhance with any new validation levels
 
-6. **prps/prp_execution_reliability/examples/template_completion_report.md**
+6. **prps/execution_reliability/examples/template_completion_report.md**
    - Current completion-report.md structure
    - Shows metrics-driven reporting
    - Too generic for task reports - needs enhancement
@@ -388,7 +388,7 @@ Add to PRP "Implementation Blueprint" → "Pre-Implementation Steps":
 
 **BEFORE writing any code, MUST study examples**:
 
-1. **Read prps/prp_execution_reliability/examples/README.md** (~15-20 min)
+1. **Read prps/execution_reliability/examples/README.md** (~15-20 min)
    - Study all 5 examples in "What to Mimic" sections
    - Understand pattern highlights
    - Note "What to Adapt" for customization points
@@ -600,7 +600,7 @@ This is acceptable - stubs are clearly marked, and real implementation is obviou
 ## Files Summary
 
 ```
-prps/prp_execution_reliability/
+prps/execution_reliability/
 ├── examples/
 │   ├── README.md                                  # NEW (850 lines) - Comprehensive guidance
 │   ├── template_validation_report.md              # NEW (106 lines) - Reference template

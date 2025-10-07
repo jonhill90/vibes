@@ -9,7 +9,7 @@
 
 ## Goal
 
-Clean up naming inconsistencies and misplaced files from the `prp_execution_reliability` PRP execution. Consolidate all artifacts under `prps/execution_reliability/`, update all references in documentation to reflect the correct (non-redundant) naming convention, and establish clear template location guidelines.
+Clean up naming inconsistencies and misplaced files from the `execution_reliability` PRP execution. Consolidate all artifacts under `prps/execution_reliability/`, update all references in documentation to reflect the correct (non-redundant) naming convention, and establish clear template location guidelines.
 
 **End State**:
 - Single directory: `prps/execution_reliability/` (consolidated)
@@ -23,11 +23,11 @@ Clean up naming inconsistencies and misplaced files from the `prp_execution_reli
 ## Why
 
 **Current Pain Points**:
-1. **Split directories**: `prps/prp_execution_reliability/` and `prps/execution_reliability/` cause confusion
-2. **Redundant naming**: `prp_execution_reliability` has redundant `prp_` prefix (already in `prps/` directory)
+1. **Split directories**: `prps/execution_reliability/` and `prps/execution_reliability/` cause confusion
+2. **Redundant naming**: `execution_reliability` has redundant `prp_` prefix (already in `prps/` directory)
 3. **Misplaced test script**: `test_validation_gates_script.py` in root (should be in tests/ or with test PRP)
 4. **Template confusion**: Two template locations (`.claude/templates/` vs `prps/templates/`) without clear documentation
-5. **Inconsistent references**: PRP documentation uses old `prp_execution_reliability` naming
+5. **Inconsistent references**: PRP documentation uses old `execution_reliability` naming
 
 **Business Value**:
 - Clean directory structure for future PRPs
@@ -43,24 +43,24 @@ Clean up naming inconsistencies and misplaced files from the `prp_execution_reli
 ### Core Tasks
 
 1. **Consolidate Directories**
-   - Move `prps/prp_execution_reliability/examples/` → `prps/execution_reliability/examples/`
-   - Move `prps/prp_execution_reliability/planning/` → `prps/execution_reliability/planning/`
-   - Move `prps/prp_execution_reliability/execution/TASK8_TEST_RESULTS.md` → `prps/execution_reliability/execution/`
-   - Delete empty `prps/prp_execution_reliability/` directory
+   - Move `prps/execution_reliability/examples/` → `prps/execution_reliability/examples/`
+   - Move `prps/execution_reliability/planning/` → `prps/execution_reliability/planning/`
+   - Move `prps/execution_reliability/execution/TASK8_TEST_RESULTS.md` → `prps/execution_reliability/execution/`
+   - Delete empty `prps/execution_reliability/` directory
    - Verify no broken references
 
 2. **Rename PRP File**
-   - Rename `prps/prp_execution_reliability.md` → `prps/execution_reliability.md`
+   - Rename `prps/execution_reliability.md` → `prps/execution_reliability.md`
    - Update Archon project reference (if needed)
    - Update any git history references (optional)
 
 3. **Update All Documentation References**
    - Update `prps/execution_reliability.md` (the PRP itself):
-     - Replace all `prp_execution_reliability` → `execution_reliability`
+     - Replace all `execution_reliability` → `execution_reliability`
      - Update file paths in "All Needed Context"
      - Update example paths in "Implementation Blueprint"
    - Update all TASK*_COMPLETION.md reports:
-     - Fix any references to `prp_execution_reliability`
+     - Fix any references to `execution_reliability`
    - Update EXECUTION_SUMMARY.md:
      - Fix feature name references
      - Update file paths
@@ -81,11 +81,11 @@ Clean up naming inconsistencies and misplaced files from the `prp_execution_reli
 
 - [ ] All artifacts under single directory: `prps/execution_reliability/`
 - [ ] PRP file renamed: `prps/execution_reliability.md` (no `prp_` prefix)
-- [ ] All documentation uses `execution_reliability` (not `prp_execution_reliability`)
+- [ ] All documentation uses `execution_reliability` (not `execution_reliability`)
 - [ ] Test script moved to appropriate location (not in root)
 - [ ] Template locations documented in `.claude/templates/README.md`
 - [ ] No broken references (all file paths work)
-- [ ] `find . -name "*prp_execution_reliability*"` returns only historical git commits
+- [ ] `find . -name "*execution_reliability*"` returns only historical git commits
 
 ---
 
@@ -93,34 +93,34 @@ Clean up naming inconsistencies and misplaced files from the `prp_execution_reli
 
 ```yaml
 Task 1: Consolidate Directory Structure
-RESPONSIBILITY: Move all prp_execution_reliability/ contents to execution_reliability/
+RESPONSIBILITY: Move all execution_reliability/ contents to execution_reliability/
 FILES TO MODIFY:
-  - Directory: prps/prp_execution_reliability/ (delete after move)
+  - Directory: prps/execution_reliability/ (delete after move)
   - Directory: prps/execution_reliability/ (consolidate into)
 SPECIFIC STEPS:
   1. Verify prps/execution_reliability/execution/ has TASK1-8 completion reports
-  2. Move prps/prp_execution_reliability/examples/ → prps/execution_reliability/examples/
-  3. Move prps/prp_execution_reliability/planning/ → prps/execution_reliability/planning/
-  4. Move prps/prp_execution_reliability/execution/TASK8_TEST_RESULTS.md → prps/execution_reliability/execution/
-  5. Verify prps/prp_execution_reliability/ is empty
-  6. Delete prps/prp_execution_reliability/ directory
+  2. Move prps/execution_reliability/examples/ → prps/execution_reliability/examples/
+  3. Move prps/execution_reliability/planning/ → prps/execution_reliability/planning/
+  4. Move prps/execution_reliability/execution/TASK8_TEST_RESULTS.md → prps/execution_reliability/execution/
+  5. Verify prps/execution_reliability/ is empty
+  6. Delete prps/execution_reliability/ directory
   7. Verify all files accessible at new locations
 VALIDATION:
   - prps/execution_reliability/ contains: examples/, planning/, execution/
-  - prps/prp_execution_reliability/ does not exist
+  - prps/execution_reliability/ does not exist
   - All files readable at new paths
 
 Task 2: Rename PRP File
 RESPONSIBILITY: Rename PRP to match non-redundant naming convention
 FILES TO MODIFY:
-  - prps/prp_execution_reliability.md → prps/execution_reliability.md
+  - prps/execution_reliability.md → prps/execution_reliability.md
 SPECIFIC STEPS:
-  1. mv prps/prp_execution_reliability.md prps/execution_reliability.md
+  1. mv prps/execution_reliability.md prps/execution_reliability.md
   2. Update PRP header "Generated Based On" if it references old name
   3. Check if Archon project reference needs updating (optional)
 VALIDATION:
   - prps/execution_reliability.md exists
-  - prps/prp_execution_reliability.md does not exist
+  - prps/execution_reliability.md does not exist
   - File content intact (no corruption)
 
 Task 3: Update PRP Documentation References
@@ -129,16 +129,16 @@ FILES TO MODIFY:
   - prps/execution_reliability.md
 SPECIFIC STEPS:
   1. Read prps/execution_reliability.md
-  2. Find all instances of "prp_execution_reliability"
+  2. Find all instances of "execution_reliability"
   3. Replace with "execution_reliability" (preserve formatting)
   4. Update file paths in "All Needed Context" section:
-     - /Users/jon/source/vibes/prps/prp_execution_reliability/examples/README.md
-     - /Users/jon/source/vibes/prps/prp_execution_reliability/examples/*.md
-     - /Users/jon/source/vibes/prps/prp_execution_reliability/examples/*.py
+     - /Users/jon/source/vibes/prps/execution_reliability/examples/README.md
+     - /Users/jon/source/vibes/prps/execution_reliability/examples/*.md
+     - /Users/jon/source/vibes/prps/execution_reliability/examples/*.py
   5. Update paths in "Implementation Blueprint" task steps
   6. Verify markdown formatting preserved
 VALIDATION:
-  - No instances of "prp_execution_reliability" in PRP (except git references)
+  - No instances of "execution_reliability" in PRP (except git references)
   - All file paths use execution_reliability
   - Markdown renders correctly
 
@@ -155,7 +155,7 @@ FILES TO MODIFY:
   - prps/execution_reliability/execution/TASK8_COMPLETION.md
 SPECIFIC STEPS:
   1. For each TASK*_COMPLETION.md:
-     - Find all "prp_execution_reliability" references
+     - Find all "execution_reliability" references
      - Replace with "execution_reliability"
      - Update file paths in examples/references
   2. Verify no broken links
@@ -170,7 +170,7 @@ FILES TO MODIFY:
   - prps/execution_reliability/execution/EXECUTION_SUMMARY.md
 SPECIFIC STEPS:
   1. Read EXECUTION_SUMMARY.md
-  2. Replace all "prp_execution_reliability" → "execution_reliability"
+  2. Replace all "execution_reliability" → "execution_reliability"
   3. Update file paths throughout document
   4. Update directory references in "Files Summary" section
 VALIDATION:
@@ -227,7 +227,7 @@ FILES TO TEST:
   - All documentation files
   - All code references
 SPECIFIC STEPS:
-  1. grep -r "prp_execution_reliability" . --exclude-dir=.git
+  1. grep -r "execution_reliability" . --exclude-dir=.git
      - Should return 0 results (except git history)
   2. Test file paths from documentation:
      - Pick 5 random file paths from PRP/completion reports
@@ -239,7 +239,7 @@ SPECIFIC STEPS:
      - Check new location (tests/validation/ or prps/test_validation_gates/)
      - Run basic validation (python test_script.py --help or similar)
 VALIDATION:
-  - No instances of "prp_execution_reliability" in codebase (except git)
+  - No instances of "execution_reliability" in codebase (except git)
   - All file paths from docs resolve correctly
   - Directory structure matches expected layout
   - Test script runs from new location
@@ -256,7 +256,7 @@ ls prps/execution_reliability/
 # Should show: examples/ planning/ execution/
 
 # Verify no old directory
-ls prps/prp_execution_reliability/ 2>&1
+ls prps/execution_reliability/ 2>&1
 # Should error: No such file or directory
 
 # Verify PRP renamed
@@ -271,11 +271,11 @@ ls test_validation_gates_script.py 2>&1
 ### Level 2: Content Updates
 ```bash
 # Check for old references in PRP
-grep -c "prp_execution_reliability" prps/execution_reliability.md
+grep -c "execution_reliability" prps/execution_reliability.md
 # Should be: 0 (or very few, like in git references)
 
 # Check for old references in completion reports
-grep -r "prp_execution_reliability" prps/execution_reliability/execution/
+grep -r "execution_reliability" prps/execution_reliability/execution/
 # Should be: empty or minimal
 
 # Verify paths in documentation
@@ -299,7 +299,7 @@ grep -A 5 "Template Locations" CLAUDE.md
 ## Success Metrics
 
 ### Quantitative
-- 0 instances of "prp_execution_reliability" in docs (except git history)
+- 0 instances of "execution_reliability" in docs (except git history)
 - 1 directory: prps/execution_reliability/ (not 2)
 - 0 files in root matching test_validation_gates_script.py
 - 100% of file paths in docs resolve correctly

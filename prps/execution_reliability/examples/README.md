@@ -709,9 +709,9 @@ These examples should be:
    ## All Needed Context
 
    ### Code Examples
-   - prps/prp_execution_reliability/examples/validation_gate_pattern.py (validation logic)
-   - prps/prp_execution_reliability/examples/error_message_pattern.py (error messages)
-   - prps/prp_execution_reliability/examples/example_task_completion_report.md (report structure)
+   - prps/execution_reliability/examples/validation_gate_pattern.py (validation logic)
+   - prps/execution_reliability/examples/error_message_pattern.py (error messages)
+   - prps/execution_reliability/examples/example_task_completion_report.md (report structure)
    ```
 
 2. **Studied** before implementation:
@@ -823,6 +823,6 @@ These examples should be:
 ---
 
 Generated: 2025-10-06
-Feature: prp_execution_reliability
+Feature: execution_reliability
 Total Examples: 5 files
 Quality Score: 9.5/10

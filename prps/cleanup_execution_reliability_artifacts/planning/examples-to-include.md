@@ -352,12 +352,12 @@ Implementer has everything needed to understand and apply patterns.
 
 **Key Findings**:
 - **prp_context_refactor/examples/**: Similar cleanup examples (README compression, pattern extraction)
-- **prp_execution_reliability/examples/validation_gate_pattern.py**: Validation patterns (EAFP, error messages)
+- **execution_reliability/examples/validation_gate_pattern.py**: Validation patterns (EAFP, error messages)
 - **test_validation_gates_script.py**: Test-driven validation, actionable error messages
 
 **Extraction Strategy**:
 - Read prp_context_refactor README for inspiration on structure
-- Extract validation patterns from prp_execution_reliability
+- Extract validation patterns from execution_reliability
 - Create new bash/Python scripts for file operations (no existing scripts found)
 - Use git best practices and pathlib documentation for safe operations
 

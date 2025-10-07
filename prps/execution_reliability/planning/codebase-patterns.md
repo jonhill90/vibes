@@ -251,7 +251,7 @@ Write(report_path, report_content)
 ---
 
 ### Pattern 5: Explicit Subagent Output Requirements
-**Source**: Analysis of feature-analysis.md, INITIAL_prp_execution_reliability.md
+**Source**: Analysis of feature-analysis.md, INITIAL_execution_reliability.md
 **Relevance**: 10/10
 **What it does**: Uses "CRITICAL OUTPUT REQUIREMENTS" and "INCOMPLETE without" language to enforce mandatory outputs from subagents
 
@@ -473,7 +473,7 @@ if not os.path.exists(report_path):
 ```
 
 ### 5. Glob Pattern for Report Discovery
-**Location**: Used in INITIAL_prp_execution_reliability.md
+**Location**: Used in INITIAL_execution_reliability.md
 **Purpose**: Find all task reports matching pattern
 **Usage Example**:
 ```python
@@ -587,7 +587,7 @@ Your task is INCOMPLETE without the completion report.
 ### 4. Hardcoded Paths Without Variables
 **What it is**: Paths like `prps/execution/report.md` instead of `prps/{feature_name}/execution/report.md`
 **Why to avoid**: Only works for single feature, not reusable
-**Found in**: INITIAL_prp_execution_reliability.md analysis identified this issue (already fixed)
+**Found in**: INITIAL_execution_reliability.md analysis identified this issue (already fixed)
 **Better approach**:
 ```python
 # WRONG (hardcoded)

@@ -11,7 +11,7 @@ set -u  # Exit on undefined variable
 # PATTERN 1: Directory Consolidation with Git History Preservation
 # =============================================================================
 # Use Case: Moving contents from split directory to consolidated location
-# Example: prps/prp_execution_reliability/ → prps/execution_reliability/
+# Example: prps/execution_reliability/ → prps/execution_reliability/
 
 # Function: Safe directory move with pre-flight checks
 move_directory_contents() {
@@ -50,7 +50,7 @@ move_directory_contents() {
 # PATTERN 2: File Rename with Git History Preservation
 # =============================================================================
 # Use Case: Renaming files to remove redundant prefixes
-# Example: prp_execution_reliability.md → execution_reliability.md
+# Example: execution_reliability.md → execution_reliability.md
 
 rename_file_with_git() {
     local old_path="$1"
@@ -152,7 +152,7 @@ consolidate_execution_reliability_example() {
     fi
 
     # Step 2: Define paths
-    SOURCE_DIR="prps/prp_execution_reliability"
+    SOURCE_DIR="prps/execution_reliability"
     DEST_DIR="prps/execution_reliability"
 
     # Step 3: Move directory contents
@@ -177,7 +177,7 @@ consolidate_execution_reliability_example() {
     # Step 5: Rename PRP file
     echo ""
     echo "Step 5/5: Renaming PRP file"
-    rename_file_with_git "prps/prp_execution_reliability.md" "prps/execution_reliability.md"
+    rename_file_with_git "prps/execution_reliability.md" "prps/execution_reliability.md"
 
     echo ""
     echo "========================================="

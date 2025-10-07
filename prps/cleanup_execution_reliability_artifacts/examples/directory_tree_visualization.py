@@ -299,8 +299,8 @@ def document_execution_reliability_cleanup():
 
     before_structure = """
 prps/
-├── prp_execution_reliability.md (PRP file with redundant prefix)
-├── prp_execution_reliability/
+├── execution_reliability.md (PRP file with redundant prefix)
+├── execution_reliability/
 │   ├── examples/ (split location 1)
 │   │   └── validation_gate_pattern.py
 │   ├── planning/ (split location 1)

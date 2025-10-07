@@ -16,7 +16,7 @@ This directory contains 4 extracted code examples demonstrating file operation p
 |------|--------|---------|-----------|
 | git_mv_operations.sh | Feature analysis + git best practices | Directory consolidation with git history preservation | 10/10 |
 | multi_file_find_replace.py | Feature analysis + prp_context_refactor | Safe multi-file text replacement with validation | 10/10 |
-| validation_checks.sh | prp_execution_reliability validation patterns | Comprehensive validation suite for file operations | 10/10 |
+| validation_checks.sh | execution_reliability validation patterns | Comprehensive validation suite for file operations | 10/10 |
 | directory_tree_visualization.py | Feature analysis + documentation needs | Before/after directory structure visualization | 9/10 |
 
 ---
@@ -66,12 +66,12 @@ move_directory_contents() {
 #### 2. Always Use `git mv` Not Shell `mv`
 ```bash
 # ✅ CORRECT: Preserves git history
-git mv prps/prp_execution_reliability/examples prps/execution_reliability/examples
+git mv prps/execution_reliability/examples prps/execution_reliability/examples
 
 # ❌ WRONG: Loses git history (appears as delete + add)
-mv prps/prp_execution_reliability/examples prps/execution_reliability/examples
+mv prps/execution_reliability/examples prps/execution_reliability/examples
 git add prps/execution_reliability/examples
-git rm -r prps/prp_execution_reliability/examples
+git rm -r prps/execution_reliability/examples
 ```
 
 **Why this matters**: Git history is invaluable for debugging. `git mv` maintains the connection between old and new locations, making `git blame` and `git log` work correctly.
@@ -177,7 +177,7 @@ Directory consolidation is risky - you're moving multiple files/directories and 
 # Step 1: Preview changes (dry_run=True)
 dry_run_results = find_replace_in_files(
     file_paths,
-    old_text="prp_execution_reliability",
+    old_text="execution_reliability",
     new_text="execution_reliability",
     dry_run=True  # Don't modify files yet
 )
@@ -192,7 +192,7 @@ response = input("Proceed with replacement? (yes/no): ")
 if response == "yes":
     actual_results = find_replace_in_files(
         file_paths,
-        old_text="prp_execution_reliability",
+        old_text="execution_reliability",
         new_text="execution_reliability",
         dry_run=False  # Now modify files
     )
@@ -226,7 +226,7 @@ except Exception as e:
 # After replacement, verify no old references remain
 all_clean, remaining_refs = validate_no_old_references(
     directory=Path("prps/execution_reliability"),
-    old_text="prp_execution_reliability"
+    old_text="execution_reliability"
 )
 
 if not all_clean:
@@ -320,7 +320,7 @@ Documentation updates require changing multiple files atomically. This example s
 ## Example 3: Validation Checks
 
 **File**: `validation_checks.sh`
-**Source**: prp_execution_reliability validation patterns + feature analysis
+**Source**: execution_reliability validation patterns + feature analysis
 **Relevance**: 10/10
 
 ### What to Mimic
@@ -615,7 +615,7 @@ def generate_markdown_tree(directory, include_stats=True):
 
 # 1. Before state (conceptual or actual)
 print("BEFORE:")
-print_tree(Path("prps/prp_execution_reliability"))
+print_tree(Path("prps/execution_reliability"))
 
 # 2. After state (actual)
 print("\nAFTER:")
@@ -691,7 +691,7 @@ source examples/validation_checks.sh
 run_comprehensive_validation "execution_reliability"
 
 # 3. Or run individual checks
-validate_no_old_references "prps/execution_reliability" "prp_execution_reliability"
+validate_no_old_references "prps/execution_reliability" "execution_reliability"
 validate_markdown_file_paths "prps/execution_reliability.md"
 ```
 
@@ -821,7 +821,7 @@ These examples should be:
 - **cleanup_execution_reliability_artifacts feature-analysis.md**: Comprehensive requirements, validation patterns, before/after directory structure
 
 ### From Local Codebase
-- **prp_execution_reliability/examples/validation_gate_pattern.py**: Validation patterns (EAFP, error messages, coverage calculation)
+- **execution_reliability/examples/validation_gate_pattern.py**: Validation patterns (EAFP, error messages, coverage calculation)
 - **test_validation_gates_script.py**: Test-driven validation examples, actionable error messages
 
 ### From Best Practices

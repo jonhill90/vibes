@@ -1,5 +1,5 @@
 #!/bin/bash
-# Source: Feature analysis + prp_execution_reliability validation patterns
+# Source: Feature analysis + execution_reliability validation patterns
 # Pattern: Validation scripts for verifying file operations and documentation updates
 # Extracted: 2025-10-07
 # Relevance: 10/10 - Essential validation patterns for cleanup verification

@@ -1,7 +1,7 @@
 # PRP Execution Summary: execution_reliability
 
 **Executed**: 2025-10-07
-**PRP**: prps/prp_execution_reliability.md
+**PRP**: prps/execution_reliability.md
 **Feature**: execution_reliability
 **Status**: ✅ COMPLETE
 
@@ -376,7 +376,7 @@ if metrics['coverage_percentage'] < 100:
 
 **Documentation** (3 files):
 - `prps/execution_reliability/execution/execution-plan.md` (dependency analysis)
-- `prps/prp_execution_reliability/execution/TASK8_TEST_RESULTS.md` (test results)
+- `prps/execution_reliability/execution/TASK8_TEST_RESULTS.md` (test results)
 - `prps/execution_reliability/execution/EXECUTION_SUMMARY.md` (this file)
 
 ### Modified Files (2 total)

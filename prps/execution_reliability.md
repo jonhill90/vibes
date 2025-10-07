@@ -1,7 +1,7 @@
 # PRP: Execution Reliability - Mandatory Report Generation & Validation Gates
 
 **Generated**: 2025-10-06
-**Based On**: prps/INITIAL_prp_execution_reliability.md
+**Based On**: prps/INITIAL_execution_reliability.md
 **Archon Project**: 001819fc-bfa3-41d5-a7df-c49eab180269
 
 ---
@@ -149,22 +149,22 @@ Make PRP execution 100% reliable for both implementation AND documentation by en
     - Use string.Template or validate variables before .format()
 
 # ESSENTIAL LOCAL FILES
-- file: /Users/jon/source/vibes/prps/prp_execution_reliability/examples/README.md
+- file: /Users/jon/source/vibes/prps/execution_reliability/examples/README.md
   why: Comprehensive "what to mimic" guidance for all 5 examples
   pattern: Study phase → application phase workflow
   critical: All patterns needed for implementation extracted
 
-- file: /Users/jon/source/vibes/prps/prp_execution_reliability/examples/example_task_completion_report.md
+- file: /Users/jon/source/vibes/prps/execution_reliability/examples/example_task_completion_report.md
   why: GOLD STANDARD structure for task completion reports
   pattern: Files tracking, gotcha verification, dependency checks
   critical: Use this structure for new task-completion-report.md template
 
-- file: /Users/jon/source/vibes/prps/prp_execution_reliability/examples/validation_gate_pattern.py
+- file: /Users/jon/source/vibes/prps/execution_reliability/examples/validation_gate_pattern.py
   why: 5 validation patterns (existence, sections, loop, coverage, security)
   pattern: validate_report_exists() is THE core validation gate
   critical: Copy PATTERN 2 into execute-prp.md Phase 2
 
-- file: /Users/jon/source/vibes/prps/prp_execution_reliability/examples/error_message_pattern.py
+- file: /Users/jon/source/vibes/prps/execution_reliability/examples/error_message_pattern.py
   why: Actionable error message design (5 formats)
   pattern: Problem → Impact → Troubleshooting → Resolution structure
   critical: format_missing_report_error() for all validation failures
@@ -505,7 +505,7 @@ if not report_path.exists():
 **BEFORE starting implementation, complete these steps:**
 
 1. **Study Examples** (~40-45 minutes total)
-   - Read `/Users/jon/source/vibes/prps/prp_execution_reliability/examples/README.md`
+   - Read `/Users/jon/source/vibes/prps/execution_reliability/examples/README.md`
    - Study `example_task_completion_report.md` (GOLD STANDARD structure)
    - Review `validation_gate_pattern.py` (5 validation patterns)
    - Review `error_message_pattern.py` (actionable error formats)
@@ -924,7 +924,7 @@ VALIDATION:
 ```python
 # Task 1: Template Creation
 # Load gold standard example
-example = Read("/Users/jon/source/vibes/prps/prp_execution_reliability/examples/example_task_completion_report.md")
+example = Read("/Users/jon/source/vibes/prps/execution_reliability/examples/example_task_completion_report.md")
 
 # Extract structure, replace values with {variables}
 template_content = convert_to_template(example)
