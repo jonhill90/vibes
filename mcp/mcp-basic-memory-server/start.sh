@@ -13,7 +13,8 @@ cat > /root/.basic-memory/config.json << 'CONFIG'
   "projects": {
     "obsidian": "/obsidian-vault"
   },
-  "default_project": "obsidian"
+  "default_project": "obsidian",
+  "default_project_mode": true
 }
 CONFIG
 
