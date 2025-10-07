@@ -17,23 +17,60 @@ Generate a complete PRP with thorough research using a 5-phase multi-subagent ap
 initial_md_path = "$ARGUMENTS"
 initial_content = Read(initial_md_path)
 
-# 2. Extract and validate feature name (SECURITY: 5 checks)
+# 2. Extract and validate feature name (SECURITY: 6 levels of validation)
 # See .claude/patterns/security-validation.md for details
 import re
 
-def extract_feature_name(filepath: str, strip_prefix: str = None) -> str:
+def extract_feature_name(filepath: str, strip_prefix: str = None, validate_no_redundant: bool = True) -> str:
+    # Whitelist of allowed prefixes (security enhancement)
+    ALLOWED_PREFIXES = {"INITIAL_", "EXAMPLE_"}
+
     if ".." in filepath: raise ValueError(f"Path traversal: {filepath}")
     basename = filepath.split("/")[-1]
     feature = basename.replace(".md", "")
-    if strip_prefix: feature = feature.replace(strip_prefix, "")
+    # CRITICAL: Use removeprefix() instead of replace() to only strip leading prefix
+    # replace() removes ALL occurrences (e.g., "INITIAL_INITIAL_test" -> "test")
+    # removeprefix() only removes from start (e.g., "INITIAL_INITIAL_test" -> "INITIAL_test")
+    # See: PEP 616 (https://peps.python.org/pep-0616/) for rationale
+    if strip_prefix:
+        if strip_prefix not in ALLOWED_PREFIXES:
+            raise ValueError(
+                f"Invalid strip_prefix: '{strip_prefix}'\n"
+                f"Allowed prefixes: {', '.join(ALLOWED_PREFIXES)}\n"
+                f"Never use 'prp_' as strip_prefix"
+            )
+        feature = feature.removeprefix(strip_prefix)
+        if not feature:
+            raise ValueError(
+                f"Empty feature name after stripping prefix '{strip_prefix}'\n"
+                f"File: {filepath}\n"
+                f"Fix: Rename file with actual feature name after prefix"
+            )
     if not re.match(r'^[a-zA-Z0-9_-]+$', feature): raise ValueError(f"Invalid: {feature}")
     if len(feature) > 50: raise ValueError(f"Too long: {len(feature)}")
     if ".." in feature or "/" in feature or "\\" in feature: raise ValueError(f"Traversal: {feature}")
     dangerous = ['$', '`', ';', '&', '|', '>', '<', '\n', '\r']
     if any(c in feature for c in dangerous): raise ValueError(f"Dangerous chars: {feature}")
+    # Level 6: Redundant prefix validation (strict enforcement for new PRPs)
+    # This prevents creating new PRPs with prp_ prefix (e.g., prps/prp_feature.md)
+    # Fail immediately - no try/except wrapper to ensure violations are caught early
+    if validate_no_redundant and feature.startswith("prp_"):
+        raise ValueError(
+            f"❌ Redundant 'prp_' prefix detected: '{feature}'\n"
+            f"\n"
+            f"PROBLEM: Files are in prps/ directory - prefix is redundant\n"
+            f"EXPECTED: '{feature.removeprefix('prp_')}'\n"
+            f"\n"
+            f"RESOLUTION:\n"
+            f"Rename: prps/{feature}.md → prps/{feature.removeprefix('prp_')}.md\n"
+            f"\n"
+            f"See: .claude/conventions/prp-naming.md for naming rules"
+        )
     return feature
 
-feature_name = extract_feature_name(initial_md_path, strip_prefix="INITIAL_")
+# Strict validation for NEW PRPs - reject prp_ prefix immediately (no try/except)
+# This enforces naming convention from the start of PRP generation workflow
+feature_name = extract_feature_name(initial_md_path, strip_prefix="INITIAL_", validate_no_redundant=True)
 
 # 3. Create scoped directories (per-feature, not global)
 Bash(f"mkdir -p prps/{feature_name}/planning")

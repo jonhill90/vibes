@@ -38,8 +38,9 @@ def extract_feature_name_current(filepath: str, strip_prefix: str = None) -> str
     feature = filepath.split("/")[-1].replace(".md", "")
 
     # GOTCHA: replace() replaces ALL occurrences, not just prefix
+    # FIXED: Use removeprefix() instead - only removes leading prefix
     if strip_prefix:
-        feature = feature.replace(strip_prefix, "")
+        feature = feature.removeprefix(strip_prefix)
 
     if not re.match(r'^[a-zA-Z0-9_-]+$', feature):
         raise ValueError(f"Invalid: {feature}")

@@ -15,16 +15,106 @@ prp_content = Read(prp_path)
 import re
 from pathlib import Path
 
-def extract_feature_name(filepath: str, strip_prefix: str = None) -> str:
+def extract_feature_name(filepath: str, strip_prefix: str = None, validate_no_redundant: bool = True) -> str:
+    """6-level security validation for feature names (see .claude/patterns/security-validation.md).
+
+    Args:
+        filepath: Path to PRP file (e.g., "prps/INITIAL_feature.md")
+        strip_prefix: Optional prefix to strip (e.g., "INITIAL_")
+        validate_no_redundant: If True, reject prp_ prefix (strict for new PRPs)
+
+    Returns:
+        Validated feature name
+
+    Raises:
+        ValueError: If validation fails with actionable error message
+    """
+    # Whitelist of allowed prefixes (security enhancement)
+    ALLOWED_PREFIXES = {"INITIAL_", "EXAMPLE_"}
+
+    # Level 1: Path traversal in full path
     if ".." in filepath: raise ValueError(f"Path traversal: {filepath}")
+
+    # Extract basename, remove extension
     feature = filepath.split("/")[-1].replace(".md", "")
-    if strip_prefix: feature = feature.replace(strip_prefix, "")
+
+    # Validate strip_prefix parameter itself (prevents path traversal via parameter)
+    if strip_prefix:
+        if strip_prefix not in ALLOWED_PREFIXES:
+            raise ValueError(
+                f"Invalid strip_prefix: '{strip_prefix}'\n"
+                f"Allowed prefixes: {', '.join(ALLOWED_PREFIXES)}\n"
+                f"Never use 'prp_' as strip_prefix"
+            )
+        # CRITICAL FIX: Use removeprefix() instead of replace()
+        # removeprefix() only removes the prefix from START of string (if present)
+        # replace() would remove ALL occurrences (bug if prefix appears multiple times)
+        # Example: "INITIAL_INITIAL_test" with replace("INITIAL_", "") → "test" (WRONG - both removed)
+        # Example: "INITIAL_INITIAL_test" with removeprefix("INITIAL_") → "INITIAL_test" (CORRECT)
+        feature = feature.removeprefix(strip_prefix)
+
+        # Check for empty result after stripping
+        if not feature:
+            raise ValueError(
+                f"Empty feature name after stripping prefix '{strip_prefix}'\n"
+                f"File: {filepath}\n"
+                f"Fix: Rename file with actual feature name after prefix"
+            )
+
+    # Level 2: Whitelist (alphanumeric + _ - only)
     if not re.match(r'^[a-zA-Z0-9_-]+$', feature): raise ValueError(f"Invalid: {feature}")
+
+    # Level 3: Length (max 50 chars)
     if len(feature) > 50: raise ValueError(f"Too long: {len(feature)}")
+
+    # Level 4: Directory traversal in extracted name
+    if ".." in feature or "/" in feature or "\\" in feature: raise ValueError(f"Path traversal: {feature}")
+
+    # Level 5: Command injection
     if any(c in feature for c in ['$','`',';','&','|','>','<','\n','\r']): raise ValueError(f"Dangerous: {feature}")
+
+    # Level 6: Redundant prefix validation (NEW - from Task 4)
+    if validate_no_redundant and feature.startswith("prp_"):
+        raise ValueError(
+            f"❌ Redundant 'prp_' prefix detected: '{feature}'\n"
+            f"\n"
+            f"PROBLEM: Files are in prps/ directory - prefix is redundant\n"
+            f"EXPECTED: '{feature.removeprefix('prp_')}'\n"
+            f"\n"
+            f"RESOLUTION:\n"
+            f"Rename: prps/{feature}.md → prps/{feature.removeprefix('prp_')}.md\n"
+            f"\n"
+            f"See: .claude/conventions/prp-naming.md for naming rules"
+        )
+
     return feature
 
-feature_name = extract_feature_name(prp_path)
+# Auto-detect INITIAL_ prefix in filename (improves developer experience)
+# Developers no longer need to remember to use strip_prefix parameter
+# If filename starts with INITIAL_, automatically strip it for directory naming
+filename = prp_path.split("/")[-1]
+
+# BACKWARD COMPATIBILITY: Use validate_no_redundant=False for existing PRPs
+# This allows legacy PRPs with prp_ prefix to execute with warnings instead of errors
+# New PRPs will be validated strictly by generate-prp.md with validate_no_redundant=True
+try:
+    if filename.startswith("INITIAL_"):
+        # Strip INITIAL_ prefix for directory naming
+        feature_name = extract_feature_name(prp_path, strip_prefix="INITIAL_", validate_no_redundant=False)
+    else:
+        # No prefix to strip, but still validate (permissive mode)
+        feature_name = extract_feature_name(prp_path, validate_no_redundant=False)
+except ValueError as e:
+    # Graceful handling: warn but continue execution for backward compatibility
+    print(f"⚠️ WARNING: Naming convention issue detected:")
+    print(str(e))
+    print("\nThis PRP may not follow current naming standards.")
+    print("Continuing execution for backward compatibility...")
+    # Extract feature name without validation for legacy support
+    feature_name = prp_path.split("/")[-1].replace(".md", "")
+    if filename.startswith("INITIAL_"):
+        feature_name = feature_name.removeprefix("INITIAL_")
+
 Bash(f"mkdir -p prps/{feature_name}/execution")
 
 # 3. Validation Gate Functions (see prps/prp_execution_reliability/examples/)

@@ -95,6 +95,24 @@ rag_search_code_examples(query="React hooks", match_count=3)
 
 **Details**: See README.md
 
+### PRP Naming Convention
+
+See [.claude/conventions/prp-naming.md](.claude/conventions/prp-naming.md) for complete naming rules.
+
+**Quick Reference**:
+- **PRP files**: `prps/{feature_name}.md` (no prp_ prefix)
+- **Initial PRPs**: `prps/INITIAL_{feature_name}.md` (auto-detected by execute-prp)
+- **Directories**: `prps/{feature_name}/` (matches PRP filename without prefix)
+- **Valid characters**: Letters, numbers, underscore (_), hyphen (-)
+- **Never use**: `prp_` prefix (redundant - files are already in prps/ directory)
+
+**Examples**:
+```
+✅ CORRECT: prps/user_auth.md → prps/user_auth/
+✅ CORRECT: prps/INITIAL_new_feature.md → prps/new_feature/
+❌ WRONG: prps/prp_feature.md (redundant prp_ prefix)
+```
+
 ---
 
 ## Quality Standards

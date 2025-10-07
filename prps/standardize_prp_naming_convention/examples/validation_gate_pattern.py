@@ -46,8 +46,9 @@ def extract_feature_name(filepath: str, strip_prefix: Optional[str] = None) -> s
     feature = filepath.split("/")[-1].replace(".md", "")
 
     # Remove optional prefix
+    # Use removeprefix() instead of replace() - only removes leading prefix, not all occurrences
     if strip_prefix:
-        feature = feature.replace(strip_prefix, "")
+        feature = feature.removeprefix(strip_prefix)
 
     # Check 2: Valid characters only (alphanumeric, underscore, hyphen)
     if not re.match(r'^[a-zA-Z0-9_-]+$', feature):

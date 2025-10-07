@@ -51,11 +51,11 @@ def extract_feature_name(filepath: str, strip_prefix: str = None) -> str:
     feature = filepath.split("/")[-1].replace(".md", "")
 
     # Strip optional prefix (e.g., "INITIAL_")
-    # NOTE: Current implementation uses replace() which replaces ALL occurrences
-    # GOTCHA: If feature name contains prefix multiple times, all are removed
-    # SOLUTION: See filename_extraction_logic.py for improved version
+    # FIXED: Use removeprefix() instead of replace() - only removes leading prefix
+    # The old replace() implementation would remove ALL occurrences (bug)
+    # removeprefix() only removes from start (correct behavior per PEP 616)
     if strip_prefix:
-        feature = feature.replace(strip_prefix, "")
+        feature = feature.removeprefix(strip_prefix)
 
     # LEVEL 2: Whitelist validation (alphanumeric + underscore + hyphen only)
     # Prevents: Special characters, spaces, unicode, etc.
