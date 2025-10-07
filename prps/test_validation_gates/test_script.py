@@ -24,7 +24,7 @@ def format_missing_report_error(task_number: int, feature_name: str, report_type
     Generate actionable error message for missing report.
 
     Pattern: Problem → Expected Path → Impact → Troubleshooting → Resolution
-    Source: prps/prp_execution_reliability/examples/error_message_pattern.py
+    Source: prps/execution_reliability/examples/error_message_pattern.py
     """
     report_path = f"prps/{feature_name}/execution/TASK{task_number}_{report_type}.md"
     template_path = f".claude/templates/task-{report_type.lower()}-report.md"
@@ -99,7 +99,7 @@ def validate_report_exists(feature_name: str, task_number: int, report_type: str
     Uses EAFP pattern to avoid TOCTOU race condition.
 
     Pattern: Try to read file (atomic), catch FileNotFoundError
-    Source: prps/prp_execution_reliability/examples/validation_gate_pattern.py PATTERN 2
+    Source: prps/execution_reliability/examples/validation_gate_pattern.py PATTERN 2
 
     Args:
         feature_name: Validated feature name (from extract_feature_name)
@@ -143,7 +143,7 @@ def calculate_report_coverage(feature_name: str, total_tasks: int) -> dict:
     GOAL: 100% coverage (all tasks documented).
 
     Pattern: Glob for reports, extract task numbers, calculate coverage
-    Source: prps/prp_execution_reliability/examples/validation_gate_pattern.py PATTERN 5
+    Source: prps/execution_reliability/examples/validation_gate_pattern.py PATTERN 5
 
     Args:
         feature_name: Validated feature name
