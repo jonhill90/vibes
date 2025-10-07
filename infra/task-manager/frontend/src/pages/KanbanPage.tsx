@@ -14,7 +14,7 @@ import { KanbanBoard } from "../features/tasks/components/KanbanBoard";
 export const KanbanPage = () => {
   // TODO: Replace with actual project selection logic
   // For MVP, use hardcoded project ID or get from URL params
-  const projectId = "default-project-id";
+  const projectId = "41d6a68a-c336-4217-a432-609f61af02a5";
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
