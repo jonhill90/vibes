@@ -58,10 +58,10 @@ Steps:
 2. Analyze dependencies (explicit + file-based)
 3. Group into parallel groups (Group 1: independent, Group 2: depends on G1, etc.)
 4. Estimate time savings
-5. Create prps/execution-plan.md
+5. Create prps/{feature_name}/execution/execution-plan.md
 ''')
 
-execution_plan = Read("prps/execution-plan.md")
+execution_plan = Read(f"prps/{feature_name}/execution/execution-plan.md")
 groups = parse_execution_groups(execution_plan)
 ```
 
@@ -116,7 +116,7 @@ Generate comprehensive tests (70%+ coverage).
 PRP: {prp_path}, Implemented: {get_all_modified_files()}, Feature: {feature_name}
 
 Steps: 1. Read files, 2. Find test patterns, 3. Generate unit tests, 4. Generate integration tests,
-5. Follow conventions, 6. Ensure pass, 7. Create test-generation-report.md
+5. Follow conventions, 6. Ensure pass, 7. Create prps/{feature_name}/execution/test-generation-report.md
 ''')
 ```
 
@@ -142,9 +142,9 @@ CRITICAL: Iterate until pass or max attempts.
 ### Phase 5: Completion (YOU)
 
 ```python
-validation_report = Read("prps/validation-report.md")
+validation_report = Read(f"prps/{feature_name}/execution/validation-report.md")
 all_passed = check_all_validations_passed(validation_report)
-test_report = Read("prps/test-generation-report.md")
+test_report = Read(f"prps/{feature_name}/execution/test-generation-report.md")
 coverage = extract_coverage(test_report)
 ```
 
@@ -156,7 +156,7 @@ Tests: {test_count} ({coverage}%) | Time: {elapsed_time} min | Speedup: {time_sa
 
 Validation: Syntax ✅ | Type ✅ | Unit ✅ ({unit_test_count}) | Integration ✅ ({integration_test_count})
 
-Next: 1. git diff, 2. pytest tests/test_{feature}* -v, 3. cat prps/validation-report.md, 4. Commit
+Next: 1. git diff, 2. pytest tests/test_{feature}* -v, 3. cat prps/{feature_name}/execution/validation-report.md, 4. Commit
 Archon: {project_status}
 ```
 
@@ -166,7 +166,7 @@ Archon: {project_status}
 Feature: {feature_name} | Completed: {completed}/{total} | Tests: {test_file_count} ({coverage}%)
 Issues: {validation_failures}
 
-Actions: 1. cat prps/validation-report.md, 2. Fix {recommendations}, 3. Re-run {failed_commands}
+Actions: 1. cat prps/{feature_name}/execution/validation-report.md, 2. Fix {recommendations}, 3. Re-run {failed_commands}
 Options: 1. Investigate, 2. Re-run validator, 3. Continue (not recommended)
 ```
 
