@@ -9,6 +9,8 @@ export default defineConfig({
     host: "0.0.0.0", // Listen on all network interfaces
     port: 3000,
     strictPort: true,
+    // Allow access from host.docker.internal (Docker Desktop internal DNS)
+    allowedHosts: ["host.docker.internal", "localhost"],
     proxy: {
       "/api": {
         target: process.env.VITE_API_URL || "http://localhost:8000",

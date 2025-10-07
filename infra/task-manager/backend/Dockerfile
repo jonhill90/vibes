@@ -48,8 +48,9 @@ ENV PATH="/venv/bin:$PATH"
 EXPOSE 8000 8051
 
 # Health check for API endpoint
+# Use API_PORT environment variable (defaults to 8000 if not set)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.getenv(\"API_PORT\", \"8000\")}/health')"
 
 # Start both FastAPI and MCP servers
 # Using startup script to run both services
