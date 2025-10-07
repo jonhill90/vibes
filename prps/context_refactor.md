@@ -1,7 +1,7 @@
 # PRP: Context Refactor (Phase 2 Cleanup)
 
 **Generated**: 2025-10-05
-**Based On**: prps/INITIAL_prp_context_refactor.md
+**Based On**: prps/INITIAL_context_refactor.md
 **Archon Project**: 54726e9e-7c06-4eb4-8f20-0c674b720804
 
 ---
@@ -167,27 +167,27 @@ Eliminate remaining context pollution through CLAUDE.md deduplication, pattern f
     - Highlight and copy-paste workflow
 
 # ESSENTIAL LOCAL FILES
-- file: prps/prp_context_refactor/examples/README.md
+- file: prps/context_refactor/examples/README.md
   why: Comprehensive guide with usage instructions, pattern highlights
   pattern: Study before implementing - shows ACTUAL before/after with exact line counts
   critical: Contains "what to mimic/adapt/skip" for each compression pattern
 
-- file: prps/prp_context_refactor/examples/example_claude_md_before_after.md
+- file: prps/context_refactor/examples/example_claude_md_before_after.md
   why: Shows CLAUDE.md compression (389→100 lines, 74% reduction)
   pattern: DRY principle - identify and remove README.md duplicates
   critical: Demonstrates semantic duplication detection (not just string matching)
 
-- file: prps/prp_context_refactor/examples/example_pattern_compression.md
+- file: prps/context_refactor/examples/example_pattern_compression.md
   why: Shows pattern compression (373→120 lines, 68% reduction)
   pattern: Tutorial→reference card transformation (40%→79% code density)
   critical: 5 compression strategies (separator removal, section condensing, explanation→comments)
 
-- file: prps/prp_context_refactor/examples/example_security_extraction.md
+- file: prps/context_refactor/examples/example_security_extraction.md
   why: Shows duplicate function extraction (66→44 lines net)
   pattern: Extract to shared pattern, condense inline versions
   critical: Preserve all 5 security checks (whitelist, traversal, length, directory, injection)
 
-- file: prps/prp_context_refactor/examples/example_original_baseline.md
+- file: prps/context_refactor/examples/example_original_baseline.md
   why: Original 107-line baseline (context-engineering-intro template)
   pattern: Growth ratio analysis (9.7x current vs 4.0x proposed)
   critical: Context bloat happens gradually, requires periodic compression
@@ -245,7 +245,7 @@ Eliminate remaining context pollution through CLAUDE.md deduplication, pattern f
 CLAUDE.md                      # 389 lines → TARGET: 100 lines
 README.md                      # 166 lines → NO CHANGES (user-facing)
 
-prps/prp_context_refactor/
+prps/context_refactor/
 ├── planning/                  # Research documents (no changes)
 └── examples/                  # 4 examples + README.md (reference only)
 ```
@@ -657,7 +657,7 @@ archon_available = health["status"] == "healthy"
 **BEFORE starting implementation, complete these steps:**
 
 1. **Study Examples** (30-40 minutes):
-   - Read `prps/prp_context_refactor/examples/README.md` (overview and patterns)
+   - Read `prps/context_refactor/examples/README.md` (overview and patterns)
    - Read each example file (understand techniques)
    - Focus on "What to Mimic" sections (copy these patterns)
    - Note "What to Adapt" for customization
@@ -688,7 +688,7 @@ FILES TO MODIFY:
   - .claude/commands/execute-prp.md (lines 33-66 → condense to 19 lines)
   - .claude/patterns/README.md (add new pattern entry)
 
-PATTERN TO FOLLOW: prps/prp_context_refactor/examples/example_security_extraction.md
+PATTERN TO FOLLOW: prps/context_refactor/examples/example_security_extraction.md
 
 SPECIFIC STEPS:
   1. Copy extract_feature_name() function from generate-prp.md lines 33-66
@@ -722,7 +722,7 @@ RESPONSIBILITY: Convert tutorial style to reference card style (68% reduction, 7
 FILES TO MODIFY:
   - .claude/patterns/archon-workflow.md (373 lines → 120 lines)
 
-PATTERN TO FOLLOW: prps/prp_context_refactor/examples/example_pattern_compression.md
+PATTERN TO FOLLOW: prps/context_refactor/examples/example_pattern_compression.md
 
 SPECIFIC STEPS:
   1. Move summary to TOP (line 1, not buried at line 327)
@@ -827,7 +827,7 @@ RESPONSIBILITY: Remove 234 lines of README.md duplication (74% reduction, zero d
 FILES TO MODIFY:
   - .claude/CLAUDE.md (389 lines → 100 lines)
 
-PATTERN TO FOLLOW: prps/prp_context_refactor/examples/example_claude_md_before_after.md
+PATTERN TO FOLLOW: prps/context_refactor/examples/example_claude_md_before_after.md
 
 SPECIFIC STEPS:
   1. Identify semantic duplicates (not just string matching)

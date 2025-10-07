@@ -120,7 +120,7 @@ We compressed the context Claude sees by **59-70%** without losing functionality
 
 **Why this matters**: Claude has an "attention budget"—more tokens doesn't mean better results. By compressing context, we improved both speed and accuracy.
 
-See [validation report](prps/prp_context_refactor/execution/validation-report.md) for detailed methodology.
+See [validation report](prps/context_refactor/execution/validation-report.md) for detailed methodology.
 
 ## Context Engineering & PRPs
 
@@ -135,6 +135,11 @@ A PRP is a context engineering artifact that treats Claude like a competent juni
 - **PRD**: Clear goals, business value, success criteria
 - **Curated Context**: Documentation URLs, file references, existing patterns, known gotchas
 - **Agent Runbook**: Implementation blueprint, pseudocode, task list, validation gates
+
+**Naming Convention**: PRPs follow a standardized naming convention documented in [.claude/conventions/prp-naming.md](.claude/conventions/prp-naming.md). Key rules:
+- Use `prps/{feature_name}.md` (no `prp_` prefix)
+- Initial PRPs use `INITIAL_` prefix (auto-detected)
+- Directory structure matches feature name
 
 ### PRP Workflow
 
