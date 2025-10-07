@@ -1,4 +1,4 @@
-# Task Management UI - Docker Compose Configuration
+# Task Manager - Docker Compose Configuration
 # Multi-service deployment with health checks and hot reload support
 # Services: PostgreSQL database, FastAPI backend, React frontend
 
