@@ -13,6 +13,8 @@ prp_content = Read(prp_path)
 
 # 2. Security validation (see .claude/patterns/security-validation.md)
 import re
+from pathlib import Path
+
 def extract_feature_name(filepath: str, strip_prefix: str = None) -> str:
     if ".." in filepath: raise ValueError(f"Path traversal: {filepath}")
     feature = filepath.split("/")[-1].replace(".md", "")
@@ -25,10 +27,187 @@ def extract_feature_name(filepath: str, strip_prefix: str = None) -> str:
 feature_name = extract_feature_name(prp_path)
 Bash(f"mkdir -p prps/{feature_name}/execution")
 
-# 3. Extract tasks
+# 3. Validation Gate Functions (see prps/prp_execution_reliability/examples/)
+
+class ValidationError(Exception):
+    """
+    Raised when validation gates fail.
+
+    Use this for ALL validation failures that should stop execution.
+    Error message should be actionable (include paths, troubleshooting, resolution).
+    """
+    pass
+
+def format_missing_report_error(task_number: int, feature_name: str, report_type: str = "COMPLETION") -> str:
+    """
+    Generate actionable error message for missing report.
+
+    Pattern: Problem → Expected Path → Impact → Troubleshooting → Resolution
+    Source: prps/prp_execution_reliability/examples/error_message_pattern.py
+    """
+    report_path = f"prps/{feature_name}/execution/TASK{task_number}_{report_type}.md"
+    template_path = f".claude/templates/task-{report_type.lower()}-report.md"
+
+    return f"""
+{'='*80}
+❌ VALIDATION GATE FAILED: Missing Task Report
+{'='*80}
+
+PROBLEM:
+  Task {task_number} did not generate required completion report.
+
+EXPECTED PATH:
+  {report_path}
+
+IMPACT:
+  This task is INCOMPLETE without documentation.
+  - Cannot audit what was implemented
+  - Cannot learn from implementation decisions
+  - Cannot debug issues in the future
+  - Violates PRP execution reliability requirements
+
+TROUBLESHOOTING:
+  1. Check if subagent execution completed successfully
+     → Review subagent output logs for errors or exceptions
+
+  2. Verify template exists and is accessible
+     → Check: {template_path}
+     → Ensure template has correct variable placeholders
+
+  3. Check file system permissions
+     → Directory: prps/{feature_name}/execution/
+     → Ensure write permissions enabled
+
+  4. Review subagent prompt
+     → Confirm report generation is marked as CRITICAL
+     → Verify exact path specification in prompt
+
+  5. Check for naming issues
+     → Standard format: TASK{{number}}_{{TYPE}}.md
+     → Wrong: TASK_{task_number}_COMPLETION.md (extra underscore)
+     → Wrong: TASK{task_number}_COMPLETE.md (COMPLETE vs COMPLETION)
+     → Correct: TASK{task_number}_COMPLETION.md
+
+RESOLUTION OPTIONS:
+
+  Option 1 (RECOMMENDED): Re-run task with explicit report requirement
+    → Update subagent prompt to emphasize report is MANDATORY
+    → Add validation check immediately after task completion
+
+  Option 2: Manually create report
+    → Use template: {template_path}
+    → Save to: {report_path}
+    → Fill in all required sections
+
+  Option 3: Debug subagent execution
+    → Review full subagent output for Write() tool errors
+    → Check template variable substitution
+    → Verify file creation in correct directory
+
+DO NOT CONTINUE PRP execution until this is resolved.
+Report coverage is MANDATORY for execution reliability.
+{'='*80}
+"""
+
+def validate_report_exists(feature_name: str, task_number: int, report_type: str = "COMPLETION") -> bool:
+    """
+    Validation gate: Ensure task completion report exists.
+
+    This is THE core validation gate that prevents silent documentation failures.
+    Uses EAFP pattern to avoid TOCTOU race condition.
+
+    Pattern: Try to read file (atomic), catch FileNotFoundError
+    Source: prps/prp_execution_reliability/examples/validation_gate_pattern.py PATTERN 2
+
+    Args:
+        feature_name: Validated feature name (from extract_feature_name)
+        task_number: Task number (e.g., 4, 17, 25)
+        report_type: Report type (COMPLETION, VALIDATION, etc.)
+
+    Returns:
+        True if report exists and has minimum content
+
+    Raises:
+        ValidationError: If report is missing or too short (with actionable message)
+    """
+    report_path = Path(f"prps/{feature_name}/execution/TASK{task_number}_{report_type}.md")
+
+    try:
+        # EAFP: Try to read, handle FileNotFoundError
+        # This is atomic - no TOCTOU race condition
+        content = report_path.read_text()
+
+        # Validate minimum content (prevent empty files)
+        if len(content) < 100:
+            raise ValidationError(
+                f"Task {task_number} report too short: {len(content)} chars (minimum 100)\n"
+                f"Path: {report_path}\n\n"
+                f"Report may be incomplete or corrupted. Please verify content."
+            )
+
+        return True
+
+    except FileNotFoundError:
+        # Use actionable error message format
+        error_msg = format_missing_report_error(task_number, feature_name, report_type)
+        raise ValidationError(error_msg)
+
+def calculate_report_coverage(feature_name: str, total_tasks: int) -> dict:
+    """
+    Calculate report coverage percentage for PRP execution.
+
+    This shows how many tasks generated completion reports vs total tasks.
+    GOAL: 100% coverage (all tasks documented).
+
+    Pattern: Glob for reports, extract task numbers, calculate coverage
+    Source: prps/prp_execution_reliability/examples/validation_gate_pattern.py PATTERN 5
+
+    Args:
+        feature_name: Validated feature name
+        total_tasks: Total number of tasks in PRP
+
+    Returns:
+        dict with keys:
+            - total_tasks: Total number of tasks
+            - reports_found: Number of reports found
+            - coverage_percentage: Coverage as percentage (rounded to 1 decimal)
+            - missing_tasks: List of task numbers without reports
+            - status: "✅ COMPLETE" or "⚠️ INCOMPLETE"
+    """
+    from glob import glob
+
+    # Find all TASK*_COMPLETION.md reports
+    pattern = f"prps/{feature_name}/execution/TASK*_COMPLETION.md"
+    task_reports = glob(pattern)
+    reports_found = len(task_reports)
+
+    # Calculate coverage percentage
+    coverage_pct = (reports_found / total_tasks) * 100 if total_tasks > 0 else 0
+
+    # Find missing task numbers
+    reported_tasks = set()
+    for report_path in task_reports:
+        # Extract task number from filename (TASK17_COMPLETION.md → 17)
+        filename = report_path.split("/")[-1]
+        match = re.search(r'TASK(\d+)_', filename)
+        if match:
+            reported_tasks.add(int(match.group(1)))
+
+    all_tasks = set(range(1, total_tasks + 1))
+    missing_tasks = sorted(all_tasks - reported_tasks)
+
+    return {
+        "total_tasks": total_tasks,
+        "reports_found": reports_found,
+        "coverage_percentage": round(coverage_pct, 1),
+        "missing_tasks": missing_tasks,
+        "status": "✅ COMPLETE" if coverage_pct == 100 else "⚠️ INCOMPLETE"
+    }
+
+# 4. Extract tasks
 tasks = extract_tasks_from_prp(prp_content)
 
-# 4. Archon setup (see .claude/patterns/archon-workflow.md)
+# 5. Archon setup (see .claude/patterns/archon-workflow.md)
 health = mcp__archon__health_check()
 if health["status"] == "healthy":
     project = mcp__archon__manage_project("create", title=f"PRP: {feature_name}", description=f"From {prp_path}")
@@ -80,12 +259,79 @@ for group_number, group in enumerate(groups):
             Task(subagent_type="prp-exec-implementer", description=f"Implement {task['name']}", prompt=f'''
 Implement single task from PRP.
 
-PRP: {prp_path}, Task: {task['name']}, Responsibility: {task['responsibility']}
-Files: {task['files']}, Pattern: {task['pattern']}, Steps: {task['steps']}
+**CONTEXT**:
+- PRP: {prp_path}
+- Task: {task['name']}
+- Responsibility: {task['responsibility']}
+- Files: {task['files']}
+- Pattern: {task['pattern']}
+- Steps: {task['steps']}
 
-Steps: 1. Read PRP, 2. Study pattern, 3. Implement, 4. Validate, 5. Report
-CRITICAL: Parallel execution - only modify YOUR task's files.
+**CRITICAL**: Parallel execution - only modify YOUR task's files.
+
+═══════════════════════════════════════════════════════════════
+⚠️  CRITICAL OUTPUT REQUIREMENTS (NON-NEGOTIABLE) ⚠️
+═══════════════════════════════════════════════════════════════
+
+This task has TWO outputs, BOTH are MANDATORY:
+
+1️⃣ **Code Implementation** (all files in FILES section above)
+
+2️⃣ **Completion Report** (REQUIRED)
+   📄 Path: prps/{feature_name}/execution/TASK{{task['number']}}_COMPLETION.md
+   📋 Template: .claude/templates/task-completion-report.md
+
+   Required sections:
+   - Implementation Summary
+   - Files Created/Modified (with line counts)
+   - Key Decisions Made
+   - Challenges Encountered
+   - Validation Status
+
+⚠️ YOUR TASK IS INCOMPLETE WITHOUT THE COMPLETION REPORT ⚠️
+
+The report is NOT optional. It is MANDATORY for:
+✓ Auditing implementation decisions
+✓ Learning from challenges encountered
+✓ Debugging issues in the future
+✓ Passing validation gates
+
+═══════════════════════════════════════════════════════════════
+
+**VALIDATION**:
+Your work will be validated immediately after completion:
+1. ✅ All files created/modified
+2. ✅ Report exists at exact path above
+3. ✅ Report contains all required sections
+4. ✅ Code passes linting (if applicable)
+
+❌ If report is missing, you will receive a VALIDATION ERROR and must regenerate it.
+
+**WORKFLOW**: 1. Read PRP, 2. Study pattern, 3. Implement, 4. Validate, 5. Create completion report
 ''')
+
+        # VALIDATION GATE - Fail fast if any reports missing
+        print(f"\n🔍 Validating Group {group_number + 1} reports...")
+        for task in group['tasks']:
+            try:
+                validate_report_exists(feature_name, task['number'])
+                print(f"  ✅ Task {task['number']}: Report validated")
+            except ValidationError as e:
+                print(str(e))
+
+                # Update Archon task status to "todo" (failed, needs retry)
+                if archon_available:
+                    mcp__archon__manage_task(
+                        "update",
+                        task_id=get_archon_task_id(task, task_mappings),
+                        status="todo",
+                        description=f"VALIDATION FAILED: Report missing"
+                    )
+
+                # HALT EXECUTION - don't continue to next group
+                raise
+
+        print(f"✅ Group {group_number + 1}: All {len(group['tasks'])} reports validated\n")
 
         if archon_available:
             for task in group['tasks']:
@@ -97,9 +343,76 @@ CRITICAL: Parallel execution - only modify YOUR task's files.
                 mcp__archon__manage_task("update", task_id=get_archon_task_id(task, task_mappings), status="doing")
 
             Task(subagent_type="prp-exec-implementer", description=f"Implement {task['name']}", prompt=f'''
-Implement task: {task['name']}
-PRP: {prp_path}, Files: {task['files']}, Steps: {task['steps']}
+Implement single task from PRP.
+
+**CONTEXT**:
+- PRP: {prp_path}
+- Task: {task['name']}
+- Responsibility: {task['responsibility']}
+- Files: {task['files']}
+- Pattern: {task['pattern']}
+- Steps: {task['steps']}
+
+═══════════════════════════════════════════════════════════════
+⚠️  CRITICAL OUTPUT REQUIREMENTS (NON-NEGOTIABLE) ⚠️
+═══════════════════════════════════════════════════════════════
+
+This task has TWO outputs, BOTH are MANDATORY:
+
+1️⃣ **Code Implementation** (all files in FILES section above)
+
+2️⃣ **Completion Report** (REQUIRED)
+   📄 Path: prps/{feature_name}/execution/TASK{{task['number']}}_COMPLETION.md
+   📋 Template: .claude/templates/task-completion-report.md
+
+   Required sections:
+   - Implementation Summary
+   - Files Created/Modified (with line counts)
+   - Key Decisions Made
+   - Challenges Encountered
+   - Validation Status
+
+⚠️ YOUR TASK IS INCOMPLETE WITHOUT THE COMPLETION REPORT ⚠️
+
+The report is NOT optional. It is MANDATORY for:
+✓ Auditing implementation decisions
+✓ Learning from challenges encountered
+✓ Debugging issues in the future
+✓ Passing validation gates
+
+═══════════════════════════════════════════════════════════════
+
+**VALIDATION**:
+Your work will be validated immediately after completion:
+1. ✅ All files created/modified
+2. ✅ Report exists at exact path above
+3. ✅ Report contains all required sections
+4. ✅ Code passes linting (if applicable)
+
+❌ If report is missing, you will receive a VALIDATION ERROR and must regenerate it.
+
+**WORKFLOW**: 1. Read PRP, 2. Study pattern, 3. Implement, 4. Validate, 5. Create completion report
 ''')
+
+            # VALIDATION GATE - Fail fast if report missing (sequential tasks)
+            print(f"\n🔍 Validating Task {task['number']} report...")
+            try:
+                validate_report_exists(feature_name, task['number'])
+                print(f"  ✅ Task {task['number']}: Report validated\n")
+            except ValidationError as e:
+                print(str(e))
+
+                # Update Archon task status to "todo" (failed, needs retry)
+                if archon_available:
+                    mcp__archon__manage_task(
+                        "update",
+                        task_id=get_archon_task_id(task, task_mappings),
+                        status="todo",
+                        description=f"VALIDATION FAILED: Report missing"
+                    )
+
+                # HALT EXECUTION - don't continue
+                raise
 
             if archon_available:
                 mcp__archon__manage_task("update", task_id=get_archon_task_id(task, task_mappings), status="done")
@@ -113,10 +426,52 @@ PRP: {prp_path}, Files: {task['files']}, Steps: {task['steps']}
 Task(subagent_type="prp-exec-test-generator", description="Generate tests", prompt=f'''
 Generate comprehensive tests (70%+ coverage).
 
-PRP: {prp_path}, Implemented: {get_all_modified_files()}, Feature: {feature_name}
+**CONTEXT**:
+- PRP: {prp_path}
+- Implemented Files: {get_all_modified_files()}
+- Feature: {feature_name}
 
-Steps: 1. Read files, 2. Find test patterns, 3. Generate unit tests, 4. Generate integration tests,
-5. Follow conventions, 6. Ensure pass, 7. Create prps/{feature_name}/execution/test-generation-report.md
+═══════════════════════════════════════════════════════════════
+⚠️  CRITICAL OUTPUT REQUIREMENTS (NON-NEGOTIABLE) ⚠️
+═══════════════════════════════════════════════════════════════
+
+This task has TWO outputs, BOTH are MANDATORY:
+
+1️⃣ **Test Files** (unit tests + integration tests, 70%+ coverage)
+
+2️⃣ **Test Generation Report** (REQUIRED)
+   📄 Path: prps/{feature_name}/execution/test-generation-report.md
+   📋 Template: .claude/templates/test-generation-report.md
+
+   Required sections:
+   - Test Summary (count, coverage %, patterns used)
+   - Test Files Created
+   - Coverage Analysis (per module/file)
+   - Patterns Applied
+   - Edge Cases Covered
+
+⚠️ YOUR TASK IS INCOMPLETE WITHOUT THE TEST GENERATION REPORT ⚠️
+
+The report is NOT optional. It is MANDATORY for:
+✓ Documenting test coverage metrics
+✓ Tracking patterns and edge cases
+✓ Auditing test quality
+✓ Passing validation gates
+
+═══════════════════════════════════════════════════════════════
+
+**VALIDATION**:
+Your work will be validated immediately after completion:
+1. ✅ All test files created
+2. ✅ Tests pass (pytest)
+3. ✅ Coverage ≥70%
+4. ✅ Report exists at exact path above
+5. ✅ Report contains all required sections
+
+❌ If report is missing, you will receive a VALIDATION ERROR and must regenerate it.
+
+**WORKFLOW**: 1. Read files, 2. Find test patterns, 3. Generate unit tests, 4. Generate integration tests,
+5. Follow conventions, 6. Ensure pass, 7. Create test-generation-report.md
 ''')
 ```
 
@@ -128,14 +483,56 @@ Steps: 1. Read files, 2. Find test patterns, 3. Generate unit tests, 4. Generate
 Task(subagent_type="prp-exec-validator", description="Validate", prompt=f'''
 Systematic validation with iteration loops (max 5 attempts per level).
 
-PRP: {prp_path}, Implemented: {implemented_files}, Tests: {test_files}
+**CONTEXT**:
+- PRP: {prp_path}
+- Implemented Files: {implemented_files}
+- Test Files: {test_files}
+- Pattern: .claude/patterns/quality-gates.md (multi-level, error analysis, fix application)
 
-Pattern: .claude/patterns/quality-gates.md (multi-level, error analysis, fix application)
+**CRITICAL**: Iterate until pass or max attempts.
 
-Steps: 1. Read PRP Validation Loop, 2. Execute levels, 3. For failures: analyze → fix → retry (max 5),
-4. Document, 5. Create prps/{feature_name}/execution/validation-report.md
+═══════════════════════════════════════════════════════════════
+⚠️  CRITICAL OUTPUT REQUIREMENTS (NON-NEGOTIABLE) ⚠️
+═══════════════════════════════════════════════════════════════
 
-CRITICAL: Iterate until pass or max attempts.
+This task has TWO outputs, BOTH are MANDATORY:
+
+1️⃣ **Validation Fixes** (all levels pass or max attempts reached)
+
+2️⃣ **Enhanced Validation Report** (REQUIRED)
+   📄 Path: prps/{feature_name}/execution/validation-report.md
+   📋 Template: .claude/templates/validation-report.md
+
+   Required sections:
+   - Validation Levels (syntax, type, unit, integration)
+   - Iteration Tracking (attempts, errors, fixes)
+   - Final Status (all pass/partial/failed)
+   - Error Analysis (root causes)
+   - Fix Applications (what was changed)
+   - Next Steps (if any failures remain)
+
+⚠️ YOUR TASK IS INCOMPLETE WITHOUT THE VALIDATION REPORT ⚠️
+
+The report is NOT optional. It is MANDATORY for:
+✓ Documenting validation iterations
+✓ Tracking error patterns and fixes
+✓ Auditing quality gate results
+✓ Understanding what passed/failed
+
+═══════════════════════════════════════════════════════════════
+
+**VALIDATION**:
+Your work will be validated immediately after completion:
+1. ✅ All validation levels attempted
+2. ✅ Iteration loop followed (max 5 per level)
+3. ✅ Report exists at exact path above
+4. ✅ Report contains all required sections
+5. ✅ Report includes iteration tracking table
+
+❌ If report is missing, you will receive a VALIDATION ERROR and must regenerate it.
+
+**WORKFLOW**: 1. Read PRP Validation Loop, 2. Execute levels, 3. For failures: analyze → fix → retry (max 5),
+4. Document all iterations, 5. Create validation-report.md with complete tracking
 ''')
 ```
 
@@ -146,28 +543,70 @@ validation_report = Read(f"prps/{feature_name}/execution/validation-report.md")
 all_passed = check_all_validations_passed(validation_report)
 test_report = Read(f"prps/{feature_name}/execution/test-generation-report.md")
 coverage = extract_coverage(test_report)
+
+# Calculate report coverage metrics
+metrics = calculate_report_coverage(feature_name, total_tasks)
+
+# Quality gate: Enforce 100% report coverage
+if metrics['coverage_percentage'] < 100:
+    raise ValidationError(
+        f"Quality Gate FAILED: Report coverage {metrics['coverage_percentage']}% (required: 100%)\n"
+        f"Missing reports for tasks: {metrics['missing_tasks']}"
+    )
 ```
 
 **Success** (all passed):
 ```
-✅ PRP Execution Complete!
-Feature: {feature_name} | Tasks: {task_count} | Files: {file_count}
-Tests: {test_count} ({coverage}%) | Time: {elapsed_time} min | Speedup: {time_saved}%
+{'='*80}
+✅ PRP EXECUTION COMPLETE
+{'='*80}
+  Feature: {feature_name}
+  Implementation: {total_tasks}/{total_tasks} tasks (100%)
+  Documentation: {metrics['reports_found']}/{metrics['total_tasks']} reports ({metrics['coverage_percentage']}%)
 
-Validation: Syntax ✅ | Type ✅ | Unit ✅ ({unit_test_count}) | Integration ✅ ({integration_test_count})
+  {metrics['status'] if metrics['coverage_percentage'] == 100 else f"⚠️ Missing reports for tasks: {metrics['missing_tasks']}"}
 
-Next: 1. git diff, 2. pytest tests/test_{feature}* -v, 3. cat prps/{feature_name}/execution/validation-report.md, 4. Commit
+  Tests: {test_count} ({coverage}%)
+  Validation: Syntax ✅ | Type ✅ | Unit ✅ ({unit_test_count}) | Integration ✅ ({integration_test_count})
+
+  Time: {elapsed_time} min | Speedup: {time_saved}%
+{'='*80}
+
+Next Steps:
+  1. git diff
+  2. pytest tests/test_{feature}* -v
+  3. cat prps/{feature_name}/execution/validation-report.md
+  4. Review task reports: ls prps/{feature_name}/execution/TASK*_COMPLETION.md
+  5. Commit changes
+
 Archon: {project_status}
 ```
 
 **Partial** (issues):
 ```
-⚠️ Partial Implementation
-Feature: {feature_name} | Completed: {completed}/{total} | Tests: {test_file_count} ({coverage}%)
-Issues: {validation_failures}
+{'='*80}
+⚠️ PARTIAL IMPLEMENTATION
+{'='*80}
+  Feature: {feature_name}
+  Completed: {completed}/{total} tasks
+  Documentation: {metrics['reports_found']}/{metrics['total_tasks']} reports ({metrics['coverage_percentage']}%)
 
-Actions: 1. cat prps/{feature_name}/execution/validation-report.md, 2. Fix {recommendations}, 3. Re-run {failed_commands}
-Options: 1. Investigate, 2. Re-run validator, 3. Continue (not recommended)
+  {f"⚠️ Missing reports for tasks: {metrics['missing_tasks']}" if metrics['missing_tasks'] else "✅ Report coverage: 100%"}
+
+  Tests: {test_file_count} ({coverage}%)
+  Issues: {validation_failures}
+{'='*80}
+
+Actions Required:
+  1. cat prps/{feature_name}/execution/validation-report.md
+  2. Fix {recommendations}
+  3. Re-run {failed_commands}
+  4. {'Generate missing reports: ' + str(metrics['missing_tasks']) if metrics['missing_tasks'] else 'All reports complete'}
+
+Options:
+  1. Investigate failures and fix
+  2. Re-run validator
+  3. Continue (NOT RECOMMENDED - incomplete documentation)
 ```
 
 ## Error Handling

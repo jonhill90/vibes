@@ -1,4 +1,4 @@
-# Validation Report: {Feature Name}
+# Validation Report: {feature_name}
 
 ## Validation Summary
 
