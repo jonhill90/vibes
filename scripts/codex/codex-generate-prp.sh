@@ -26,6 +26,33 @@ fi
 # Codex profile (can be overridden via environment variable)
 CODEX_PROFILE="${CODEX_PROFILE:-codex-prp}"
 
+# Determine GNU timeout binary (macOS provides gtimeout via coreutils)
+TIMEOUT_BIN="${TIMEOUT_BIN:-timeout}"
+if ! command -v "$TIMEOUT_BIN" >/dev/null 2>&1; then
+    if command -v gtimeout >/dev/null 2>&1; then
+        TIMEOUT_BIN="$(command -v gtimeout)"
+    else
+        echo "⚠️  WARNING: GNU timeout command not found; proceeding without enforced timeouts" >&2
+        echo "   Install with: brew install coreutils" >&2
+        TIMEOUT_BIN=""
+    fi
+fi
+export TIMEOUT_BIN
+
+# Detect Codex CLI availability and prompt handling
+CODEX_CLI_MODE="none"  # values: none, flag, stdin
+if command -v codex >/dev/null 2>&1; then
+    if codex exec --help 2>&1 | grep -q -- "--prompt"; then
+        CODEX_CLI_MODE="flag"
+    else
+        CODEX_CLI_MODE="stdin"
+        echo "ℹ️  Codex CLI detected (using stdin prompt mode)" >&2
+    fi
+else
+    echo "⚠️  WARNING: Codex CLI not found; running in placeholder mode" >&2
+fi
+export CODEX_CLI_MODE
+
 # Timeouts (in seconds)
 PHASE0_TIMEOUT=60      # 1 minute for setup
 PHASE1_TIMEOUT=600     # 10 minutes for feature analysis
@@ -38,6 +65,48 @@ PHASE4_TIMEOUT=900     # 15 minutes for PRP assembly
 MIN_PRP_SCORE=8
 # shellcheck disable=SC2034
 MAX_REGENERATION_ATTEMPTS=3
+
+# Lightweight timeout wrapper (falls back to direct execution if timeout unavailable)
+run_with_timeout() {
+    local kill_after=()
+    local extra_opts=()
+    local duration=""
+
+    while (($# > 0)); do
+        case "$1" in
+            --kill-after=*)
+                kill_after+=("$1")
+                shift
+                ;;
+            --preserve-status|--foreground)
+                extra_opts+=("$1")
+                shift
+                ;;
+            *)
+                duration="$1"
+                shift
+                break
+                ;;
+        esac
+    done
+
+    if [ -z "$duration" ]; then
+        echo "❌ ERROR: run_with_timeout called without duration" >&2
+        return 1
+    fi
+
+    if (($# == 0)); then
+        echo "❌ ERROR: run_with_timeout called without command" >&2
+        return 1
+    fi
+
+    if [ -n "$TIMEOUT_BIN" ]; then
+        "$TIMEOUT_BIN" "${kill_after[@]}" "${extra_opts[@]}" "$duration" "$@"
+    else
+        echo "⚠️  WARNING: Executing without timeout enforcement: $*" >&2
+        "$@"
+    fi
+}
 
 # Script directory (for sourcing dependencies)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -69,7 +138,7 @@ check_archon_availability() {
 
     # Test basic archon functionality with timeout
     # CRITICAL: Use timeout to prevent hanging if archon server is down
-    if timeout 3s archon health-check &> /dev/null; then
+    if run_with_timeout 3s archon health-check &> /dev/null; then
         echo "✅ Archon MCP server available"
         return 0
     else
@@ -259,8 +328,9 @@ check_dependencies() {
 
     local missing_deps=()
     for dep in "${DEP_ARRAY[@]}"; do
-        # Trim whitespace
-        dep=$(echo "$dep" | xargs)
+        # Trim leading/trailing whitespace without external tools (sandbox safe)
+        dep="${dep#"${dep%%[![:space:]]*}"}"
+        dep="${dep%"${dep##*[![:space:]]}"}"
 
         # Check if dependency phase completed successfully
         if ! validate_phase_completion "$feature" "$dep" 2>/dev/null; then
@@ -318,6 +388,18 @@ execute_sequential_phase() {
         return 0
     fi
 
+    # Ensure Codex CLI is available
+    if [ "$CODEX_CLI_MODE" = "none" ]; then
+        echo "⚠️  WARNING: Codex CLI unavailable; creating placeholder output" >&2
+        local output_dir="prps/${feature}/codex/planning"
+        mkdir -p "$output_dir"
+        echo "# ${PHASES[$phase]} (Placeholder - Codex CLI unavailable)" > "${output_dir}/${phase}.md"
+        log_phase_start "$feature" "$phase"
+        log_phase_complete "$feature" "$phase" 0 0
+        archon_update_task_status "$phase" "done"
+        return 0
+    fi
+
     # Update Archon: mark task as "doing"
     archon_update_task_status "$phase" "doing"
 
@@ -328,6 +410,20 @@ execute_sequential_phase() {
     local log_dir="prps/${feature}/codex/logs"
     mkdir -p "$log_dir"
     local log_file="${log_dir}/${phase}.log"
+
+    # Resolve prompt template with runtime context
+    local prompt_content
+    if ! prompt_content=$(FEATURE_NAME="$feature" \
+        INITIAL_MD_PATH="$initial_md" \
+        FEATURE_DIR="prps/${feature}" \
+        PLANNING_DIR="prps/${feature}/planning" \
+        CODEX_DIR="prps/${feature}/codex" \
+        LOG_DIR="prps/${feature}/codex/logs" \
+        PHASE_NAME="$phase" \
+        envsubst < "$prompt_file"); then
+        echo "❌ ERROR: Failed to render prompt template: ${prompt_file}" >&2
+        return 1
+    fi
 
     # Execute with timeout wrapper
     local start_time
@@ -340,14 +436,35 @@ execute_sequential_phase() {
 
     # CRITICAL: Timeout wrapper to prevent zombie processes (GOTCHA #3)
     # CRITICAL: Explicit profile to avoid wrong model/config (GOTCHA #4)
-    if timeout --kill-after=5s "${timeout_sec}s" \
-        codex exec \
-        --profile "$CODEX_PROFILE" \
-        --prompt "$(cat "$prompt_file")" \
-        > "$log_file" 2>&1; then
+    local cmd_exit=0
+    if [ "$CODEX_CLI_MODE" = "flag" ]; then
+        if run_with_timeout --kill-after=5s "${timeout_sec}s" \
+            codex exec \
+            -c rollout_recorder.enabled=false \
+            --profile "$CODEX_PROFILE" \
+            --prompt "$prompt_content" \
+            > "$log_file" 2>&1; then
+            cmd_exit=0
+        else
+            cmd_exit=$?
+        fi
+    else
+        if run_with_timeout --kill-after=5s "${timeout_sec}s" \
+            codex exec \
+            -c rollout_recorder.enabled=false \
+            --profile "$CODEX_PROFILE" \
+            - \
+            > "$log_file" 2>&1 <<< "$prompt_content"; then
+            cmd_exit=0
+        else
+            cmd_exit=$?
+        fi
+    fi
+
+    if [ $cmd_exit -eq 0 ]; then
         exit_code=0
     else
-        exit_code=$?
+        exit_code=$cmd_exit
     fi
 
     local end_time

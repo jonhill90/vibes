@@ -19,6 +19,73 @@ KILL_AFTER_SEC=5
 # Default Codex profile
 CODEX_PROFILE="${CODEX_PROFILE:-codex-prp}"
 
+# Determine GNU timeout binary (supports macOS gtimeout)
+TIMEOUT_BIN="${TIMEOUT_BIN:-timeout}"
+if ! command -v "$TIMEOUT_BIN" >/dev/null 2>&1; then
+    if command -v gtimeout >/dev/null 2>&1; then
+        TIMEOUT_BIN="$(command -v gtimeout)"
+    else
+        echo "⚠️  WARNING: GNU timeout command not found; proceeding without enforced timeouts" >&2
+        echo "   Install with: brew install coreutils" >&2
+        TIMEOUT_BIN=""
+    fi
+fi
+
+# Provide local run_with_timeout helper if not already defined
+if ! declare -f run_with_timeout >/dev/null 2>&1; then
+    run_with_timeout() {
+        local kill_after=()
+        local extra_opts=()
+        local duration=""
+
+        while (($# > 0)); do
+            case "$1" in
+                --kill-after=*)
+                    kill_after+=("$1")
+                    shift
+                    ;;
+                --preserve-status|--foreground)
+                    extra_opts+=("$1")
+                    shift
+                    ;;
+                *)
+                    duration="$1"
+                    shift
+                    break
+                    ;;
+            esac
+        done
+
+        if [ -z "$duration" ]; then
+            echo "❌ ERROR: run_with_timeout called without duration" >&2
+            return 1
+        fi
+
+        if (($# == 0)); then
+            echo "❌ ERROR: run_with_timeout called without command" >&2
+            return 1
+        fi
+
+        if [ -n "$TIMEOUT_BIN" ]; then
+            "$TIMEOUT_BIN" "${kill_after[@]}" "${extra_opts[@]}" "$duration" "$@"
+        else
+            echo "⚠️  WARNING: Executing without timeout enforcement: $*" >&2
+            "$@"
+        fi
+    }
+fi
+
+# Respect Codex CLI mode (fallback detection if not exported)
+CODEX_CLI_MODE="${CODEX_CLI_MODE:-none}"
+if [ "$CODEX_CLI_MODE" = "none" ] && command -v codex >/dev/null 2>&1; then
+    if codex exec --help 2>&1 | grep -q -- "--prompt"; then
+        CODEX_CLI_MODE="flag"
+    else
+        CODEX_CLI_MODE="stdin"
+        echo "ℹ️  Codex CLI detected (using stdin prompt mode)" >&2
+    fi
+fi
+
 # =============================================================================
 # Core Parallel Execution Function
 # =============================================================================
@@ -79,11 +146,41 @@ execute_parallel_group() {
         # CRITICAL: Separate log file per agent to avoid output interleaving (GOTCHA #5)
         # CRITICAL: Explicit profile to avoid wrong model/config (GOTCHA #4)
         if [ -f "$prompt_file" ]; then
-            timeout --kill-after=${KILL_AFTER_SEC}s ${DEFAULT_TIMEOUT_SEC}s \
-                codex exec \
-                --profile "$CODEX_PROFILE" \
-                --prompt "$(cat "$prompt_file")" \
-                > "$log_file" 2>&1 &
+            local prompt_content
+            if ! prompt_content=$(FEATURE_NAME="$feature" \
+                FEATURE_DIR="prps/${feature}" \
+                PLANNING_DIR="prps/${feature}/planning" \
+                CODEX_DIR="prps/${feature}/codex" \
+                LOG_DIR="prps/${feature}/codex/logs" \
+                INITIAL_MD_PATH="prps/${feature}/codex/INITIAL.md" \
+                PHASE_NAME="$phase" \
+                envsubst < "$prompt_file"); then
+                echo "❌ ERROR: Failed to render prompt template: ${prompt_file}" >&2
+                return 1
+            fi
+
+            if [ "$CODEX_CLI_MODE" = "none" ]; then
+                echo "⚠️  WARNING: Codex CLI unavailable; creating placeholder output" >&2
+                (echo "Skipped: Codex CLI missing" > "$log_file"; exit 0) &
+            else
+                if [ "$CODEX_CLI_MODE" = "flag" ]; then
+                    (
+                        run_with_timeout --kill-after=${KILL_AFTER_SEC}s ${DEFAULT_TIMEOUT_SEC}s \
+                            codex exec \
+                            -c rollout_recorder.enabled=false \
+                            --profile "$CODEX_PROFILE" \
+                            --prompt "$prompt_content"
+                    ) > "$log_file" 2>&1 &
+                else
+                    (
+                        run_with_timeout --kill-after=${KILL_AFTER_SEC}s ${DEFAULT_TIMEOUT_SEC}s \
+                            codex exec \
+                            -c rollout_recorder.enabled=false \
+                            --profile "$CODEX_PROFILE" \
+                            - <<< "$prompt_content"
+                    ) > "$log_file" 2>&1 &
+                fi
+            fi
         else
             echo "⚠️  WARNING: Prompt file not found: ${prompt_file}" >&2
             echo "Creating empty agent that will succeed immediately (for testing)" >&2

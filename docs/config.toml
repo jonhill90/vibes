@@ -17,3 +17,19 @@ args = ["mcp", "gateway", "run"]
 # HTTP Server (Archon) - Requires experimental flag
 [mcp_servers.archon]
 url = "http://localhost:8051/mcp"
+
+[profiles.codex-prp]
+model = "gpt-5-codex"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+cwd = "/Users/jon/source/vibes"
+startup_timeout_sec = 30
+tool_timeout_sec = 600
+
+[profiles.codex-prp.sandbox_workspace_write]
+workspace_roots = [
+    "/Users/jon/source/vibes"
+]
+network_access = true
+bypass_approvals = true
+bypass_sandbox = true
