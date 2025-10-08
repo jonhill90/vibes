@@ -9,7 +9,7 @@
 The Codex workflow consists of **5 core scripts** that orchestrate PRP generation and execution:
 
 ```
-scripts/codex/
+.codex/scripts/
 ├── codex-generate-prp.sh      # Main orchestrator (Phase 0-4)
 ├── codex-execute-prp.sh       # Validation loop orchestrator
 ├── parallel-exec.sh           # Phase 2 parallel execution
@@ -570,7 +570,7 @@ test_invalid_names() {
 }
 
 # Run tests
-source scripts/codex/security-validation.sh
+source .codex/scripts/security-validation.sh
 test_valid_names
 test_invalid_names
 ```
@@ -578,7 +578,7 @@ test_invalid_names
 **Parallel Execution Tests**:
 ```bash
 # Run built-in self-tests
-bash scripts/codex/parallel-exec.sh --test
+bash .codex/scripts/parallel-exec.sh --test
 # ✅ Test 1 PASSED: All agents succeeded
 # ✅ Parallel execution confirmed (2s ≤ 3s)
 # ✅ Test 2 PASSED: Exit codes captured correctly
@@ -603,7 +603,7 @@ Simple test feature for validation
 EOF
 
 # Run generation
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_test_feature.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_test_feature.md
 
 # Validate PRP created
 if [ ! -f "prps/test_feature.md" ]; then
@@ -696,7 +696,7 @@ fi
 # ... (create test PRP with tasks)
 
 # Execute PRP
-./scripts/codex/codex-execute-prp.sh prps/test_feature.md
+./.codex/scripts/codex-execute-prp.sh prps/test_feature.md
 
 # Validate completion report
 if [ ! -f "prps/test_feature/codex/logs/execution_report.md" ]; then
@@ -740,7 +740,7 @@ bash tests/codex/test_security_validation.sh || exit 1
 
 echo ""
 echo "2. Parallel Execution Tests"
-bash scripts/codex/parallel-exec.sh --test || exit 1
+bash .codex/scripts/parallel-exec.sh --test || exit 1
 
 # Integration tests
 echo ""
@@ -780,12 +780,12 @@ PHASE4_TIMEOUT=900      # PRP assembly (synthesis)
 
 1. **Complex Features** (large codebase, extensive docs):
    ```bash
-   PHASE1_TIMEOUT=900 PHASE2_TIMEOUT=900 ./scripts/codex/codex-generate-prp.sh ...
+   PHASE1_TIMEOUT=900 PHASE2_TIMEOUT=900 ./.codex/scripts/codex-generate-prp.sh ...
    ```
 
 2. **Simple Features** (small, well-defined):
    ```bash
-   PHASE1_TIMEOUT=300 PHASE2_TIMEOUT=300 ./scripts/codex/codex-generate-prp.sh ...
+   PHASE1_TIMEOUT=300 PHASE2_TIMEOUT=300 ./.codex/scripts/codex-generate-prp.sh ...
    ```
 
 3. **Slow Codex Server**:
@@ -795,7 +795,7 @@ PHASE4_TIMEOUT=900      # PRP assembly (synthesis)
    PHASE2_TIMEOUT=900 \
    PHASE3_TIMEOUT=900 \
    PHASE4_TIMEOUT=1350 \
-   ./scripts/codex/codex-generate-prp.sh ...
+   ./.codex/scripts/codex-generate-prp.sh ...
    ```
 
 ### Parallel Limits
@@ -1042,7 +1042,7 @@ esac
 **Debugging?**
 1. Check individual phase logs: `prps/{feature}/codex/logs/phase*.log`
 2. Check manifest: `prps/{feature}/codex/logs/manifest.jsonl`
-3. Run with debug: `bash -x scripts/codex/codex-generate-prp.sh ...`
+3. Run with debug: `bash -x .codex/scripts/codex-generate-prp.sh ...`
 
 ---
 

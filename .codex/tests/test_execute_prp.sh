@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tests/codex/test_execute_prp.sh
+# .codex/tests/test_execute_prp.sh
 # Purpose: End-to-end integration test for PRP execution workflow
 # Pattern: Feature-analysis.md success criteria (lines 78-86)
 # Tests: Validation loop, error handling, coverage enforcement, completion reporting
@@ -257,7 +257,7 @@ test_script_exists() {
     echo "Test 1: Script existence and permissions"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-execute-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-execute-prp.sh"
 
     if [ -f "$script" ]; then
         pass "Script exists: codex-execute-prp.sh"
@@ -288,7 +288,7 @@ test_dependencies_exist() {
     local all_found=true
 
     for dep in "${deps[@]}"; do
-        local dep_path="${REPO_ROOT}/scripts/codex/${dep}"
+        local dep_path="${REPO_ROOT}/.codex/scripts/${dep}"
         if [ -f "$dep_path" ]; then
             pass "Dependency exists: $dep"
         else
@@ -309,7 +309,7 @@ test_feature_extraction() {
     echo "-----------------------------------------"
 
     # Source security validation
-    source "${REPO_ROOT}/scripts/codex/security-validation.sh" >/dev/null 2>&1 || {
+    source "${REPO_ROOT}/.codex/scripts/security-validation.sh" >/dev/null 2>&1 || {
         fail "Failed to source security-validation.sh"
         return 1
     }
@@ -342,7 +342,7 @@ test_gotcha_extraction() {
     echo "Test 4: Extract Known Gotchas from PRP"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-execute-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-execute-prp.sh"
 
     # Check if script has gotcha extraction function
     if grep -q "extract_gotchas_from_prp\|Known Gotchas" "$script"; then
@@ -369,7 +369,7 @@ test_validation_loop_structure() {
     echo "Test 5: Validation loop structure"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-execute-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-execute-prp.sh"
 
     # Check for max attempts configuration
     if grep -q "MAX_VALIDATION_ATTEMPTS" "$script"; then
@@ -409,7 +409,7 @@ test_error_handling() {
     echo "Test 6: Error handling and retry logic"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-execute-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-execute-prp.sh"
 
     # Check for error analysis function
     if grep -q "analyze.*error\|error.*analysis" "$script"; then
@@ -441,7 +441,7 @@ test_completion_report() {
     echo "Test 7: Completion report generation"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-execute-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-execute-prp.sh"
 
     # Check for report generation function
     if grep -q "completion.*report\|report.*completion\|generate.*report" "$script"; then
@@ -473,7 +473,7 @@ test_script_syntax() {
     echo "Test 8: Script syntax validation"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-execute-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-execute-prp.sh"
 
     # Syntax check
     if bash -n "$script" 2>/dev/null; then
@@ -611,7 +611,7 @@ test_prp_file_validation() {
     echo "Test 11: PRP file validation"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-execute-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-execute-prp.sh"
     local prp="${TEST_DIR}/${TEST_FEATURE}.md"
 
     # Test with valid PRP

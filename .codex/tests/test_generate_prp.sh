@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tests/codex/test_generate_prp.sh
+# .codex/tests/test_generate_prp.sh
 # Purpose: End-to-end integration test for PRP generation workflow
 # Pattern: Feature-analysis.md success criteria (lines 66-77)
 # Tests: Script structure, security validation, dependency checking, error handling
@@ -106,7 +106,7 @@ test_script_exists() {
     echo "Test 1: Script existence and permissions"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-generate-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-generate-prp.sh"
 
     if [ -f "$script" ]; then
         pass "Script exists: codex-generate-prp.sh"
@@ -138,7 +138,7 @@ test_dependencies_exist() {
     local all_found=true
 
     for dep in "${deps[@]}"; do
-        local dep_path="${REPO_ROOT}/scripts/codex/${dep}"
+        local dep_path="${REPO_ROOT}/.codex/scripts/${dep}"
         if [ -f "$dep_path" ]; then
             pass "Dependency exists: $dep"
         else
@@ -159,7 +159,7 @@ test_security_validation() {
     echo "-----------------------------------------"
 
     # Source security validation
-    source "${REPO_ROOT}/scripts/codex/security-validation.sh" >/dev/null 2>&1 || {
+    source "${REPO_ROOT}/.codex/scripts/security-validation.sh" >/dev/null 2>&1 || {
         fail "Failed to source security-validation.sh"
         return 1
     }
@@ -193,7 +193,7 @@ test_manifest_logging() {
     echo "-----------------------------------------"
 
     # Source log-phase.sh
-    source "${REPO_ROOT}/scripts/codex/log-phase.sh" >/dev/null || {
+    source "${REPO_ROOT}/.codex/scripts/log-phase.sh" >/dev/null || {
         fail "Failed to source log-phase.sh"
         return 1
     }
@@ -244,7 +244,7 @@ test_dependency_validation() {
     echo "-----------------------------------------"
 
     # Source parallel-exec.sh
-    source "${REPO_ROOT}/scripts/codex/parallel-exec.sh" >/dev/null 2>&1 || {
+    source "${REPO_ROOT}/.codex/scripts/parallel-exec.sh" >/dev/null 2>&1 || {
         fail "Failed to source parallel-exec.sh"
         return 1
     }
@@ -258,7 +258,7 @@ test_dependency_validation() {
 
     # Test Phase 3 depends on Phase 2
     # Note: This is a structural test, not a runtime test
-    if grep -q "phase2a\|phase2b\|phase2c" "${REPO_ROOT}/scripts/codex/codex-generate-prp.sh"; then
+    if grep -q "phase2a\|phase2b\|phase2c" "${REPO_ROOT}/.codex/scripts/codex-generate-prp.sh"; then
         pass "Script references Phase 2 agents"
     else
         fail "Script missing Phase 2 agent references"
@@ -272,7 +272,7 @@ test_script_syntax() {
     echo "Test 6: Script syntax validation"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-generate-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-generate-prp.sh"
 
     # Check if bash is available
     if ! command -v bash &> /dev/null; then
@@ -311,7 +311,7 @@ test_mock_prp_generation() {
     info "MOCK TEST - Codex CLI not available in test environment"
     info "This test validates script structure and error handling"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-generate-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-generate-prp.sh"
     local initial_md="${TEST_DIR}/INITIAL_${TEST_FEATURE}.md"
 
     # Test 1: Script shows help when no arguments
@@ -343,7 +343,7 @@ test_timeout_wrapper() {
     echo "Test 8: Timeout wrapper validation"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-generate-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-generate-prp.sh"
 
     # Check if timeout command is used
     if grep -q "timeout.*codex exec" "$script" || grep -q "TIMEOUT" "$script"; then
@@ -367,7 +367,7 @@ test_profile_enforcement() {
     echo "Test 9: Codex profile enforcement"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-generate-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-generate-prp.sh"
 
     # Check for CODEX_PROFILE variable
     if grep -q "CODEX_PROFILE" "$script"; then
@@ -391,7 +391,7 @@ test_parallel_execution_structure() {
     echo "Test 10: Parallel execution structure"
     echo "-----------------------------------------"
 
-    local script="${REPO_ROOT}/scripts/codex/codex-generate-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-generate-prp.sh"
 
     # Check for background job syntax (&)
     if grep -q "&$\|& *$" "$script"; then

@@ -33,7 +33,7 @@ This directory contains Codex CLI commands that replicate the Vibes five-phase P
 brew install bash
 
 # Use new Bash for scripts
-/opt/homebrew/bin/bash scripts/codex/codex-generate-prp.sh <args>
+/opt/homebrew/bin/bash .codex/scripts/codex-generate-prp.sh <args>
 ```
 
 **Dependencies** (auto-checked by scripts):
@@ -47,11 +47,11 @@ No installation needed - commands are ready to use:
 
 ```bash
 # Verify scripts exist
-ls -la scripts/codex/codex-*.sh
+ls -la .codex/scripts/codex-*.sh
 ls -la .codex/commands/codex-*.md
 
 # Test a script (help message)
-./scripts/codex/codex-generate-prp.sh
+./.codex/scripts/codex-generate-prp.sh
 ```
 
 ### 3. Profile Configuration
@@ -98,15 +98,15 @@ stream: true
 
 **Location**:
 - **Command prompt**: `.codex/commands/codex-generate-prp.md`
-- **Orchestration script**: `scripts/codex/codex-generate-prp.sh`
+- **Orchestration script**: `.codex/scripts/codex-generate-prp.sh`
 
 **Usage**:
 ```bash
 # Generate PRP from INITIAL.md
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_user_auth.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_user_auth.md
 
 # With custom profile
-CODEX_PROFILE=gpt-5-codex ./scripts/codex/codex-generate-prp.sh prps/INITIAL_feature.md
+CODEX_PROFILE=gpt-5-codex ./.codex/scripts/codex-generate-prp.sh prps/INITIAL_feature.md
 ```
 
 **Workflow**:
@@ -150,21 +150,21 @@ prps/
 
 **Location**:
 - **Command prompt**: `.codex/commands/codex-execute-prp.md`
-- **Orchestration script**: `scripts/codex/codex-execute-prp.sh`
+- **Orchestration script**: `.codex/scripts/codex-execute-prp.sh`
 
 **Usage**:
 ```bash
 # Execute PRP with full validation
-./scripts/codex/codex-execute-prp.sh prps/user_auth.md
+./.codex/scripts/codex-execute-prp.sh prps/user_auth.md
 
 # Execute INITIAL PRP (auto-strips prefix)
-./scripts/codex/codex-execute-prp.sh prps/INITIAL_user_auth.md
+./.codex/scripts/codex-execute-prp.sh prps/INITIAL_user_auth.md
 
 # Custom validation settings
-MAX_VALIDATION_ATTEMPTS=3 MIN_COVERAGE=80 ./scripts/codex/codex-execute-prp.sh prps/feature.md
+MAX_VALIDATION_ATTEMPTS=3 MIN_COVERAGE=80 ./.codex/scripts/codex-execute-prp.sh prps/feature.md
 
 # Skip validation (testing only)
-SKIP_VALIDATION=true ./scripts/codex/codex-execute-prp.sh prps/feature.md
+SKIP_VALIDATION=true ./.codex/scripts/codex-execute-prp.sh prps/feature.md
 ```
 
 **Validation Loop** (max 5 attempts):
@@ -220,11 +220,11 @@ Build user authentication system with:
 EOF
 
 # Step 2: Generate PRP (parallel Phase 2)
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_user_auth.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_user_auth.md
 # Output: prps/user_auth.md (comprehensive PRP with ≥8/10 quality)
 
 # Step 3: Execute PRP (with validation loop)
-./scripts/codex/codex-execute-prp.sh prps/user_auth.md
+./.codex/scripts/codex-execute-prp.sh prps/user_auth.md
 # Output: Validated implementation with ≥70% test coverage
 
 # Step 4: Review completion report
@@ -243,7 +243,7 @@ git commit -m "Implement user authentication"
 
 ```bash
 # Generate PRP without execution
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_api_client.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_api_client.md
 
 # Review generated PRP
 cat prps/api_client.md
@@ -259,7 +259,7 @@ grep "Score:" prps/api_client.md
 # Score: 9/10 (high confidence)
 
 # Execute later
-./scripts/codex/codex-execute-prp.sh prps/api_client.md
+./.codex/scripts/codex-execute-prp.sh prps/api_client.md
 ```
 
 ---
@@ -270,12 +270,12 @@ grep "Score:" prps/api_client.md
 # Custom validation thresholds
 MAX_VALIDATION_ATTEMPTS=3 \
 MIN_COVERAGE=80 \
-./scripts/codex/codex-execute-prp.sh prps/feature.md
+./.codex/scripts/codex-execute-prp.sh prps/feature.md
 
 # Custom timeout values
 PHASE1_TIMEOUT=900 \
 PHASE2_TIMEOUT=1200 \
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_complex_feature.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_complex_feature.md
 ```
 
 ---
@@ -284,7 +284,7 @@ PHASE2_TIMEOUT=1200 \
 
 ```bash
 # Run PRP generation
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_feature.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_feature.md
 # ❌ Phase 2a failed (exit 124 = timeout)
 
 # Check individual phase logs
@@ -296,7 +296,7 @@ cat prps/feature/codex/logs/manifest.jsonl
 # {"phase":"phase2a","status":"failed","exit_code":124,"duration":600}
 
 # Retry with increased timeout
-PHASE2_TIMEOUT=1200 ./scripts/codex/codex-generate-prp.sh prps/INITIAL_feature.md
+PHASE2_TIMEOUT=1200 ./.codex/scripts/codex-generate-prp.sh prps/INITIAL_feature.md
 ```
 
 ---
@@ -345,7 +345,7 @@ PHASE2_TIMEOUT=1200 ./scripts/codex/codex-generate-prp.sh prps/INITIAL_feature.m
 brew install bash
 
 # Run with new Bash
-/opt/homebrew/bin/bash scripts/codex/codex-generate-prp.sh <args>
+/opt/homebrew/bin/bash .codex/scripts/codex-generate-prp.sh <args>
 
 # Or set as default (optional)
 echo "/opt/homebrew/bin/bash" | sudo tee -a /etc/shells
@@ -384,19 +384,19 @@ sudo apt-get install coreutils
 **Examples**:
 ```bash
 # ❌ WRONG
-./scripts/codex/codex-generate-prp.sh ../../../etc/passwd
+./.codex/scripts/codex-generate-prp.sh ../../../etc/passwd
 # Error: Path traversal detected
 
 # ❌ WRONG
-./scripts/codex/codex-generate-prp.sh prps/prp_feature.md
+./.codex/scripts/codex-generate-prp.sh prps/prp_feature.md
 # Error: Redundant 'prp_' prefix
 
 # ❌ WRONG
-./scripts/codex/codex-generate-prp.sh "test;rm -rf /"
+./.codex/scripts/codex-generate-prp.sh "test;rm -rf /"
 # Error: Dangerous character ';'
 
 # ✅ RIGHT
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_user_auth.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_user_auth.md
 ```
 
 **Solution**: Use valid feature names (alphanumeric + underscore + hyphen only)
@@ -418,7 +418,7 @@ Choose (1/2/3): 2  # Accept
 # Option 3: Improve INITIAL.md and retry
 # Add more details to INITIAL.md
 # Re-run generation
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_feature.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_feature.md
 ```
 
 ---
@@ -433,7 +433,7 @@ Choose (1/2/3): 2  # Accept
 # Choose option 2: "Retry with increased timeout (+50%)"
 
 # Solution 2: Manual timeout override
-PHASE2_TIMEOUT=1200 ./scripts/codex/codex-generate-prp.sh prps/INITIAL_feature.md
+PHASE2_TIMEOUT=1200 ./.codex/scripts/codex-generate-prp.sh prps/INITIAL_feature.md
 
 # Solution 3: Check if Codex server is slow
 # Test Codex CLI directly
@@ -449,7 +449,7 @@ codex exec --profile codex-prp --prompt "Hello"
 **Solution**:
 ```bash
 # Option 1: Lower threshold (if acceptable)
-MIN_COVERAGE=45 ./scripts/codex/codex-execute-prp.sh prps/feature.md
+MIN_COVERAGE=45 ./.codex/scripts/codex-execute-prp.sh prps/feature.md
 
 # Option 2: Add more tests (recommended)
 # Validation loop will pause for manual intervention
@@ -502,7 +502,7 @@ codex profiles list
 # codex-prp ✓
 
 # Retry
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_feature.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_feature.md
 ```
 
 ---
@@ -570,7 +570,7 @@ cat > .codex/prompts/phase1.md <<'EOF'
 EOF
 
 # Run with custom prompt
-./scripts/codex/codex-generate-prp.sh prps/INITIAL_feature.md
+./.codex/scripts/codex-generate-prp.sh prps/INITIAL_feature.md
 ```
 
 ---
@@ -594,7 +594,7 @@ jobs:
 
       - name: Generate PRP
         run: |
-          ./scripts/codex/codex-generate-prp.sh prps/INITIAL_feature.md
+          ./.codex/scripts/codex-generate-prp.sh prps/INITIAL_feature.md
 
       - name: Check Quality
         run: |
@@ -606,7 +606,7 @@ jobs:
 
       - name: Execute PRP
         run: |
-          ./scripts/codex/codex-execute-prp.sh prps/feature.md
+          ./.codex/scripts/codex-execute-prp.sh prps/feature.md
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
@@ -628,7 +628,7 @@ jobs:
 └── profiles/
     └── codex-prp.yaml                # Codex profile configuration
 
-scripts/codex/
+.codex/scripts/
 ├── README.md                          # Technical/internal docs
 ├── codex-generate-prp.sh             # Main PRP generation orchestrator
 ├── codex-execute-prp.sh              # Main PRP execution orchestrator
@@ -658,7 +658,7 @@ prps/
 
 **Questions?** Check:
 1. This README (user-facing docs)
-2. `scripts/codex/README.md` (technical/internal docs)
+2. `.codex/scripts/README.md` (technical/internal docs)
 3. PRP: `prps/codex_commands.md` (complete specification)
 4. Examples: `prps/codex_commands/examples/README.md`
 

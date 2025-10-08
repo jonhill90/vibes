@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tests/codex/test_parallel_timing.sh
+# .codex/tests/test_parallel_timing.sh
 # Purpose: Validate parallel Phase 2 execution and measure speedup
 # Pattern: Feature-analysis.md success criteria (lines 72-73)
 # Tests: Concurrent timestamps, parallel speedup ≥2x
@@ -71,7 +71,7 @@ setup() {
     mkdir -p "${TEST_DIR}"
 
     # Source log-phase.sh for manifest creation
-    source "${REPO_ROOT}/scripts/codex/log-phase.sh" >/dev/null || {
+    source "${REPO_ROOT}/.codex/scripts/log-phase.sh" >/dev/null || {
         fail "Failed to source log-phase.sh"
         exit 1
     }
@@ -379,7 +379,7 @@ test_phase2_outputs_exist() {
     # Note: We can't create actual outputs without Codex CLI
     # But we can validate the script expects them
 
-    local script="${REPO_ROOT}/scripts/codex/codex-generate-prp.sh"
+    local script="${REPO_ROOT}/.codex/scripts/codex-generate-prp.sh"
 
     for output in "${expected_outputs[@]}"; do
         if grep -q "$output" "$script" 2>/dev/null; then
@@ -399,7 +399,7 @@ test_real_parallel_execution() {
     info "Testing actual parallel job control with mock agents"
 
     # Create test manifest
-    source "${REPO_ROOT}/scripts/codex/log-phase.sh" 2>/dev/null
+    source "${REPO_ROOT}/.codex/scripts/log-phase.sh" 2>/dev/null
 
     # Record start time
     local start_time=$(date +%s)
