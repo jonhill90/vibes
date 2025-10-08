@@ -736,7 +736,7 @@ echo "========================================="
 # Unit tests
 echo ""
 echo "1. Security Validation Tests"
-bash tests/codex/test_security_validation.sh || exit 1
+bash .codex/tests/test_security_validation.sh || exit 1
 
 echo ""
 echo "2. Parallel Execution Tests"
@@ -745,15 +745,15 @@ bash .codex/scripts/parallel-exec.sh --test || exit 1
 # Integration tests
 echo ""
 echo "3. PRP Generation Test"
-bash tests/codex/test_generate_prp.sh || exit 1
+bash .codex/tests/test_generate_prp.sh || exit 1
 
 echo ""
 echo "4. Parallel Timing Test"
-bash tests/codex/test_parallel_timing.sh || exit 1
+bash .codex/tests/test_parallel_timing.sh || exit 1
 
 echo ""
 echo "5. PRP Execution Test"
-bash tests/codex/test_execute_prp.sh || exit 1
+bash .codex/tests/test_execute_prp.sh || exit 1
 
 echo ""
 echo "========================================="

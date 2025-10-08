@@ -245,7 +245,7 @@ validate_file_structure() {
 
 ### Complete Pre-Flight Check
 
-**Executable Script**: `scripts/codex/validate-bootstrap.sh`
+**Executable Script**: `.codex/scripts/validate-bootstrap.sh`
 
 ```bash
 #!/bin/bash
@@ -771,7 +771,7 @@ request_manual_intervention() {
             echo "  1. Validate profile: codex config show --profile codex-prp"
             echo "  2. Check for missing required fields"
             echo "  3. Fix in ~/.codex/config.toml"
-            echo "  4. Re-run validation: scripts/codex/validate-bootstrap.sh"
+            echo "  4. Re-run validation: .codex/scripts/validate-bootstrap.sh"
             echo ""
             echo "See: docs/codex-config.md"
             ;;
@@ -1014,7 +1014,7 @@ echo ""
 
 # Pre-Flight Validation
 echo "=== Pre-Flight Validation ==="
-./scripts/codex/validate-bootstrap.sh "$PROFILE_NAME" || {
+./.codex/scripts/validate-bootstrap.sh "$PROFILE_NAME" || {
     echo "❌ Pre-flight checks failed"
     exit 1
 }

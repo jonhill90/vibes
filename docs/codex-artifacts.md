@@ -53,8 +53,8 @@ vibes/
 │   │   ├── codex-execute-prp.md    # Execution workflow (deferred to Phase 2)
 │   │   └── phase*.md               # Individual phase prompts (deferred to Phase 2)
 │   └── config.toml                 # Repo-local config (optional)
-├── scripts/
-│   └── codex/
+├── .codex/
+│   └── scripts/
 │       ├── validate-bootstrap.sh   # Pre-flight validation
 │       ├── log-phase.sh            # JSONL manifest logging
 │       └── validate-config.sh      # Config validation
@@ -77,13 +77,13 @@ vibes/
 |---------|---------|----------|
 | `codex-generate-prp` | PRP generation workflow | `.codex/commands/` |
 | `codex-execute-prp` | PRP execution workflow | `.codex/commands/` |
-| `codex-validate` | Validation helper | `scripts/codex/` |
+| `codex-validate` | Validation helper | `.codex/scripts/` |
 
 **Rationale**: `codex-` prefix immediately identifies Codex-specific commands and groups them alphabetically.
 
 ### Scripts
 
-**Pattern**: `{verb}-{noun}.sh` in `scripts/codex/`
+**Pattern**: `{verb}-{noun}.sh` in `.codex/scripts/`
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
@@ -261,7 +261,7 @@ git diff HEAD~1 HEAD
 **Before creating artifacts**:
 ```bash
 #!/bin/bash
-# scripts/codex/validate-artifact-structure.sh
+# .codex/scripts/validate-artifact-structure.sh
 
 validate_artifact_structure() {
     local feature=$1
@@ -352,7 +352,7 @@ validate_manifest_coverage "codex_integration"
 **Helper script for new features**:
 ```bash
 #!/bin/bash
-# scripts/codex/create-artifact-dirs.sh
+# .codex/scripts/create-artifact-dirs.sh
 # Usage: ./create-artifact-dirs.sh <feature_name>
 
 set -euo pipefail
@@ -433,7 +433,7 @@ echo "3. Validate: scripts/codex/validate-artifact-structure.sh ${FEATURE_NAME}"
 **Create test feature to verify structure**:
 ```bash
 # Create test feature
-./scripts/codex/create-artifact-dirs.sh test_feature
+./.codex/scripts/create-artifact-dirs.sh test_feature
 
 # Expected output
 prps/test_feature/codex/
@@ -451,7 +451,7 @@ prps/test_feature/codex/
 **Write test entries and validate**:
 ```bash
 # Source logging script
-source scripts/codex/log-phase.sh
+source .codex/scripts/log-phase.sh
 
 # Log test phase
 FEATURE_NAME="test_feature"
@@ -633,7 +633,7 @@ validate_manifest_coverage "${FEATURE}"
 **Solution**:
 ```bash
 # Create structure explicitly
-./scripts/codex/create-artifact-dirs.sh ${FEATURE_NAME}
+./.codex/scripts/create-artifact-dirs.sh ${FEATURE_NAME}
 
 # OR manually
 mkdir -p prps/${FEATURE_NAME}/codex/logs
@@ -715,8 +715,8 @@ find prps/${FEATURE_NAME}/codex -print | sed -e 's;[^/]*/;|___;g'
 ### Source Code
 
 - `prps/codex_integration/examples/manifest_logger.sh`: JSONL logging implementation
-- `scripts/codex/log-phase.sh`: Manifest logging helper
-- `scripts/codex/validate-artifact-structure.sh`: Structure validation
+- `.codex/scripts/log-phase.sh`: Manifest logging helper
+- `.codex/scripts/validate-artifact-structure.sh`: Structure validation
 
 ---
 
