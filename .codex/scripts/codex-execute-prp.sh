@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/codex/codex-execute-prp.sh
+# .codex/scripts/codex-execute-prp.sh
 # Purpose: Orchestrate PRP execution with validation loop (ruff → mypy → pytest)
 # Pattern: .claude/patterns/quality-gates.md (validation loop pattern)
 # Source: Task 5 from prps/codex_commands.md (lines 648-684)
@@ -53,7 +53,7 @@ fi
 # Show usage information
 show_usage() {
     cat <<'EOF'
-Usage: ./scripts/codex/codex-execute-prp.sh <prp_file>
+Usage: ./.codex/scripts/codex-execute-prp.sh <prp_file>
 
 Orchestrate PRP execution with validation loop (ruff → mypy → pytest).
 
@@ -82,13 +82,13 @@ After Max Attempts:
 
 Examples:
   # Execute PRP with validation
-  ./scripts/codex/codex-execute-prp.sh prps/user_auth.md
+  ./.codex/scripts/codex-execute-prp.sh prps/user_auth.md
 
   # Execute INITIAL PRP (auto-strips INITIAL_ prefix)
-  ./scripts/codex/codex-execute-prp.sh prps/INITIAL_user_auth.md
+  ./.codex/scripts/codex-execute-prp.sh prps/INITIAL_user_auth.md
 
   # Custom max attempts
-  MAX_VALIDATION_ATTEMPTS=3 ./scripts/codex/codex-execute-prp.sh prps/user_auth.md
+  MAX_VALIDATION_ATTEMPTS=3 ./.codex/scripts/codex-execute-prp.sh prps/user_auth.md
 
 Manifest Location:
   prps/<feature>/codex/logs/manifest.jsonl
@@ -645,7 +645,7 @@ run_validation_loop() {
             2)
                 echo ""
                 echo "⏸️  Pausing for manual intervention"
-                echo "Fix issues and re-run: ./scripts/codex/codex-execute-prp.sh $prp_path"
+                echo "Fix issues and re-run: ./.codex/scripts/codex-execute-prp.sh $prp_path"
                 return 3  # Manual intervention exit code
                 ;;
             3)

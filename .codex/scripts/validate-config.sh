@@ -2,7 +2,7 @@
 # Codex Configuration Validation Script
 # Purpose: Validate Codex profile configuration against v0.20+ requirements
 # Pattern: Codebase patterns Pattern 4 (validation loops)
-# Usage: ./scripts/codex/validate-config.sh [profile_name]
+# Usage: ./.codex/scripts/validate-config.sh [profile_name]
 
 set -euo pipefail
 

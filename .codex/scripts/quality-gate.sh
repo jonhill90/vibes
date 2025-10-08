@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/codex/quality-gate.sh
+# .codex/scripts/quality-gate.sh
 # Purpose: Extract PRP quality score and enforce ≥8/10 minimum
 # Pattern: Based on prps/codex_commands/examples/quality_gate.sh
 # Source: Task 8 from prps/codex_commands.md (lines 763-791)
@@ -347,7 +347,7 @@ generate_quality_report() {
 
 show_usage() {
     cat <<'EOF'
-Usage: scripts/codex/quality-gate.sh <prp_file> [min_score] [max_attempts]
+Usage: .codex/scripts/quality-gate.sh <prp_file> [min_score] [max_attempts]
 
 Extract PRP quality score and enforce minimum threshold.
 
@@ -358,16 +358,16 @@ Arguments:
 
 Examples:
   # Interactive mode (with regeneration options)
-  scripts/codex/quality-gate.sh prps/user_auth.md
+  .codex/scripts/quality-gate.sh prps/user_auth.md
 
   # Custom minimum score (9/10)
-  scripts/codex/quality-gate.sh prps/user_auth.md 9
+  .codex/scripts/quality-gate.sh prps/user_auth.md 9
 
   # Custom max attempts
-  scripts/codex/quality-gate.sh prps/user_auth.md 8 5
+  .codex/scripts/quality-gate.sh prps/user_auth.md 8 5
 
   # Non-interactive check (CI/CD)
-  if scripts/codex/quality-gate.sh prps/user_auth.md 8 1; then
+  if .codex/scripts/quality-gate.sh prps/user_auth.md 8 1; then
       echo "Quality passed"
   fi
 

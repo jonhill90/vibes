@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/codex/parallel-exec.sh
+# .codex/scripts/parallel-exec.sh
 # Purpose: Parallel execution helper for Phase 2 agents with PID tracking and exit code capture
 # Pattern: Adapted from prps/codex_integration/examples/phase_orchestration.sh (lines 112-161)
 # Source: PRP Task 2 - parallel execution with timeout, exit code capture, separate logging
@@ -467,7 +467,7 @@ test_parallel_execution() {
 
 show_usage() {
     cat <<'EOF'
-Usage: source scripts/codex/parallel-exec.sh
+Usage: source .codex/scripts/parallel-exec.sh
 
 Parallel execution helper for Phase 2 agents with:
   - Timeout wrapper (prevents zombie processes)
@@ -488,7 +488,7 @@ Functions available when sourced:
 
 Example Usage:
   # Source the script
-  source scripts/codex/parallel-exec.sh
+  source .codex/scripts/parallel-exec.sh
 
   # Execute Phase 2 agents in parallel
   execute_parallel_group "user_auth" "phase2" "phase2a" "phase2b" "phase2c"

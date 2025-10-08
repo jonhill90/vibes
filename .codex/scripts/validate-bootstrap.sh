@@ -2,7 +2,7 @@
 # Pre-flight validation for Codex CLI execution
 # Source: Pattern 7 (Comprehensive Validation Suite) from codebase-patterns.md
 # Purpose: Run before any codex exec command to ensure environment is ready
-# Usage: ./scripts/codex/validate-bootstrap.sh [profile_name]
+# Usage: ./.codex/scripts/validate-bootstrap.sh [profile_name]
 
 set -euo pipefail
 

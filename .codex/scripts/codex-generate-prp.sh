@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/codex/codex-generate-prp.sh
+# .codex/scripts/codex-generate-prp.sh
 # Purpose: Orchestrate full 5-phase PRP generation workflow with parallel Phase 2
 # Pattern: Adapted from prps/codex_integration/examples/phase_orchestration.sh
 # Source: PRP Task 3 - Complete PRP generation with quality gates

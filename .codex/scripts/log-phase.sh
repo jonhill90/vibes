@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/codex/log-phase.sh
+# .codex/scripts/log-phase.sh
 # Purpose: JSONL manifest logging for Codex phase tracking and audit trail
 # Pattern: Append-only JSONL with ISO 8601 timestamps (UTC)
 # Source: Adapted from prps/codex_integration/examples/manifest_logger.sh

@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/codex/security-validation.sh
+# .codex/scripts/security-validation.sh
 # Purpose: Security validation for feature names - prevents path traversal and command injection
 # Pattern: 6-level validation based on .claude/patterns/security-validation.md
 # Source: Adapted from prps/codex_commands/examples/security_validation.py
@@ -191,7 +191,7 @@ validate_bash_variable_safe() {
 # Show usage information
 show_usage() {
     cat <<'EOF'
-Usage: source scripts/codex/security-validation.sh
+Usage: source .codex/scripts/security-validation.sh
 
 Security validation for feature names - prevents path traversal and command injection.
 
