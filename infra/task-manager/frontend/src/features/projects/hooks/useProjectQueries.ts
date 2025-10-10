@@ -179,6 +179,81 @@ export function useCreateProject() {
 }
 
 /**
+ * useDeleteProject - Mutation hook for deleting projects
+ *
+ * PATTERN: Optimistic updates with rollback on error
+ *
+ * FLOW:
+ * 1. onMutate: Cancel in-flight queries, snapshot current state, remove project optimistically
+ * 2. mutationFn: Call API to delete project
+ * 3. onError: Rollback to previous state
+ * 4. onSettled: Invalidate queries to refetch (only if last mutation)
+ *
+ * CRITICAL GOTCHAS:
+ * - MUST await cancelQueries to prevent race conditions (Gotcha #1)
+ * - Snapshot previous state for rollback on error
+ * - Check isMutating to prevent concurrent mutation issues (Gotcha #2)
+ */
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string, { previousProjects?: Project[] }>({
+    mutationKey: ["deleteProject"], // CRITICAL: enables tracking concurrent mutations
+    mutationFn: (projectId: string) => projectService.deleteProject(projectId),
+
+    // CRITICAL: onMutate for optimistic updates
+    onMutate: async (projectId) => {
+      // GOTCHA #1: Cancel any outgoing refetches to avoid race conditions
+      await queryClient.cancelQueries({ queryKey: projectKeys.lists() });
+
+      // Snapshot the previous value for rollback
+      const previousProjects = queryClient.getQueryData<Project[]>(projectKeys.lists());
+
+      // Optimistically remove the project from cache
+      queryClient.setQueryData(projectKeys.lists(), (old: Project[] | undefined) => {
+        if (!old) return [];
+        return old.filter((project) => project.id !== projectId);
+      });
+
+      // Return context for onError
+      return { previousProjects };
+    },
+
+    // PATTERN: Rollback on error
+    onError: (error, projectId, context) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Failed to delete project:", errorMessage, {
+        projectId,
+      });
+
+      // Rollback to previous state
+      if (context?.previousProjects) {
+        queryClient.setQueryData(projectKeys.lists(), context.previousProjects);
+      }
+
+      // TODO: Show toast notification when useToast is available
+      // showToast(`Failed to delete project: ${errorMessage}`, "error");
+    },
+
+    // TODO: Show success toast when useToast is available
+    // onSuccess: () => {
+    //   showToast("Project deleted successfully", "success");
+    // },
+
+    // PATTERN: Only invalidate if last mutation (prevents concurrent mutation issues)
+    // GOTCHA #2: Check isMutating to prevent race conditions from concurrent deletes
+    onSettled: () => {
+      // Check if other mutations are still running
+      const mutationCount = queryClient.isMutating({ mutationKey: ["deleteProject"] });
+      if (mutationCount === 1) {
+        // This is the last mutation, safe to invalidate
+        queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      }
+    },
+  });
+}
+
+/**
  * USAGE EXAMPLE:
  *
  * ```tsx
@@ -223,6 +298,23 @@ export function useCreateProject() {
  *   return (
  *     <button onClick={handleCreate} disabled={createProject.isPending}>
  *       {createProject.isPending ? "Creating..." : "Create Project"}
+ *     </button>
+ *   );
+ * }
+ *
+ * // Delete project mutation with optimistic updates
+ * function DeleteProjectButton({ projectId }: { projectId: string }) {
+ *   const deleteProject = useDeleteProject();
+ *
+ *   const handleDelete = () => {
+ *     if (confirm("Are you sure you want to delete this project?")) {
+ *       deleteProject.mutate(projectId);
+ *     }
+ *   };
+ *
+ *   return (
+ *     <button onClick={handleDelete} disabled={deleteProject.isPending}>
+ *       {deleteProject.isPending ? "Deleting..." : "Delete"}
  *     </button>
  *   );
  * }

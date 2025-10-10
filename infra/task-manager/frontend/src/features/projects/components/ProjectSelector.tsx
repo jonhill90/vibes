@@ -35,22 +35,30 @@
  */
 
 import * as Select from "@radix-ui/react-select";
-import { Check, ChevronDown, FolderPlus } from "lucide-react";
-import { memo, useCallback, useMemo } from "react";
+import { Check, ChevronDown, FolderPlus, Trash2 } from "lucide-react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useProjects } from "../hooks/useProjectQueries";
+import { DeleteProjectDialog } from "./DeleteProjectDialog";
+import type { Project } from "../types/project";
 
 interface ProjectSelectorProps {
   selectedProjectId: string | null;
   onProjectChange: (projectId: string) => void;
   onCreateProject: () => void;
+  onProjectDeleted?: () => void;
 }
 
 export const ProjectSelector = memo(({
   selectedProjectId,
   onProjectChange,
   onCreateProject,
+  onProjectDeleted,
 }: ProjectSelectorProps) => {
   const { data: projects, isLoading, error, refetch } = useProjects();
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
   // CRITICAL: All hooks must be at top level before any early returns
 
@@ -73,6 +81,20 @@ export const ProjectSelector = memo(({
       onProjectChange(value);
     }
   }, [onCreateProject, onProjectChange]);
+
+  // Delete button handler
+  const handleDeleteClick = useCallback((project: Project, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent select item from triggering
+    setProjectToDelete(project);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  // Delete success handler
+  const handleDeleteSuccess = useCallback(() => {
+    setProjectToDelete(null);
+    setDeleteDialogOpen(false);
+    onProjectDeleted?.();
+  }, [onProjectDeleted]);
 
   // Loading state: show skeleton (prevents layout shift - Task 9)
   if (isLoading) {
@@ -109,6 +131,7 @@ export const ProjectSelector = memo(({
   }
 
   return (
+    <>
     <Select.Root
       value={selectedProjectId || undefined}
       onValueChange={handleValueChange}
@@ -143,7 +166,7 @@ export const ProjectSelector = memo(({
               <Select.Item
                 key={project.id}
                 value={project.id}
-                className="relative flex items-center px-8 py-2 text-sm rounded-md cursor-pointer outline-none transition-colors duration-150 text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30 focus:ring-2 focus:ring-inset focus:ring-blue-500 dark:focus:ring-blue-400 data-[state=checked]:bg-blue-100 dark:data-[state=checked]:bg-blue-900/50 data-[state=checked]:text-blue-700 dark:data-[state=checked]:text-blue-300 data-[state=checked]:font-medium"
+                className="relative flex items-center justify-between px-8 py-2 pr-2 text-sm rounded-md cursor-pointer outline-none transition-colors duration-150 text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30 focus:ring-2 focus:ring-inset focus:ring-blue-500 dark:focus:ring-blue-400 data-[state=checked]:bg-blue-100 dark:data-[state=checked]:bg-blue-900/50 data-[state=checked]:text-blue-700 dark:data-[state=checked]:text-blue-300 data-[state=checked]:font-medium"
                 aria-label={`Select project: ${project.name}`}
               >
                 {/* Checkmark indicator for selected project */}
@@ -151,7 +174,18 @@ export const ProjectSelector = memo(({
                   <Check className="h-4 w-4" aria-hidden="true" />
                 </Select.ItemIndicator>
 
-                <Select.ItemText>{project.name}</Select.ItemText>
+                <Select.ItemText className="flex-1">{project.name}</Select.ItemText>
+
+                {/* Delete button */}
+                <button
+                  onClick={(e) => handleDeleteClick(project, e)}
+                  className="flex-shrink-0 p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
+                  aria-label={`Delete project: ${project.name}`}
+                  title="Delete project"
+                  type="button"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </button>
               </Select.Item>
             ))}
 
@@ -173,5 +207,14 @@ export const ProjectSelector = memo(({
         </Select.Content>
       </Select.Portal>
     </Select.Root>
+
+    {/* Delete confirmation dialog */}
+    <DeleteProjectDialog
+      open={deleteDialogOpen}
+      onOpenChange={setDeleteDialogOpen}
+      project={projectToDelete}
+      onSuccess={handleDeleteSuccess}
+    />
+  </>
   );
 });

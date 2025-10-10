@@ -31,6 +31,7 @@ interface KanbanBoardProps {
   selectedProjectId: string | null;
   onProjectChange: (projectId: string) => void;
   onCreateProject: () => void;
+  onProjectDeleted?: () => void;
 }
 
 // Column configuration
@@ -46,6 +47,7 @@ export const KanbanBoard = ({
   selectedProjectId,
   onProjectChange,
   onCreateProject,
+  onProjectDeleted,
 }: KanbanBoardProps) => {
   // Fetch tasks for the project with smart polling
   const { data: tasks, isLoading, error } = useProjectTasks(projectId);
@@ -139,6 +141,7 @@ export const KanbanBoard = ({
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
           onCreateProject={onCreateProject}
+          onProjectDeleted={onProjectDeleted}
         />
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           {tasks?.length || 0} tasks total

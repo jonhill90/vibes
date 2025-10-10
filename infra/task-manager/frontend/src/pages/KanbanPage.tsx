@@ -78,6 +78,25 @@ export const KanbanPage = () => {
     setCreateModalOpen(false);
   }, []);
 
+  // CRITICAL: Handle project deletion - switch to first available project or clear selection
+  const handleProjectDeleted = useCallback(() => {
+    if (!projects || projects.length === 0) {
+      setSelectedProjectId(null);
+      ProjectStorage.clear();
+      return;
+    }
+
+    // Check if deleted project was the selected one
+    const currentProjectExists = selectedProjectId && projects.some((p) => p.id === selectedProjectId);
+
+    if (!currentProjectExists && projects.length > 0) {
+      // Deleted project was selected, switch to first available
+      const firstProject = projects[0];
+      setSelectedProjectId(firstProject.id);
+      ProjectStorage.set(firstProject.id);
+    }
+  }, [projects, selectedProjectId]);
+
   // Loading state: show spinner while fetching projects
   if (isLoading) {
     return (
@@ -135,6 +154,7 @@ export const KanbanPage = () => {
             selectedProjectId={selectedProjectId}
             onProjectChange={setSelectedProjectId}
             onCreateProject={handleCreateProjectClick}
+            onProjectDeleted={handleProjectDeleted}
           />
         </ErrorBoundary>
       </main>
