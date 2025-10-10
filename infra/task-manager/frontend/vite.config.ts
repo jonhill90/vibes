@@ -13,7 +13,9 @@ export default defineConfig({
     allowedHosts: ["host.docker.internal", "localhost"],
     proxy: {
       "/api": {
-        target: process.env.VITE_API_URL || "http://localhost:8000",
+        // Use host.docker.internal when VITE_API_URL is set (Docker environment)
+        // Otherwise use localhost:8001 (local development)
+        target: process.env.VITE_API_URL || "http://localhost:8001",
         changeOrigin: true,
         secure: false,
       },

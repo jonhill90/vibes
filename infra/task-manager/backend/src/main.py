@@ -78,6 +78,7 @@ if ENVIRONMENT == "development":
     origins = [
         "http://localhost:3000",  # React default port
         "http://localhost:5173",  # Vite default port
+        "http://host.docker.internal:3000",  # Docker Desktop internal DNS
     ]
 elif ENVIRONMENT == "production":
     # Production: Use environment variable for allowed origins

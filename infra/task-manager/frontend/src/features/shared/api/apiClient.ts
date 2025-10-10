@@ -21,9 +21,12 @@ export interface ApiError {
 
 /**
  * Create axios instance with base configuration
+ *
+ * NOTE: baseURL is empty to use relative paths (/api/...)
+ * Vite dev server proxy handles forwarding /api requests to backend
  */
 const apiClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
+  baseURL: "", // Use relative URLs, Vite proxy handles backend routing
   timeout: 30000, // 30 seconds
   headers: {
     "Content-Type": "application/json",

@@ -22,6 +22,24 @@ export interface TaskFilters {
 }
 
 /**
+ * Paginated task list response
+ */
+export interface TaskListResponse {
+  tasks: Task[];
+  total_count: number;
+  page: number;
+  per_page: number;
+}
+
+/**
+ * Single task response
+ */
+export interface TaskResponse {
+  task: Task;
+  message?: string;
+}
+
+/**
  * Position update request
  */
 export interface TaskPositionUpdate {
@@ -50,8 +68,8 @@ class TaskService {
       if (filters.per_page) params.per_page = filters.per_page;
     }
 
-    const response = await apiClient.get<Task[]>("/api/tasks", { params });
-    return response.data;
+    const response = await apiClient.get<TaskListResponse>("/api/tasks/", { params });
+    return response.data.tasks;
   }
 
   /**
@@ -62,8 +80,8 @@ class TaskService {
    * @throws ApiError if not found (404)
    */
   async getTask(id: string): Promise<Task> {
-    const response = await apiClient.get<Task>(`/api/tasks/${id}`);
-    return response.data;
+    const response = await apiClient.get<TaskResponse>(`/api/tasks/${id}`);
+    return response.data.task;
   }
 
   /**
@@ -74,8 +92,8 @@ class TaskService {
    * @throws ApiError if validation fails (422)
    */
   async createTask(data: TaskCreate): Promise<Task> {
-    const response = await apiClient.post<Task>("/api/tasks", data);
-    return response.data;
+    const response = await apiClient.post<TaskResponse>("/api/tasks/", data);
+    return response.data.task;
   }
 
   /**
@@ -87,8 +105,8 @@ class TaskService {
    * @throws ApiError if not found (404) or validation fails (422)
    */
   async updateTask(id: string, data: TaskUpdate): Promise<Task> {
-    const response = await apiClient.patch<Task>(`/api/tasks/${id}`, data);
-    return response.data;
+    const response = await apiClient.patch<TaskResponse>(`/api/tasks/${id}`, data);
+    return response.data.task;
   }
 
   /**
@@ -105,11 +123,11 @@ class TaskService {
    * @throws ApiError if not found (404) or validation fails (422)
    */
   async updateTaskPosition(id: string, status: TaskStatus, position: number): Promise<Task> {
-    const response = await apiClient.patch<Task>(`/api/tasks/${id}/position`, {
+    const response = await apiClient.patch<TaskResponse>(`/api/tasks/${id}/position`, {
       status,
       position,
     });
-    return response.data;
+    return response.data.task;
   }
 
   /**
