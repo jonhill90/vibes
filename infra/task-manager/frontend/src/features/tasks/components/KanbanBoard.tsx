@@ -115,7 +115,7 @@ export const KanbanBoard = ({
 
   return (
     <div className="h-full p-6">
-      {/* Board Header with Title, Project Selector, and Theme Toggle */}
+      {/* Board Header with Title and Theme Toggle */}
       <div className="mb-6 flex items-center justify-between">
         {/* Left side: Title and Description */}
         <div>
@@ -127,22 +127,19 @@ export const KanbanBoard = ({
           </p>
         </div>
 
-        {/* Right side: Project Selector and Theme Toggle */}
+        {/* Right side: Theme Toggle ONLY */}
         <div className="flex items-center gap-4">
-          <ProjectSelector
-            selectedProjectId={selectedProjectId}
-            onProjectChange={onProjectChange}
-            onCreateProject={onCreateProject}
-          />
           <ThemeToggle />
         </div>
       </div>
 
-      {/* Board Sub-header */}
+      {/* Project Selector Section (replaces "Kanban Board" header) */}
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-          Kanban Board
-        </h2>
+        <ProjectSelector
+          selectedProjectId={selectedProjectId}
+          onProjectChange={onProjectChange}
+          onCreateProject={onCreateProject}
+        />
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           {tasks?.length || 0} tasks total
         </p>
