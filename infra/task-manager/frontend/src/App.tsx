@@ -13,6 +13,7 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KanbanPage } from "./pages/KanbanPage";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 // Create QueryClient instance for TanStack Query
 const queryClient = new QueryClient({
@@ -28,13 +29,16 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    // CRITICAL: DndProvider wraps entire app for drag-and-drop functionality
-    // Must use HTML5Backend for browser-based drag-and-drop
-    <DndProvider backend={HTML5Backend}>
-      <QueryClientProvider client={queryClient}>
-        <KanbanPage />
-      </QueryClientProvider>
-    </DndProvider>
+    // CRITICAL: ThemeProvider wraps app for light/dark mode
+    <ThemeProvider>
+      {/* DndProvider wraps entire app for drag-and-drop functionality */}
+      {/* Must use HTML5Backend for browser-based drag-and-drop */}
+      <DndProvider backend={HTML5Backend}>
+        <QueryClientProvider client={queryClient}>
+          <KanbanPage />
+        </QueryClientProvider>
+      </DndProvider>
+    </ThemeProvider>
   );
 }
 

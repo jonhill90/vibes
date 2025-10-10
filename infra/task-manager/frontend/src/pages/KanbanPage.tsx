@@ -124,37 +124,18 @@ export const KanbanPage = () => {
     );
   }
 
-  // Normal case: show header with ProjectSelector + main with KanbanBoard
+  // Normal case: show KanbanBoard with integrated header
   return (
     <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900 transition-opacity duration-200 animate-in fade-in">
-      {/* Page Header with ProjectSelector */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm" role="banner">
-        <div className="max-w-full px-6 py-4 flex items-center gap-4">
-          {/* Project Selector Dropdown */}
-          <nav aria-label="Project navigation">
-            <ProjectSelector
-              selectedProjectId={selectedProjectId}
-              onProjectChange={setSelectedProjectId}
-              onCreateProject={handleCreateProjectClick}
-            />
-          </nav>
-
-          {/* Title Section */}
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Task Management
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Organize your tasks with drag-and-drop Kanban board
-            </p>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content - Kanban Board wrapped in ErrorBoundary (TASK 8: Catastrophic failures) */}
       <main className="flex-1 overflow-hidden" role="main" aria-label="Kanban board">
         <ErrorBoundary>
-          <KanbanBoard projectId={selectedProjectId} />
+          <KanbanBoard
+            projectId={selectedProjectId}
+            selectedProjectId={selectedProjectId}
+            onProjectChange={setSelectedProjectId}
+            onCreateProject={handleCreateProjectClick}
+          />
         </ErrorBoundary>
       </main>
 

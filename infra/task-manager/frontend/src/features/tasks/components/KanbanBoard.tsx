@@ -23,9 +23,14 @@ import { useProjectTasks, useUpdateTaskPosition } from "../hooks/useTaskQueries"
 import { KanbanColumn } from "./KanbanColumn";
 import type { TaskStatus } from "../types/task";
 import { groupBy } from "../../shared/utils/groupBy";
+import { ProjectSelector } from "../../projects/components/ProjectSelector";
+import { ThemeToggle } from "../../../components/ThemeToggle";
 
 interface KanbanBoardProps {
   projectId: string;
+  selectedProjectId: string | null;
+  onProjectChange: (projectId: string) => void;
+  onCreateProject: () => void;
 }
 
 // Column configuration
@@ -36,7 +41,12 @@ const COLUMNS: Array<{ status: TaskStatus; label: string }> = [
   { status: "done", label: "Done" },
 ];
 
-export const KanbanBoard = ({ projectId }: KanbanBoardProps) => {
+export const KanbanBoard = ({
+  projectId,
+  selectedProjectId,
+  onProjectChange,
+  onCreateProject,
+}: KanbanBoardProps) => {
   // Fetch tasks for the project with smart polling
   const { data: tasks, isLoading, error } = useProjectTasks(projectId);
 
@@ -105,9 +115,32 @@ export const KanbanBoard = ({ projectId }: KanbanBoardProps) => {
 
   return (
     <div className="h-full p-6">
-      {/* Board Header */}
+      {/* Board Header with Title, Project Selector, and Theme Toggle */}
+      <div className="mb-6 flex items-center justify-between">
+        {/* Left side: Title and Description */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Task Management
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Organize your tasks with drag-and-drop Kanban board
+          </p>
+        </div>
+
+        {/* Right side: Project Selector and Theme Toggle */}
+        <div className="flex items-center gap-4">
+          <ProjectSelector
+            selectedProjectId={selectedProjectId}
+            onProjectChange={onProjectChange}
+            onCreateProject={onCreateProject}
+          />
+          <ThemeToggle />
+        </div>
+      </div>
+
+      {/* Board Sub-header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
           Kanban Board
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
