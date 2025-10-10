@@ -30,10 +30,10 @@ class ProjectService {
    * @returns Promise<Project[]>
    */
   async listProjects(page = 1, perPage = 100): Promise<Project[]> {
-    const response = await apiClient.get<Project[]>("/api/projects", {
+    const response = await apiClient.get<{ projects: Project[] }>("/api/projects", {
       params: { page, per_page: perPage },
     });
-    return response.data;
+    return response.data.projects;
   }
 
   /**
