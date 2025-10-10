@@ -83,8 +83,10 @@ export const ProjectSelector = memo(({
   }, [onCreateProject, onProjectChange]);
 
   // Delete button handler
-  const handleDeleteClick = useCallback((project: Project, e: React.MouseEvent) => {
+  const handleDeleteClick = useCallback((project: Project, e: React.MouseEvent | React.PointerEvent) => {
+    e.preventDefault(); // Prevent default action
     e.stopPropagation(); // Prevent select item from triggering
+    console.log('[DELETE] Opening delete dialog for project:', project.name);
     setProjectToDelete(project);
     setDeleteDialogOpen(true);
   }, []);
@@ -178,7 +180,7 @@ export const ProjectSelector = memo(({
 
                 {/* Delete button */}
                 <button
-                  onClick={(e) => handleDeleteClick(project, e)}
+                  onPointerDown={(e) => handleDeleteClick(project, e)}
                   className="flex-shrink-0 p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                   aria-label={`Delete project: ${project.name}`}
                   title="Delete project"

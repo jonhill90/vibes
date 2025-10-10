@@ -35,6 +35,8 @@ export const DeleteProjectDialog = ({
 }: DeleteProjectDialogProps) => {
   const deleteProject = useDeleteProject();
 
+  console.log('[DeleteProjectDialog] Render:', { open, projectName: project?.name });
+
   // CRITICAL: Prevent close during mutation (Gotcha #9)
   const handleOpenChange = (newOpen: boolean) => {
     // If user is trying to close (!newOpen) and mutation is pending, block it
