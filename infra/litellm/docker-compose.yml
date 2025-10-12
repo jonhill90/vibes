@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   litellm:
     image: ghcr.io/berriai/litellm:main-latest
@@ -8,14 +10,13 @@ services:
       STORE_MODEL_IN_DB: ${STORE_MODEL_IN_DB}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       UI_BASE_URL: ${UI_BASE_URL}
-      MCP_TOOL_PREFIX_SEPARATOR: ":"
+      MCP_TOOL_PREFIX_SEPARATOR: "_"
     volumes:
       - ./config.yaml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml"]
-    ports:
-      - "${LITELLM_HOST}:${LITELLM_PORT}:4000"
     networks:
-      - vibes-network
+      - proxy
+      - n8n-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 30s
@@ -24,5 +25,8 @@ services:
       start_period: 120s
 
 networks:
-  vibes-network:
+  proxy:
     external: true
+  n8n-network:
+    external: true
+    name: n8n_n8n-network
