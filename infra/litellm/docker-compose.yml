@@ -12,6 +12,8 @@ services:
     volumes:
       - ./config.yaml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml"]
+    ports:
+      - "${LITELLM_HOST}:${LITELLM_PORT}:4000"
     networks:
       - vibes-network
     healthcheck:
