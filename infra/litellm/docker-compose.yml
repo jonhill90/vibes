@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   litellm:
     image: ghcr.io/berriai/litellm:main-latest
@@ -15,8 +13,7 @@ services:
       - ./config.yaml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml"]
     networks:
-      - proxy
-      - n8n-network
+      - vibes-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 30s
@@ -25,8 +22,5 @@ services:
       start_period: 120s
 
 networks:
-  proxy:
+  vibes-network:
     external: true
-  n8n-network:
-    external: true
-    name: n8n_n8n-network

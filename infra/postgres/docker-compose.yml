@@ -9,7 +9,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-litellm-db.sh:/docker-entrypoint-initdb.d/init-litellm-db.sh:ro
     networks:
-      - proxy
+      - vibes-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -22,5 +22,5 @@ volumes:
   postgres_data:
 
 networks:
-  proxy:
+  vibes-network:
     external: true
