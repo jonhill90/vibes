@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# Create litellm database and user
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE DATABASE $LITELLM_DB_NAME;
+    CREATE USER $LITELLM_DB_USER WITH PASSWORD '$LITELLM_DB_PASSWORD';
+    GRANT ALL PRIVILEGES ON DATABASE $LITELLM_DB_NAME TO $LITELLM_DB_USER;
+    
+    -- Connect to litellm database and grant schema privileges
+    \c $LITELLM_DB_NAME
+    GRANT ALL ON SCHEMA public TO $LITELLM_DB_USER;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $LITELLM_DB_USER;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO $LITELLM_DB_USER;
+EOSQL
+
+echo "LiteLLM database and user created successfully!"
