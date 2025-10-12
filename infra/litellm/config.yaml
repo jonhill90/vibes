@@ -67,3 +67,11 @@ litellm_settings:
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   database_url: os.environ/DATABASE_URL
+
+# MCP Servers
+mcp_servers:
+  Linear:
+    url: "https://mcp.linear.app/sse"
+    transport: "sse"
+    auth_type: "bearer_token"
+    auth_value: "os.environ/LINEAR_API_KEY"
