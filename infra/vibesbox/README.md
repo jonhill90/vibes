@@ -130,12 +130,22 @@ Vibesbox is an agent-friendly "jumpbox" for executing shell commands in an isola
    cd /Users/jon/source/vibes/infra/vibesbox
    ```
 
-2. **Build and start the container**:
+2. **Configure environment variables**:
+   ```bash
+   # Copy example configuration
+   cp .env.example .env
+
+   # Edit .env and set your values
+   # VIBES_PATH=/path/to/your/vibes     # Required: Path to vibes directory
+   # VIBESBOX_PORT=8053                 # Optional: External port (default: 8053)
+   ```
+
+3. **Build and start the container**:
    ```bash
    docker compose up --build -d
    ```
 
-3. **Verify health**:
+4. **Verify health**:
    ```bash
    curl http://localhost:8053/health
    # Expected: {"status": "healthy", "service": "vibesbox"}
@@ -557,10 +567,14 @@ mypy src/
 
 ### Environment Variables
 
-Configure via `.env` file or environment variables:
+Configure via `.env` file (see `.env.example`) or environment variables:
 
-- `MCP_PORT` - MCP server port (default: 8000)
+**Docker Compose Configuration**:
+- `VIBES_PATH` - Path to vibes directory on host (default: /workspace/vibes)
+- `VIBESBOX_PORT` - External MCP server port (default: 8053, internal always 8000)
 - `LOG_LEVEL` - Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)
+
+**Server Configuration**:
 - `MAX_TIMEOUT` - Maximum command timeout in seconds (default: 300)
 - `MAX_OUTPUT_LINES` - Maximum output lines before truncation (default: 100)
 
@@ -589,7 +603,8 @@ Configure via `.env` file or environment variables:
 3. **Check port conflicts**:
    ```bash
    lsof -i :8053
-   # If port in use, change in docker-compose.yml
+   # If port in use, change VIBESBOX_PORT in .env file
+   # Example: VIBESBOX_PORT=8054
    ```
 
 4. **Rebuild from scratch**:

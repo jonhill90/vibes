@@ -11,9 +11,10 @@ services:
     container_name: vibesbox
 
     # MCP server port
-    # Internal: 8000, External: 8053 (avoid conflicts with Kong at 8000)
+    # Internal: 8000, External: configurable via VIBESBOX_PORT (default 8053)
+    # Avoids conflicts with Kong at 8000
     ports:
-      - "8053:8000"
+      - "${VIBESBOX_PORT:-8053}:8000"
 
     # Resource limits for security (prevent resource abuse)
     deploy:
@@ -34,6 +35,10 @@ services:
       - CHOWN       # Change file ownership
       - SETGID      # Set group ID
       - SETUID      # Set user ID
+
+    # Volume mounts
+    volumes:
+      - ${VIBES_PATH:-/workspace/vibes}:/workspace/vibes:rw
 
     # Health check for Docker monitoring
     healthcheck:
