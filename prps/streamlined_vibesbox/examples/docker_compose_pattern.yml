@@ -1,0 +1,129 @@
+# Source: /Users/jon/source/vibes/infra/task-manager/docker-compose.yml
+# Pattern: Docker Compose with health checks and resource limits
+# Extracted: 2025-10-13
+# Relevance: 8/10 - Good pattern for vibes network integration
+
+# ============================================================================
+# STREAMLINED VIBESBOX - DOCKER COMPOSE PATTERN
+# ============================================================================
+# This is adapted from task-manager but simplified for vibesbox:
+# - No database (stateless command execution)
+# - No frontend (API-only server)
+# - Connected to vibes network for inter-service communication
+# - Resource limits for security
+
+services:
+  # Vibesbox Command Executor Service
+  vibesbox:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vibesbox
+
+    # PATTERN 1: MCP server port only
+    ports:
+      - "${MCP_PORT:-8051}:8051"
+
+    # PATTERN 2: Environment configuration
+    environment:
+      - MCP_PORT=${MCP_PORT:-8051}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      # Command execution settings
+      - DEFAULT_TIMEOUT=${DEFAULT_TIMEOUT:-30}
+      - MAX_OUTPUT_LENGTH=${MAX_OUTPUT_LENGTH:-10000}
+
+    # PATTERN 3: Resource limits (security - prevent resource abuse)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'           # Half a CPU core
+          memory: 512M          # 512MB RAM
+        reservations:
+          cpus: '0.25'          # Reserve quarter CPU
+          memory: 256M          # Reserve 256MB
+
+    # PATTERN 4: PID limit (prevent fork bombs)
+    pids_limit: 100
+
+    # PATTERN 5: Network configuration
+    # Connect to existing vibes network for inter-service communication
+    networks:
+      - vibes
+
+    # PATTERN 6: Health check for MCP server
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s  # Give server time to initialize
+
+    # PATTERN 7: Restart policy
+    restart: unless-stopped
+
+    # PATTERN 8: Security options (optional - for hardening)
+    # Uncomment these for production:
+    # security_opt:
+    #   - no-new-privileges:true
+    # read_only: true  # Read-only filesystem
+    # tmpfs:           # Writable tmp directory
+    #   - /tmp
+
+# ============================================================================
+# NETWORK CONFIGURATION
+# ============================================================================
+# CRITICAL: Use external vibes network (created separately)
+# This allows vibesbox to communicate with other vibes services
+networks:
+  vibes:
+    external: true
+    name: vibes
+
+
+# ============================================================================
+# KEY DIFFERENCES FROM TASK-MANAGER DOCKER-COMPOSE
+# ============================================================================
+# 1. No database service (stateless)
+# 2. No frontend service (API-only)
+# 3. Resource limits added (task-manager doesn't have these)
+# 4. PID limit added (security)
+# 5. Single service vs multi-service
+# 6. Connected to external vibes network (not internal network)
+
+
+# ============================================================================
+# ALTERNATIVE: WITH OPTIONAL WORKSPACE VOLUME
+# ============================================================================
+# If you need persistent workspace for multi-command workflows:
+#
+# services:
+#   vibesbox:
+#     # ... same as above ...
+#     volumes:
+#       - vibesbox-workspace:/workspace
+#     environment:
+#       - WORKSPACE_DIR=/workspace
+#       # ... other env vars ...
+#
+# volumes:
+#   vibesbox-workspace:
+#     driver: local
+
+
+# ============================================================================
+# USAGE NOTES
+# ============================================================================
+# Start: docker-compose up -d
+# Stop: docker-compose down
+# Logs: docker-compose logs -f vibesbox
+# Restart: docker-compose restart vibesbox
+#
+# Prerequisites:
+# 1. Create vibes network: docker network create vibes
+# 2. Set environment variables in .env file
+#
+# Example .env:
+# MCP_PORT=8051
+# LOG_LEVEL=INFO
+# DEFAULT_TIMEOUT=30
