@@ -8,6 +8,7 @@ KEY FEATURES:
 - Environment-specific CORS configuration (Gotcha #8)
 - Database connection pool lifecycle management (Gotcha #2)
 - Qdrant client initialization and cleanup
+- Qdrant collection initialization with HNSW disabled for bulk upload (Gotcha #9)
 - Health check endpoint
 - OpenAPI documentation with metadata
 - API router organization with /api prefix
@@ -15,6 +16,7 @@ KEY FEATURES:
 CRITICAL GOTCHAS ADDRESSED:
 - Gotcha #2: Returns POOL from dependencies, NOT connections
 - Gotcha #8: CORS configured with specific origins (NEVER allow_origins=["*"])
+- Gotcha #9: HNSW disabled (m=0) during bulk upload for 60-90x speedup
 - Gotcha #12: Services use async with pool.acquire() for connection management
 """
 
@@ -26,6 +28,7 @@ import asyncpg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from qdrant_client import AsyncQdrantClient
+from qdrant_client.models import VectorParams, Distance, HnswConfigDiff
 
 from src.config.settings import settings
 
@@ -39,14 +42,16 @@ async def lifespan(app: FastAPI):
     Startup:
     - Initialize database connection pool
     - Initialize Qdrant vector database client
+    - Create Qdrant collection with HNSW disabled for bulk upload (Gotcha #9)
 
     Shutdown:
     - Close database connection pool gracefully
     - Close Qdrant client gracefully
 
-    CRITICAL PATTERN:
+    CRITICAL PATTERNS:
     - Store POOL in app.state, not connections (Gotcha #2)
     - Dependencies return pool, services acquire connections as needed
+    - HNSW disabled (m=0) during bulk upload for 60-90x speedup (Gotcha #9)
     """
     # Startup
     logger.info("🚀 Starting RAG Service API...")
@@ -76,6 +81,34 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"❌ Failed to initialize Qdrant client: {e}")
         # Clean up database pool if Qdrant fails
+        await app.state.db_pool.close()
+        raise
+
+    try:
+        # CRITICAL: Initialize Qdrant collection with HNSW disabled for bulk upload (Gotcha #9)
+        # HNSW enabled during bulk upload is 60-90x slower - disable with m=0, re-enable after bulk
+        collections = await app.state.qdrant_client.get_collections()
+        collection_names = [c.name for c in collections.collections]
+
+        if settings.QDRANT_COLLECTION_NAME not in collection_names:
+            await app.state.qdrant_client.create_collection(
+                collection_name=settings.QDRANT_COLLECTION_NAME,
+                vectors_config=VectorParams(
+                    size=settings.OPENAI_EMBEDDING_DIMENSION,  # 1536 for text-embedding-3-small
+                    distance=Distance.COSINE,
+                    hnsw_config=HnswConfigDiff(m=0),  # Disable HNSW for bulk upload (Gotcha #9)
+                ),
+            )
+            logger.info(
+                f"✅ Qdrant collection created: {settings.QDRANT_COLLECTION_NAME} "
+                f"(dims={settings.OPENAI_EMBEDDING_DIMENSION}, distance=COSINE, HNSW disabled for bulk)"
+            )
+        else:
+            logger.info(f"✅ Qdrant collection already exists: {settings.QDRANT_COLLECTION_NAME}")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize Qdrant collection: {e}")
+        # Clean up resources if collection initialization fails
+        await app.state.qdrant_client.close()
         await app.state.db_pool.close()
         raise
 
