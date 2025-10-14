@@ -10,6 +10,7 @@ Extract secure feature names | [security-validation.md](security-validation.md) 
 Integrate with Archon MCP | [archon-workflow.md](archon-workflow.md) | generate-prp, execute-prp
 Execute subagents in parallel | [parallel-subagents.md](parallel-subagents.md) | generate-prp Phase 2, execute-prp Phase 2
 Validate PRP/execution quality | [quality-gates.md](quality-gates.md) | generate-prp Phase 5, execute-prp Phase 4
+Validate frontend UIs via browser | [browser-validation.md](browser-validation.md) | validation-gates, prp-exec-validator
 
 ## Pattern Categories
 
@@ -32,6 +33,11 @@ Validate PRP/execution quality | [quality-gates.md](quality-gates.md) | generate
 - **[quality-gates.md](quality-gates.md)**: Scoring criteria, validation loops
   - Use when: Output must meet quality thresholds before delivery
   - Key benefit: Prevents low-quality deliverables (8+/10 PRP score)
+
+### Testing Patterns
+- **[browser-validation.md](browser-validation.md)**: Browser automation patterns for frontend UI validation
+  - Use when: Testing React frontends, validating user-facing features
+  - Key benefit: End-to-end validation with accessibility-first approach (not screenshot-based)
 
 ### Reliability Patterns
 - Coming soon: error-handling.md (retry logic, graceful degradation, error recovery)

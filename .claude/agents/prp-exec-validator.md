@@ -1,7 +1,7 @@
 ---
 name: prp-exec-validator
-description: USE PROACTIVELY for systematic validation. Runs validation gates from PRP, analyzes failures, suggests fixes, iterates until all pass. Works autonomously with fix loops.
-tools: Bash, Read, Edit, Grep
+description: USE PROACTIVELY for systematic validation. Runs validation gates from PRP (backend + end-to-end UI validation), analyzes failures, suggests fixes, iterates until all pass. Works autonomously with fix loops. Can perform browser automation for full-stack testing.
+tools: Bash, Read, Edit, Grep, browser_navigate, browser_snapshot, browser_click, browser_type, browser_take_screenshot, browser_evaluate, browser_wait_for, browser_fill_form, browser_tabs, browser_install
 color: cyan
 ---
 

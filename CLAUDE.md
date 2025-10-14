@@ -115,6 +115,185 @@ See [.claude/conventions/prp-naming.md](.claude/conventions/prp-naming.md) for c
 
 ---
 
+## Browser Testing for Agents
+
+**Purpose**: Extend validation beyond backend APIs to full-stack UI testing using Playwright browser automation.
+
+### When to Use Browser Testing
+
+**Use browser validation when**:
+- ✅ Testing user-facing UI features (document upload, task creation)
+- ✅ Validating end-to-end workflows (frontend + backend integration)
+- ✅ Verifying React component interactions
+- ✅ Testing accessibility and user experience
+
+**Use API testing when**:
+- ❌ Backend-only validation (10x faster than browser tests)
+- ❌ Data validation (no UI interaction needed)
+- ❌ Performance testing (browser adds overhead)
+
+**Key Principle**: Browser tests are Level 3 (Integration) tests - use after API validation passes.
+
+### Quick Start: Browser Validation
+
+```python
+# Pre-flight: Ensure services running
+Bash("docker-compose up -d")
+
+# Navigate to frontend
+browser_navigate(url="http://localhost:5173")
+
+# Capture accessibility tree (agent-parseable structured data)
+snapshot = browser_snapshot()
+
+# Validate UI state
+if "ExpectedElement" in snapshot:
+    print("✅ Validation passed")
+
+# Take screenshot for human proof only
+browser_take_screenshot(filename="validation-proof.png")
+```
+
+### Available Browser Tools
+
+Agents with browser capability have these MCP tools available:
+- `browser_navigate` - Navigate to URL
+- `browser_snapshot` - Capture accessibility tree (for validation)
+- `browser_click` - Click element using semantic query
+- `browser_type` - Type into input field
+- `browser_fill_form` - Fill multiple form fields
+- `browser_wait_for` - Wait for specific text/element
+- `browser_take_screenshot` - Capture screenshot (human proof only)
+- `browser_evaluate` - Execute JavaScript
+- `browser_install` - Install browser binaries (if needed)
+
+### Common Workflows
+
+#### Document Upload Validation
+```python
+# Navigate and capture initial state
+browser_navigate(url="http://localhost:5173")
+initial_state = browser_snapshot()
+
+# Interact with UI
+browser_click(element="button containing 'Upload'")
+browser_wait_for(text="Select a document", timeout=5000)
+
+# Fill form and submit
+browser_fill_form(fields=[
+    {"name": "file", "type": "file", "value": "/tmp/test.pdf"}
+])
+browser_click(element="button containing 'Submit'")
+browser_wait_for(text="Upload successful", timeout=30000)
+
+# Validate final state
+final_state = browser_snapshot()
+if "test.pdf" in final_state:
+    print("✅ Document uploaded successfully")
+    browser_take_screenshot(filename="upload-proof.png")
+```
+
+#### Task Creation Validation
+```python
+browser_navigate(url="http://localhost:5174")
+browser_click(element="button containing 'Create Task'")
+browser_fill_form(fields=[
+    {"name": "title", "type": "textbox", "value": "Test Task"}
+])
+browser_click(element="button containing 'Create'")
+browser_wait_for(text="Task created", timeout=10000)
+
+# Verify task appears in list
+state = browser_snapshot()
+if "Test Task" in state:
+    print("✅ Task created and visible")
+```
+
+### Critical Browser Testing Gotchas
+
+**1. Browser Binaries Not Installed**
+```python
+# Check browser installed before use
+try:
+    browser_navigate(url="about:blank")
+except Exception:
+    print("Installing browser binaries...")
+    browser_install()
+    time.sleep(30)  # Wait for installation
+```
+
+**2. Frontend Service Not Running**
+```python
+# Always check service health first
+result = Bash("docker-compose ps | grep rag-service")
+if "Up" not in result.stdout:
+    Bash("docker-compose up -d")
+    time.sleep(10)
+```
+
+**3. Use Accessibility Tree, Not Screenshots**
+```python
+# ❌ WRONG - Agents can't parse screenshots
+screenshot = browser_take_screenshot("validation.png")
+# Agent cannot validate from image
+
+# ✅ RIGHT - Use structured accessibility data
+snapshot = browser_snapshot()
+if "ExpectedElement" in snapshot:
+    print("✅ Validated")
+```
+
+**4. Element Refs Change Every Render**
+```python
+# ❌ WRONG - Hard-coded refs break
+browser_click(ref="e5")
+
+# ✅ RIGHT - Use semantic queries
+browser_click(element="button containing 'Upload'")
+```
+
+**5. Use Auto-Wait, Not sleep()**
+```python
+# ❌ WRONG - Manual waits
+time.sleep(3)
+
+# ✅ RIGHT - Conditional waits
+browser_wait_for(text="Upload complete", timeout=30000)
+```
+
+### Integration with Quality Gates
+
+Browser tests fit at **Level 3b: Browser Integration** in the quality-gates pattern:
+
+```python
+# Level 1: Syntax & Style (fast, ~5s)
+ruff check && mypy .
+
+# Level 2: Unit Tests (medium, ~30s)
+pytest tests/unit/
+
+# Level 3a: API Integration (medium, ~60s)
+pytest tests/integration/
+
+# Level 3b: Browser Integration (slow, ~120s)
+# Agent-driven browser validation
+validate_frontend_browser()
+```
+
+### Agents with Browser Capability
+
+- **validation-gates** - Testing and validation specialist, can validate frontend UIs
+- **prp-exec-validator** - Full-stack validation (backend + frontend)
+
+### Resources
+
+**Complete Pattern Documentation**: `.claude/patterns/browser-validation.md`
+**Agent Configurations**: `.claude/agents/validation-gates.md`, `.claude/agents/prp-exec-validator.md`
+**Quality Gates Integration**: `.claude/patterns/quality-gates.md` (Level 3b)
+**Code Examples**: `prps/playwright_agent_integration/examples/`
+
+---
+
 ## Quality Standards
 
 - Follow existing patterns

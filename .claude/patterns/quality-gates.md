@@ -41,10 +41,67 @@ eslint --fix src/                   # JavaScript
 # Level 2: Unit Tests
 pytest tests/ -v
 
-# Level 3: Integration Tests
+# Level 3a: API Integration Tests
 # Project-specific (from PRP)
 docker-compose up -d && ./integration_tests.sh
+
+# Level 3b: Browser Integration Tests (User-Facing Features)
+# Agent-driven browser validation (10x slower than API tests)
+claude --agent validation-gates "Validate frontend at localhost:5173"
 ```
+
+### Level 3b: Browser Integration Tests
+
+**When to Use**: User-facing features, frontend UI validation, end-to-end workflows
+
+**Pattern**: Navigation → Interaction → Validation (accessibility tree-based)
+
+```python
+def validate_frontend_browser() -> dict:
+    """Browser validation for frontend UI."""
+    # 1. Pre-flight: Check frontend running
+    response = Bash("curl -s http://localhost:5173")
+    if "Connection refused" in response.stderr:
+        return {"success": False, "error": "Frontend not running"}
+
+    # 2. Navigate and capture state
+    browser_navigate(url="http://localhost:5173")
+    initial_state = browser_snapshot()  # Accessibility tree (~500 tokens)
+
+    # 3. Validate expected components
+    checks = {
+        "app_loaded": "RootWebArea" in initial_state,
+        "navigation": "navigation" in initial_state,
+        "main_content": "main" in initial_state
+    }
+
+    if not all(checks.values()):
+        return {"success": False, "error": f"Missing components"}
+
+    # 4. Test interaction (semantic locators, not refs)
+    browser_click(element="button containing 'Upload'")
+    browser_wait_for(text="Select a document", timeout=5000)
+
+    # 5. Validate final state
+    final_state = browser_snapshot()
+    if "Select a document" not in final_state:
+        return {"success": False, "error": "Dialog not shown"}
+
+    # 6. Screenshot for human verification only
+    browser_take_screenshot(filename="validation-proof.png")
+
+    return {"success": True, "screenshot": "validation-proof.png"}
+```
+
+**Performance Note**: Browser tests are ~10x slower than API tests. Run after API validation passes.
+
+**Key Differences from API Tests**:
+- Use accessibility tree for validation (not screenshots - agents can't parse images)
+- Use semantic locators ("button containing 'Upload'", not refs like "e5")
+- Requires frontend service running + browser binaries installed
+- Same 5-attempt retry pattern applies
+
+**See**: `.claude/patterns/browser-validation.md` for complete patterns, gotchas, and error handling
 
 ## Validation Loop (Max 5 Attempts)
 
