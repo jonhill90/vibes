@@ -11,6 +11,7 @@ Returns: All methods return tuple[bool, dict] for consistent error handling
 from typing import Any
 import asyncpg
 import logging
+import json
 from uuid import UUID
 from datetime import datetime
 
@@ -107,10 +108,13 @@ class SourceService:
             metadata = source_data.get("metadata", {})
             error_message = source_data.get("error_message")
 
+            # Convert metadata dict to JSON string for JSONB column
+            metadata_json = json.dumps(metadata) if isinstance(metadata, dict) else metadata
+
             # Insert source using asyncpg $1, $2 placeholders
             query = """
                 INSERT INTO sources (source_type, url, status, metadata, error_message)
-                VALUES ($1, $2, $3, $4, $5)
+                VALUES ($1, $2, $3, $4::jsonb, $5)
                 RETURNING id, source_type, url, status, metadata, error_message,
                           created_at, updated_at
             """
@@ -118,7 +122,7 @@ class SourceService:
             # Critical Gotcha #8: Always use async with for connection management
             async with self.db_pool.acquire() as conn:
                 row = await conn.fetchrow(
-                    query, source_type, url, status, metadata, error_message
+                    query, source_type, url, status, metadata_json, error_message
                 )
 
             source = dict(row)

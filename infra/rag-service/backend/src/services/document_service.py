@@ -19,6 +19,7 @@ from typing import Any
 from uuid import UUID
 import asyncpg
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +214,9 @@ class DocumentService:
             url = document_data.get("url")
             metadata = document_data.get("metadata", {})
 
+            # Convert metadata dict to JSON string for JSONB column
+            metadata_json = json.dumps(metadata) if isinstance(metadata, dict) else metadata
+
             async with self.db_pool.acquire() as conn:
                 # CRITICAL: Use $1, $2 placeholders (asyncpg style)
                 query = """
@@ -220,7 +224,7 @@ class DocumentService:
                         source_id, title, document_type, url, metadata,
                         created_at, updated_at
                     )
-                    VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+                    VALUES ($1, $2, $3, $4, $5::jsonb, NOW(), NOW())
                     RETURNING *
                 """
                 row = await conn.fetchrow(
@@ -229,7 +233,7 @@ class DocumentService:
                     title,
                     document_type,
                     url,
-                    metadata,
+                    metadata_json,
                 )
 
             document = dict(row)

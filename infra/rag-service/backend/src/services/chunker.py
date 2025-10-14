@@ -18,6 +18,7 @@ Reference: prps/rag_service_implementation.md (Phase 4, Task 4.2, Gotcha #4)
 import asyncio
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Optional
 
@@ -402,7 +403,7 @@ class TextChunker:
     async def chunk_text(
         self,
         text: str,
-        executor: Optional[asyncio.ThreadPoolExecutor] = None,
+        executor: Optional[ThreadPoolExecutor] = None,
     ) -> list[Chunk]:
         """Asynchronously chunk text into semantic chunks.
 

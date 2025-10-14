@@ -19,6 +19,7 @@ Reference: prps/rag_service_implementation.md (Phase 4, Task 4.3)
 import asyncio
 import logging
 import time
+import json
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -356,6 +357,9 @@ class IngestionService:
 
                 # Create document record
                 # CRITICAL: Use $1, $2 placeholders (asyncpg style, Gotcha #3)
+                # Convert metadata dict to JSON string for JSONB column
+                metadata_json = json.dumps(metadata) if isinstance(metadata, dict) else metadata
+
                 document_row = await conn.fetchrow(
                     """
                     INSERT INTO documents (
@@ -363,7 +367,7 @@ class IngestionService:
                         created_at, updated_at
                     )
                     VALUES (
-                        $1, $2, $3, $4, $5, $6,
+                        $1, $2, $3, $4, $5, $6::jsonb,
                         NOW(), NOW()
                     )
                     RETURNING id
@@ -373,7 +377,7 @@ class IngestionService:
                     title,
                     document_type,
                     url,
-                    metadata,
+                    metadata_json,
                 )
 
                 document_id = document_row["id"]
@@ -390,17 +394,16 @@ class IngestionService:
                             chunk.chunk_index,
                             chunk.text,
                             chunk.token_count,
-                            embedding,  # Store embedding in PostgreSQL for cache
                         )
                     )
 
-                # Batch insert chunks
+                # Batch insert chunks (embeddings stored in Qdrant, not PostgreSQL)
                 await conn.executemany(
                     """
                     INSERT INTO chunks (
-                        id, document_id, chunk_index, text, token_count, embedding
+                        id, document_id, chunk_index, text, token_count
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    VALUES ($1, $2, $3, $4, $5)
                     """,
                     chunk_records,
                 )
@@ -413,12 +416,13 @@ class IngestionService:
             # Qdrant upserts are idempotent - can retry safely
             try:
                 points = []
-                for chunk_id, document_id_val, chunk_index, text, token_count, embedding in chunk_records:
+                # Combine chunk_records with embeddings (they're parallel arrays)
+                for (chunk_id, doc_id_val, chunk_index, text, token_count), embedding in zip(chunk_records, embeddings):
                     points.append({
                         "id": chunk_id,
                         "embedding": embedding,
                         "payload": {
-                            "document_id": str(document_id_val),
+                            "document_id": str(doc_id_val),
                             "chunk_index": chunk_index,
                             "text": text[:1000],  # Truncate for payload optimization
                             "token_count": token_count,
