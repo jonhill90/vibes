@@ -2158,6 +2158,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Extension for full-text search
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
+-- Extension for vector embeddings (required for embedding_cache table)
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- Table: sources
 CREATE TABLE sources (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
