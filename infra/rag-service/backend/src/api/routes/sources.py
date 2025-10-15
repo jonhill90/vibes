@@ -15,6 +15,7 @@ Pattern: Example 05 (FastAPI route pattern)
 Reference: infra/task-manager/backend/src/api/routes/
 """
 
+import json
 import logging
 from typing import Optional
 from uuid import UUID
@@ -35,6 +36,21 @@ from src.services.source_service import SourceService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/sources", tags=["sources"])
+
+
+def parse_metadata(metadata):
+    """Parse metadata field from database (handles JSONB as string)."""
+    if metadata is None:
+        return {}
+    if isinstance(metadata, dict):
+        return metadata
+    if isinstance(metadata, str):
+        try:
+            return json.loads(metadata) if metadata else {}
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to parse metadata JSON: {metadata}")
+            return {}
+    return {}
 
 
 @router.post(
@@ -102,7 +118,7 @@ async def create_source(
             source_type=source["source_type"],
             url=source.get("url"),
             status=source["status"],
-            metadata=source.get("metadata"),
+            metadata=parse_metadata(source.get("metadata")),
             error_message=source.get("error_message"),
             created_at=source["created_at"].isoformat(),
             updated_at=source["updated_at"].isoformat(),
@@ -184,7 +200,7 @@ async def list_sources(
                 source_type=source["source_type"],
                 url=source.get("url"),
                 status=source["status"],
-                metadata=source.get("metadata"),
+                metadata=parse_metadata(source.get("metadata")),
                 error_message=source.get("error_message"),
                 created_at=source["created_at"].isoformat(),
                 updated_at=source["updated_at"].isoformat(),
@@ -274,7 +290,7 @@ async def get_source(
             source_type=source["source_type"],
             url=source.get("url"),
             status=source["status"],
-            metadata=source.get("metadata"),
+            metadata=parse_metadata(source.get("metadata")),
             error_message=source.get("error_message"),
             created_at=source["created_at"].isoformat(),
             updated_at=source["updated_at"].isoformat(),
@@ -391,7 +407,7 @@ async def update_source(
             source_type=source["source_type"],
             url=source.get("url"),
             status=source["status"],
-            metadata=source.get("metadata"),
+            metadata=parse_metadata(source.get("metadata")),
             error_message=source.get("error_message"),
             created_at=source["created_at"].isoformat(),
             updated_at=source["updated_at"].isoformat(),
