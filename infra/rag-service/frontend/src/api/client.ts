@@ -181,8 +181,8 @@ export async function searchDocuments(request: SearchRequest): Promise<SearchRes
  * List all sources
  */
 export async function listSources(): Promise<SourceResponse[]> {
-  const response = await apiClient.get<SourceResponse[]>('/api/sources');
-  return response.data;
+  const response = await apiClient.get<{ sources: SourceResponse[] }>('/api/sources');
+  return response.data.sources;
 }
 
 /**
