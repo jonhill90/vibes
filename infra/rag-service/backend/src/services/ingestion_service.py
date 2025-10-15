@@ -16,7 +16,6 @@ Pattern: examples/06_transaction_pattern.py + EmbeddingBatchResult
 Reference: prps/rag_service_implementation.md (Phase 4, Task 4.3)
 """
 
-import asyncio
 import logging
 import time
 import json
@@ -182,7 +181,7 @@ class IngestionService:
             )
 
             # Step 2: Chunk text using TextChunker
-            logger.info(f"Step 2/4: Chunking text into semantic chunks")
+            logger.info("Step 2/4: Chunking text into semantic chunks")
             try:
                 chunks: list[Chunk] = await self.text_chunker.chunk_text(markdown_text)
             except Exception as e:
@@ -233,7 +232,7 @@ class IngestionService:
             )
 
             # Step 4: Atomic storage (PostgreSQL + Qdrant)
-            logger.info(f"Step 4/4: Storing document and chunks atomically")
+            logger.info("Step 4/4: Storing document and chunks atomically")
 
             # Extract document title from file path or metadata
             import os
@@ -433,7 +432,7 @@ class IngestionService:
                 await self.vector_service.upsert_vectors(points)
                 logger.info(f"Upserted {len(points)} vectors to Qdrant")
 
-            except Exception as e:
+            except Exception:
                 # If Qdrant upsert fails, we have inconsistent state
                 # PostgreSQL has chunks, but Qdrant doesn't
                 # Log error and re-raise (caller should handle)

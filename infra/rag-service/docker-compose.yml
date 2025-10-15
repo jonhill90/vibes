@@ -4,13 +4,13 @@
 # Services:
 # - postgres: PostgreSQL 15 with pgvector extension
 # - qdrant: Qdrant vector database
-# - api: FastAPI backend service
+# - backend: FastAPI backend service
 # - frontend: Vite React development server
 #
 # Usage:
 #   docker compose up -d              # Start all services
 #   docker compose ps                 # Check service health
-#   docker compose logs -f api        # View API logs
+#   docker compose logs -f backend    # View backend logs
 #   docker compose down               # Stop all services
 #   docker compose down -v            # Stop and remove volumes
 
@@ -61,13 +61,14 @@ services:
     restart: unless-stopped
 
   # FastAPI Backend Service
-  api:
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: rag-api
+    container_name: rag-service-backend
     ports:
       - "${API_PORT:-8001}:8001"  # Offset port to avoid conflict with task-manager
+      - "${MCP_PORT:-8002}:8002"  # MCP HTTP server port
     environment:
       # Database configuration
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-rag_service}
@@ -91,6 +92,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
 
       # MCP configuration
+      MCP_PORT: ${MCP_PORT:-8002}
       MCP_PAYLOAD_MAX_LENGTH: ${MCP_PAYLOAD_MAX_LENGTH:-1000}
       MCP_PAGINATION_MAX: ${MCP_PAGINATION_MAX:-20}
     volumes:
@@ -129,7 +131,7 @@ services:
     networks:
       - rag-network
     depends_on:
-      api:
+      backend:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5173 || exit 1"]

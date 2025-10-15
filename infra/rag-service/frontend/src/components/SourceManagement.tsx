@@ -1,0 +1,561 @@
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import {
+  listSources,
+  createSource,
+  updateSource,
+  deleteSource,
+  SourceResponse,
+  SourceRequest,
+} from '../api/client';
+
+/**
+ * SourceManagement Component
+ *
+ * Provides CRUD interface for managing document sources.
+ * Features:
+ * - Table listing all sources with metadata
+ * - Create source form with validation
+ * - Edit source functionality (inline or modal)
+ * - Delete with confirmation dialog
+ * - Loading states and error handling
+ */
+
+interface EditingSource {
+  id: string;
+  name: string;
+  source_type: string;
+}
+
+export default function SourceManagement() {
+  const [sources, setSources] = useState<SourceResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editingSource, setEditingSource] = useState<EditingSource | null>(null);
+  const [deletingSourceId, setDeletingSourceId] = useState<string | null>(null);
+
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<SourceRequest>();
+
+  // Load sources
+  const loadSources = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await listSources();
+      setSources(data);
+    } catch (err) {
+      console.error('Failed to load sources:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load sources');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSources();
+  }, []);
+
+  // Create source
+  const onCreateSource = async (data: SourceRequest) => {
+    setError(null);
+    try {
+      await createSource(data);
+      reset();
+      await loadSources();
+    } catch (err) {
+      console.error('Failed to create source:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create source');
+    }
+  };
+
+  // Update source
+  const handleUpdateSource = async () => {
+    if (!editingSource) return;
+
+    setError(null);
+    try {
+      await updateSource(editingSource.id, {
+        name: editingSource.name,
+        source_type: editingSource.source_type,
+      });
+      setEditingSource(null);
+      await loadSources();
+    } catch (err) {
+      console.error('Failed to update source:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update source');
+    }
+  };
+
+  // Delete source
+  const handleDeleteSource = async (id: string) => {
+    setError(null);
+    try {
+      await deleteSource(id);
+      setDeletingSourceId(null);
+      await loadSources();
+    } catch (err) {
+      console.error('Failed to delete source:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete source');
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      <h2 style={styles.heading}>Source Management</h2>
+
+      {/* Error Display */}
+      {error && (
+        <div style={styles.errorContainer}>
+          <p style={styles.errorText}>{error}</p>
+        </div>
+      )}
+
+      {/* Create Source Form */}
+      <div style={styles.createSection}>
+        <h3 style={styles.subheading}>Create New Source</h3>
+        <form onSubmit={handleSubmit(onCreateSource)} style={styles.form}>
+          <div style={styles.formRow}>
+            <div style={styles.formGroup}>
+              <label htmlFor="name" style={styles.label}>
+                Source Name *
+              </label>
+              <input
+                id="name"
+                type="text"
+                {...register('name', { required: 'Name is required' })}
+                style={styles.input}
+                placeholder="e.g., Documentation, Research Papers"
+              />
+              {errors.name && <span style={styles.error}>{errors.name.message}</span>}
+            </div>
+
+            <div style={styles.formGroup}>
+              <label htmlFor="source_type" style={styles.label}>
+                Source Type *
+              </label>
+              <select
+                id="source_type"
+                {...register('source_type', { required: 'Type is required' })}
+                style={styles.select}
+              >
+                <option value="">Select type...</option>
+                <option value="document">Document</option>
+                <option value="web">Web</option>
+                <option value="api">API</option>
+                <option value="database">Database</option>
+                <option value="other">Other</option>
+              </select>
+              {errors.source_type && (
+                <span style={styles.error}>{errors.source_type.message}</span>
+              )}
+            </div>
+
+            <button type="submit" style={styles.createButton}>
+              Create Source
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Sources Table */}
+      <div style={styles.tableSection}>
+        <h3 style={styles.subheading}>Existing Sources</h3>
+
+        {loading ? (
+          <div style={styles.loadingContainer}>
+            <p style={styles.loadingText}>Loading sources...</p>
+          </div>
+        ) : sources.length === 0 ? (
+          <div style={styles.emptyState}>
+            <p style={styles.emptyText}>No sources found</p>
+            <p style={styles.emptyHint}>Create your first source using the form above</p>
+          </div>
+        ) : (
+          <div style={styles.tableContainer}>
+            <table style={styles.table}>
+              <thead>
+                <tr style={styles.tableHeaderRow}>
+                  <th style={styles.tableHeader}>Name</th>
+                  <th style={styles.tableHeader}>Type</th>
+                  <th style={styles.tableHeader}>Created</th>
+                  <th style={styles.tableHeader}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sources.map((source) => (
+                  <tr key={source.id} style={styles.tableRow}>
+                    <td style={styles.tableCell}>
+                      {editingSource?.id === source.id ? (
+                        <input
+                          type="text"
+                          value={editingSource.name}
+                          onChange={(e) =>
+                            setEditingSource({ ...editingSource, name: e.target.value })
+                          }
+                          style={styles.editInput}
+                        />
+                      ) : (
+                        source.name
+                      )}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {editingSource?.id === source.id ? (
+                        <select
+                          value={editingSource.source_type}
+                          onChange={(e) =>
+                            setEditingSource({
+                              ...editingSource,
+                              source_type: e.target.value,
+                            })
+                          }
+                          style={styles.editSelect}
+                        >
+                          <option value="document">Document</option>
+                          <option value="web">Web</option>
+                          <option value="api">API</option>
+                          <option value="database">Database</option>
+                          <option value="other">Other</option>
+                        </select>
+                      ) : (
+                        source.source_type
+                      )}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {new Date(source.created_at).toLocaleDateString()}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {editingSource?.id === source.id ? (
+                        <div style={styles.actionButtons}>
+                          <button
+                            onClick={handleUpdateSource}
+                            style={styles.saveButton}
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingSource(null)}
+                            style={styles.cancelButton}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={styles.actionButtons}>
+                          <button
+                            onClick={() =>
+                              setEditingSource({
+                                id: source.id,
+                                name: source.name,
+                                source_type: source.source_type,
+                              })
+                            }
+                            style={styles.editButton}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setDeletingSourceId(source.id)}
+                            style={styles.deleteButton}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deletingSourceId && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3 style={styles.modalTitle}>Confirm Delete</h3>
+            <p style={styles.modalText}>
+              Are you sure you want to delete this source? This action cannot be undone.
+            </p>
+            <div style={styles.modalActions}>
+              <button
+                onClick={() => handleDeleteSource(deletingSourceId)}
+                style={styles.confirmDeleteButton}
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setDeletingSourceId(null)}
+                style={styles.cancelModalButton}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Inline styles
+const styles = {
+  container: {
+    maxWidth: '1000px',
+    margin: '0 auto',
+    padding: '20px',
+  },
+  heading: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    marginBottom: '20px',
+    color: '#333',
+  },
+  subheading: {
+    fontSize: '18px',
+    fontWeight: '600',
+    marginBottom: '16px',
+    color: '#555',
+  },
+  errorContainer: {
+    padding: '16px',
+    backgroundColor: '#f8d7da',
+    border: '1px solid #f5c6cb',
+    borderRadius: '4px',
+    marginBottom: '16px',
+  },
+  errorText: {
+    color: '#721c24',
+    margin: 0,
+  },
+  createSection: {
+    padding: '20px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '8px',
+    marginBottom: '32px',
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '16px',
+  },
+  formRow: {
+    display: 'flex',
+    gap: '16px',
+    alignItems: 'flex-end',
+    flexWrap: 'wrap' as const,
+  },
+  formGroup: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '8px',
+    flex: '1',
+    minWidth: '200px',
+  },
+  label: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#555',
+  },
+  input: {
+    padding: '10px',
+    fontSize: '14px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    outline: 'none',
+  },
+  select: {
+    padding: '10px',
+    fontSize: '14px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    outline: 'none',
+    backgroundColor: '#fff',
+  },
+  error: {
+    fontSize: '12px',
+    color: '#dc3545',
+  },
+  createButton: {
+    padding: '10px 24px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#fff',
+    backgroundColor: '#28a745',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s ease',
+    height: 'fit-content',
+  },
+  tableSection: {
+    marginTop: '32px',
+  },
+  loadingContainer: {
+    textAlign: 'center' as const,
+    padding: '40px',
+  },
+  loadingText: {
+    fontSize: '16px',
+    color: '#666',
+  },
+  emptyState: {
+    textAlign: 'center' as const,
+    padding: '40px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '8px',
+  },
+  emptyText: {
+    fontSize: '18px',
+    color: '#333',
+    margin: '0 0 8px 0',
+  },
+  emptyHint: {
+    fontSize: '14px',
+    color: '#666',
+    margin: 0,
+  },
+  tableContainer: {
+    overflowX: 'auto' as const,
+    border: '1px solid #ddd',
+    borderRadius: '8px',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+    backgroundColor: '#fff',
+  },
+  tableHeaderRow: {
+    backgroundColor: '#f8f9fa',
+  },
+  tableHeader: {
+    padding: '12px',
+    textAlign: 'left' as const,
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#555',
+    borderBottom: '2px solid #ddd',
+  },
+  tableRow: {
+    borderBottom: '1px solid #eee',
+  },
+  tableCell: {
+    padding: '12px',
+    fontSize: '14px',
+    color: '#333',
+  },
+  editInput: {
+    padding: '6px',
+    fontSize: '14px',
+    border: '1px solid #007bff',
+    borderRadius: '4px',
+    width: '100%',
+  },
+  editSelect: {
+    padding: '6px',
+    fontSize: '14px',
+    border: '1px solid #007bff',
+    borderRadius: '4px',
+    backgroundColor: '#fff',
+  },
+  actionButtons: {
+    display: 'flex',
+    gap: '8px',
+  },
+  editButton: {
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#fff',
+    backgroundColor: '#007bff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  deleteButton: {
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#fff',
+    backgroundColor: '#dc3545',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  saveButton: {
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#fff',
+    backgroundColor: '#28a745',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  cancelButton: {
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#333',
+    backgroundColor: '#f8f9fa',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  modalOverlay: {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modal: {
+    backgroundColor: '#fff',
+    padding: '24px',
+    borderRadius: '8px',
+    maxWidth: '400px',
+    width: '90%',
+  },
+  modalTitle: {
+    fontSize: '20px',
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: '16px',
+  },
+  modalText: {
+    fontSize: '14px',
+    color: '#666',
+    marginBottom: '24px',
+  },
+  modalActions: {
+    display: 'flex',
+    gap: '12px',
+    justifyContent: 'flex-end',
+  },
+  confirmDeleteButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#fff',
+    backgroundColor: '#dc3545',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  cancelModalButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#333',
+    backgroundColor: '#f8f9fa',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+};

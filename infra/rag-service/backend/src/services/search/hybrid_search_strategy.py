@@ -223,6 +223,10 @@ class HybridSearchStrategy:
             normalize_time = (time.time() - normalize_start) * 1000
             logger.debug(f"Score normalization took {normalize_time:.1f}ms")
 
+            # Validate normalized scores are in 0-1 range
+            self._validate_score_normalization(normalized_vector, "vector")
+            self._validate_score_normalization(normalized_text, "text")
+
             # Step 3: Combine scores with weights (0.7×vector + 0.3×text)
             combine_start = time.time()
 
@@ -532,19 +536,83 @@ class HybridSearchStrategy:
         # Convert to list
         results = list(combined.values())
 
-        # Log match type distribution for debugging
+        # Log match type distribution for monitoring
         match_types = {"vector": 0, "text": 0, "both": 0}
         for r in results:
             match_type = r["match_type"]
             match_types[match_type] = match_types.get(match_type, 0) + 1
 
-        logger.debug(
-            f"Combined {len(results)} unique results. "
-            f"Match types: vector={match_types['vector']}, "
-            f"text={match_types['text']}, both={match_types['both']}"
-        )
+        # Calculate match type percentages for monitoring
+        total_results = len(results)
+        if total_results > 0:
+            vector_pct = (match_types['vector'] / total_results) * 100
+            text_pct = (match_types['text'] / total_results) * 100
+            both_pct = (match_types['both'] / total_results) * 100
+
+            logger.info(
+                f"Hybrid search match distribution: "
+                f"vector_only={match_types['vector']} ({vector_pct:.1f}%), "
+                f"text_only={match_types['text']} ({text_pct:.1f}%), "
+                f"both={match_types['both']} ({both_pct:.1f}%) "
+                f"[total={total_results} unique results]"
+            )
+
+            # Alert if hybrid search not effective (one strategy dominates >80%)
+            if vector_pct > 80 or text_pct > 80:
+                logger.warning(
+                    f"Hybrid search ineffective: one strategy dominates "
+                    f"(vector={vector_pct:.1f}%, text={text_pct:.1f}%). "
+                    f"Consider adjusting weights or candidate_multiplier."
+                )
+        else:
+            logger.debug("No results to combine")
 
         return results
+
+    def _validate_score_normalization(
+        self,
+        results: List[Dict[str, Any]],
+        strategy_name: str,
+    ) -> None:
+        """Validate that normalized scores are in the 0-1 range.
+
+        Args:
+            results: Results with normalized_score field
+            strategy_name: Name of strategy for logging ("vector" or "text")
+
+        Raises:
+            ValueError: If any normalized score is outside 0-1 range
+
+        Example:
+            self._validate_score_normalization(normalized_vector, "vector")
+        """
+        if not results:
+            return
+
+        for i, result in enumerate(results):
+            score = result.get("normalized_score", -1.0)
+            if not (0.0 <= score <= 1.0):
+                logger.error(
+                    f"Invalid normalized score in {strategy_name} results: "
+                    f"result[{i}] has normalized_score={score} (expected 0.0-1.0). "
+                    f"chunk_id={result.get('chunk_id', 'unknown')}"
+                )
+                raise ValueError(
+                    f"Score normalization failed for {strategy_name}: "
+                    f"normalized_score={score} is outside 0.0-1.0 range"
+                )
+
+        # Log score range for monitoring
+        scores = [r["normalized_score"] for r in results]
+        min_score = min(scores)
+        max_score = max(scores)
+        avg_score = sum(scores) / len(scores)
+
+        logger.debug(
+            f"{strategy_name.capitalize()} normalized scores: "
+            f"min={min_score:.3f}, max={max_score:.3f}, avg={avg_score:.3f}, "
+            f"count={len(scores)}"
+        )
 
     async def validate(self) -> bool:
         """Validate strategy can execute searches.

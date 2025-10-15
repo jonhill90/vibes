@@ -9,7 +9,6 @@ Reference: https://docs.pydantic.dev/latest/concepts/pydantic_settings/
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator, SecretStr
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -95,10 +94,36 @@ class Settings(BaseSettings):
         le=65535
     )
 
+    CORS_ORIGINS: str = Field(
+        default="",
+        description="Comma-separated list of allowed CORS origins (empty = development defaults)"
+    )
+
     # Search Configuration
     USE_HYBRID_SEARCH: bool = Field(
         default=False,
         description="Enable hybrid search (vector + full-text)"
+    )
+
+    HYBRID_VECTOR_WEIGHT: float = Field(
+        default=0.7,
+        description="Weight for vector similarity scores in hybrid search",
+        ge=0.0,
+        le=1.0
+    )
+
+    HYBRID_TEXT_WEIGHT: float = Field(
+        default=0.3,
+        description="Weight for text search scores in hybrid search",
+        ge=0.0,
+        le=1.0
+    )
+
+    HYBRID_CANDIDATE_MULTIPLIER: int = Field(
+        default=5,
+        description="Multiplier for candidate retrieval in hybrid search (fetch limit * multiplier)",
+        ge=2,
+        le=10
     )
 
     SIMILARITY_THRESHOLD: float = Field(
@@ -219,6 +244,50 @@ class Settings(BaseSettings):
                 f"CHUNK_OVERLAP ({v}) must be less than CHUNK_SIZE ({chunk_size})"
             )
         return v
+
+    @field_validator("HYBRID_TEXT_WEIGHT")
+    @classmethod
+    def validate_hybrid_weights(cls, v: float, info) -> float:
+        """Validate hybrid search weights sum to 1.0.
+
+        Args:
+            v: Text weight value
+            info: Validation context with other field values
+
+        Returns:
+            Validated text weight
+
+        Raises:
+            ValueError: If weights don't sum to 1.0
+        """
+        vector_weight = info.data.get("HYBRID_VECTOR_WEIGHT", 0.7)
+        total = vector_weight + v
+        if abs(total - 1.0) > 0.001:
+            raise ValueError(
+                f"HYBRID_VECTOR_WEIGHT ({vector_weight}) + HYBRID_TEXT_WEIGHT ({v}) "
+                f"must sum to 1.0 (got {total})"
+            )
+        return v
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS_ORIGINS into a list of origins.
+
+        Returns:
+            List of allowed origins (development defaults if CORS_ORIGINS is empty)
+        """
+        if not self.CORS_ORIGINS:
+            # Development defaults
+            return [
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://host.docker.internal:3000",
+                "http://host.docker.internal:5173",
+            ]
+
+        # Parse comma-separated origins
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
 
 def load_settings() -> Settings:

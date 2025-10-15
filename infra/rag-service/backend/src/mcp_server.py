@@ -1,25 +1,25 @@
 """MCP Server Entry Point for RAG Service.
 
-This module provides the MCP server implementation using FastMCP with STDIO transport.
+This module provides the MCP server implementation using FastMCP with HTTP transport.
 It registers all MCP tools (search, document, source) and initializes all required services.
 
-Pattern: FastMCP server with STDIO transport
+Pattern: FastMCP server with Streamable HTTP transport
 References:
-- infra/vibesbox/src/mcp_server.py (FastMCP pattern)
-- infra/task-manager/backend/src/mcp_server.py (Service initialization pattern)
-- prps/rag_service_implementation/examples/02_mcp_consolidated_tools.py
+- Example 01: prps/rag_service_completion/examples/01_mcp_http_server_setup.py
+- Example 02: prps/rag_service_completion/examples/02_openai_client_initialization.py
+- infra/task-manager/backend/src/mcp_server.py (JSON string returns, consolidated tools)
 
 CRITICAL GOTCHAS ADDRESSED:
+- Gotcha #2: AsyncOpenAI client initialized and injected into EmbeddingService
+- Gotcha #3: MCP tools MUST return JSON strings (not dicts)
 - Gotcha #2: Store POOL in app state, not connections
-- Gotcha #6: MCP tools MUST return JSON strings (not dicts)
 - Gotcha #8: Use async with pool.acquire() for connection management
 - Gotcha #9: HNSW disabled during bulk upload (m=0) for 60-90x speedup
 
 Architecture:
-- FastMCP server with tool registration pattern
-- Service initialization in main() before server run
-- Services stored in mcp.context for tool access
-- STDIO transport for Claude Desktop integration
+- FastMCP server with HTTP transport on port 8002
+- Service initialization before server run
+- Services stored in mcp.app.state for tool access
 - Graceful shutdown with resource cleanup
 """
 
@@ -29,6 +29,7 @@ import sys
 
 import asyncpg
 from mcp.server.fastmcp import FastMCP
+from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import VectorParams, Distance, HnswConfigDiff
 
@@ -48,15 +49,17 @@ from src.services.search.rag_service import RAGService
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stderr  # CRITICAL: Log to stderr for STDIO transport
+    stream=sys.stderr  # CRITICAL: Log to stderr for HTTP transport
 )
 logger = logging.getLogger(__name__)
 
-# Create FastMCP server with STDIO transport
-# PATTERN FROM: vibesbox/src/mcp_server.py
+# Create FastMCP server with HTTP transport configuration
+# PATTERN FROM: Example 01 (01_mcp_http_server_setup.py)
+# CRITICAL: Use port 8002 to avoid conflicts (8000=task-manager, 8001=api)
 mcp = FastMCP(
     "RAG Service",
-    # No host/port for STDIO transport - Claude Desktop communicates via stdin/stdout
+    host="0.0.0.0",  # Listen on all interfaces (required for Docker)
+    port=8002  # HTTP port for MCP server
 )
 
 
@@ -65,20 +68,22 @@ async def initialize_services():
 
     This function initializes the complete service dependency tree:
     1. Database connection pool (asyncpg)
-    2. Qdrant vector database client
-    3. Base services (Vector, Source, Document, Embedding)
-    4. Composite services (DocumentParser, TextChunker)
-    5. High-level services (IngestionService, RAGService)
+    2. OpenAI AsyncClient (CRITICAL: Gotcha #2 fix)
+    3. Qdrant vector database client
+    4. Base services (Vector, Source, Document, Embedding)
+    5. Composite services (DocumentParser, TextChunker)
+    6. High-level services (IngestionService, RAGService)
 
-    Services are stored in mcp context for tool access.
+    Services are stored in mcp.app.state for tool access.
 
     CRITICAL PATTERNS:
+    - Initialize AsyncOpenAI BEFORE EmbeddingService (Gotcha #2)
     - Store POOL in context, not connections (Gotcha #2)
     - HNSW disabled (m=0) during bulk upload for 60-90x speedup (Gotcha #9)
     - Use async with pool.acquire() in services (Gotcha #8)
 
     Returns:
-        Tuple of (db_pool, qdrant_client) for cleanup
+        Tuple of (db_pool, openai_client, qdrant_client) for cleanup
 
     Raises:
         Exception: If service initialization fails
@@ -88,7 +93,7 @@ async def initialize_services():
     try:
         # Initialize database connection pool
         # CRITICAL: Store POOL, not connections (Gotcha #2)
-        logger.info("Step 1/9: Creating database connection pool...")
+        logger.info("Step 1/10: Creating database connection pool...")
         db_pool = await asyncpg.create_pool(
             settings.DATABASE_URL,
             min_size=settings.DATABASE_POOL_MIN_SIZE,
@@ -104,8 +109,23 @@ async def initialize_services():
         raise
 
     try:
+        # CRITICAL: Initialize OpenAI client BEFORE EmbeddingService (Gotcha #2)
+        # PATTERN FROM: Example 02 (02_openai_client_initialization.py)
+        logger.info("Step 2/10: Initializing OpenAI AsyncClient...")
+        openai_client = AsyncOpenAI(
+            api_key=settings.OPENAI_API_KEY.get_secret_value(),
+            max_retries=3,
+            timeout=30.0
+        )
+        logger.info(f"✅ OpenAI client initialized (model={settings.OPENAI_EMBEDDING_MODEL})")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize OpenAI client: {e}")
+        await db_pool.close()
+        raise
+
+    try:
         # Initialize Qdrant vector database client
-        logger.info("Step 2/9: Initializing Qdrant client...")
+        logger.info("Step 3/10: Initializing Qdrant client...")
         qdrant_client = AsyncQdrantClient(url=settings.QDRANT_URL)
         logger.info(f"✅ Qdrant client initialized (url={settings.QDRANT_URL})")
     except Exception as e:
@@ -115,7 +135,7 @@ async def initialize_services():
 
     try:
         # CRITICAL: Initialize Qdrant collection with HNSW disabled for bulk upload (Gotcha #9)
-        logger.info("Step 3/9: Ensuring Qdrant collection exists...")
+        logger.info("Step 4/10: Ensuring Qdrant collection exists...")
         collections = await qdrant_client.get_collections()
         collection_names = [c.name for c in collections.collections]
 
@@ -142,27 +162,29 @@ async def initialize_services():
 
     try:
         # Initialize base services
-        logger.info("Step 4/9: Initializing VectorService...")
+        logger.info("Step 5/10: Initializing VectorService...")
         vector_service = VectorService(
             qdrant_client=qdrant_client,
             collection_name=settings.QDRANT_COLLECTION_NAME,
         )
         logger.info("✅ VectorService initialized")
 
-        logger.info("Step 5/9: Initializing SourceService, DocumentService, EmbeddingService...")
+        logger.info("Step 6/10: Initializing SourceService and DocumentService...")
         source_service = SourceService(db_pool=db_pool)
         document_service = DocumentService(db_pool=db_pool)
+        logger.info("✅ SourceService and DocumentService initialized")
+
+        # CRITICAL: Initialize EmbeddingService with openai_client parameter (Gotcha #2 fix)
+        # PATTERN FROM: Example 02 (02_openai_client_initialization.py)
+        logger.info("Step 7/10: Initializing EmbeddingService with OpenAI client...")
         embedding_service = EmbeddingService(
             db_pool=db_pool,
-            api_key=settings.OPENAI_API_KEY.get_secret_value(),
-            model=settings.OPENAI_EMBEDDING_MODEL,
-            dimensions=settings.OPENAI_EMBEDDING_DIMENSION,
-            batch_size=settings.EMBEDDING_BATCH_SIZE,
+            openai_client=openai_client,  # FIX: Inject the client
         )
-        logger.info("✅ Base services initialized")
+        logger.info("✅ EmbeddingService initialized with OpenAI client")
 
         # Initialize composite services
-        logger.info("Step 6/9: Initializing DocumentParser and TextChunker...")
+        logger.info("Step 8/10: Initializing DocumentParser and TextChunker...")
         document_parser = DocumentParser()
         text_chunker = TextChunker(
             chunk_size=settings.CHUNK_SIZE,
@@ -171,7 +193,7 @@ async def initialize_services():
         logger.info("✅ Composite services initialized")
 
         # Initialize IngestionService
-        logger.info("Step 7/9: Initializing IngestionService...")
+        logger.info("Step 9/10: Initializing IngestionService...")
         ingestion_service = IngestionService(
             db_pool=db_pool,
             document_parser=document_parser,
@@ -183,7 +205,7 @@ async def initialize_services():
         logger.info("✅ IngestionService initialized")
 
         # Initialize search strategies
-        logger.info("Step 8/9: Initializing search strategies...")
+        logger.info("Step 10/10: Initializing search strategies and RAGService...")
         base_search_strategy = BaseSearchStrategy(
             vector_service=vector_service,
             embedding_service=embedding_service,
@@ -203,7 +225,6 @@ async def initialize_services():
             logger.info("ℹ️  Hybrid search disabled (USE_HYBRID_SEARCH=False)")
 
         # Initialize RAGService
-        logger.info("Step 9/9: Initializing RAGService...")
         rag_service = RAGService(
             base_strategy=base_search_strategy,
             hybrid_strategy=hybrid_search_strategy,
@@ -212,10 +233,11 @@ async def initialize_services():
         logger.info("✅ RAGService initialized")
 
         # Store all services in MCP context for tool access
-        # PATTERN: Store services in mcp context (similar to FastAPI app.state)
-        # Tools will access via ctx.app (FastMCP context object)
+        # PATTERN: Store services in mcp.app.state (similar to FastAPI app.state)
+        # Tools will access via mcp.app.state
         mcp.app.state = type('State', (), {})()  # Create state namespace
         mcp.app.state.db_pool = db_pool
+        mcp.app.state.openai_client = openai_client
         mcp.app.state.qdrant_client = qdrant_client
         mcp.app.state.vector_service = vector_service
         mcp.app.state.source_service = source_service
@@ -228,7 +250,7 @@ async def initialize_services():
 
         logger.info("✅ All services initialized and stored in MCP context")
 
-        return db_pool, qdrant_client
+        return db_pool, openai_client, qdrant_client
 
     except Exception as e:
         logger.error(f"❌ Failed to initialize services: {e}")
@@ -238,58 +260,21 @@ async def initialize_services():
 
 
 # Register all MCP tools
-# PATTERN: Import register functions and call them
-# Tools are registered via @mcp.tool() decorators in respective modules
+# PATTERN: Import tools modules to trigger @mcp.tool() decorators
+# Tools are defined in src/tools/ and return JSON strings (Gotcha #3)
 logger.info("Registering MCP tools...")
 
 try:
-    from src.tools.search_tools import register_search_tools
-    from src.tools.document_tools import register_document_tools
+    # Import tool modules to register via decorators
+    # These imports will execute @mcp.tool() decorators and register the tools
+    from src.tools import search_tools  # noqa: F401
+    from src.tools import document_tools  # noqa: F401
+    from src.tools import source_tools  # noqa: F401
 
-    # Register search tools (search_knowledge_base)
-    register_search_tools(mcp)
-    logger.info("✓ Search tools registered")
-
-    # Register document tools (manage_document)
-    register_document_tools(mcp)
-    logger.info("✓ Document tools registered")
-
-    # Note: source_tools uses async function pattern, not register function
-    # Import the tool function directly to register via decorator
-    from src.tools.source_tools import manage_source
-
-    # Register source tool by making it available to MCP
-    @mcp.tool()
-    async def rag_manage_source(
-        action: str,
-        source_id: str | None = None,
-        source_type: str | None = None,
-        url: str | None = None,
-        status: str | None = None,
-        metadata: dict | None = None,
-        error_message: str | None = None,
-        limit: int = 10,
-        offset: int = 0,
-    ) -> str:
-        """Manage RAG sources (consolidated: create/update/delete/get/list).
-
-        Wrapper for manage_source tool to integrate with FastMCP.
-        See source_tools.manage_source for full documentation.
-        """
-        return await manage_source(
-            action=action,
-            source_id=source_id,
-            source_type=source_type,
-            url=url,
-            status=status,
-            metadata=metadata,
-            error_message=error_message,
-            limit=limit,
-            offset=offset,
-        )
-
-    logger.info("✓ Source tools registered")
     logger.info("✅ All MCP tools registered successfully")
+    logger.info("   - search_knowledge_base (query, limit, source_id)")
+    logger.info("   - manage_document (action: create/get/update/delete/list)")
+    logger.info("   - rag_manage_source (action: create/get/update/delete/list)")
 
 except ImportError as e:
     logger.error(f"❌ Failed to import MCP tools: {e}")
@@ -302,30 +287,34 @@ except Exception as e:
 async def main():
     """Main entry point for MCP server.
 
-    Initializes services, runs MCP server with STDIO transport,
+    Initializes services, runs MCP server with HTTP transport,
     and handles graceful shutdown.
 
     CRITICAL PATTERNS:
-    - STDIO transport for Claude Desktop integration
+    - HTTP transport on port 8002 (not STDIO)
     - Graceful shutdown with resource cleanup
     - Exception handling for initialization failures
     """
     db_pool = None
+    openai_client = None
     qdrant_client = None
 
     try:
         # Initialize all services
-        db_pool, qdrant_client = await initialize_services()
+        db_pool, openai_client, qdrant_client = await initialize_services()
 
-        # Run MCP server with STDIO transport
-        # PATTERN FROM: vibesbox/src/mcp_server.py
+        # Run MCP server with HTTP transport
+        # PATTERN FROM: Example 01 (01_mcp_http_server_setup.py)
+        logger.info("=" * 70)
         logger.info("🚀 Starting RAG Service MCP server...")
-        logger.info("   Transport: STDIO (for Claude Desktop)")
+        logger.info("   Transport: Streamable HTTP")
+        logger.info("   URL: http://0.0.0.0:8002/mcp")
         logger.info("   Tools: search_knowledge_base, manage_document, rag_manage_source")
         logger.info("=" * 70)
 
         # Run server - this blocks until shutdown
-        await mcp.run(transport="stdio")
+        # CRITICAL: Use transport="streamable-http" for HTTP mode (not "stdio")
+        await mcp.run(transport="streamable-http")
 
     except KeyboardInterrupt:
         logger.info("⚠️  RAG Service MCP server stopped by user (Ctrl+C)")
@@ -349,6 +338,8 @@ async def main():
                 logger.info("✅ Database pool closed")
         except Exception as e:
             logger.error(f"❌ Error closing database pool: {e}", exc_info=True)
+
+        # Note: AsyncOpenAI client doesn't need explicit close
 
         logger.info("✅ RAG Service MCP server shutdown complete")
 

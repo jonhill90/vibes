@@ -13,7 +13,6 @@ import asyncpg
 import logging
 import json
 from uuid import UUID
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

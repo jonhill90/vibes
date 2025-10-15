@@ -21,7 +21,6 @@ CRITICAL GOTCHAS ADDRESSED:
 """
 
 import logging
-import os
 from contextlib import asynccontextmanager
 
 import asyncpg
@@ -31,6 +30,7 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import VectorParams, Distance, HnswConfigDiff
 
 from src.config.settings import settings
+from src.api.routes import health, documents, search, sources
 
 logger = logging.getLogger(__name__)
 
@@ -141,24 +141,10 @@ app = FastAPI(
 )
 
 # Configure CORS - Environment-specific origins (Gotcha #8)
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+# Use settings.cors_origins_list which handles both development and production
+origins = settings.cors_origins_list
 
-if ENVIRONMENT == "development":
-    # Development: Allow local frontend origins
-    origins = [
-        "http://localhost:3000",  # React default port
-        "http://localhost:5173",  # Vite default port
-        "http://localhost:5174",  # Vite alternate port
-        "http://host.docker.internal:3000",  # Docker Desktop internal DNS
-        "http://host.docker.internal:5173",  # Docker Desktop Vite
-    ]
-elif ENVIRONMENT == "production":
-    # Production: Use environment variable for allowed origins
-    cors_origins = os.getenv("CORS_ORIGINS", "")
-    origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
-else:
-    # Unknown environment: No origins allowed
-    origins = []
+logger.info(f"CORS configured with origins: {origins}")
 
 # CRITICAL: NEVER use allow_origins=["*"] in production (Gotcha #8)
 app.add_middleware(
@@ -169,16 +155,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API routers
-from src.api.routes import health
-
+# Health check (no prefix)
 app.include_router(health.router, tags=["health"])
 
-# TODO: Include additional API routers when implemented
-# from src.api import documents_router, search_router, sources_router
-# app.include_router(documents_router, prefix="/api")
-# app.include_router(search_router, prefix="/api")
-# app.include_router(sources_router, prefix="/api")
+# API routes (already have /api prefix in router definitions)
+app.include_router(documents.router, tags=["documents"])
+app.include_router(search.router, tags=["search"])
+app.include_router(sources.router, tags=["sources"])
 
 
 @app.get("/")

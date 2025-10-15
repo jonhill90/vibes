@@ -74,6 +74,11 @@ class EmbeddingService:
         self.expected_dimension = settings.OPENAI_EMBEDDING_DIMENSION
         self.batch_size = settings.EMBEDDING_BATCH_SIZE
 
+        # Cache hit rate tracking (Task 7: Embedding Cache Schema Fix)
+        self.cache_hits = 0
+        self.cache_misses = 0
+        self.total_requests = 0
+
         logger.info(
             f"EmbeddingService initialized: model={self.model_name}, "
             f"dimension={self.expected_dimension}, batch_size={self.batch_size}"
@@ -109,8 +114,16 @@ class EmbeddingService:
         # Step 1: Check cache
         cached_embedding = await self._get_cached_embedding(text)
         if cached_embedding:
+            # Track cache hit (Task 7)
+            self.cache_hits += 1
+            self.total_requests += 1
+            self._log_cache_hit_rate_if_needed()
             logger.debug(f"Cache hit for text: {text[:50]}...")
             return cached_embedding
+
+        # Track cache miss (Task 7)
+        self.cache_misses += 1
+        self.total_requests += 1
 
         # Step 2: Generate embedding with retry logic
         try:
@@ -118,6 +131,7 @@ class EmbeddingService:
             if embedding:
                 # Step 3: Store in cache
                 await self._cache_embedding(text, embedding)
+                self._log_cache_hit_rate_if_needed()
                 return embedding
             else:
                 logger.error(f"Failed to generate embedding for text: {text[:50]}...")
@@ -189,10 +203,18 @@ class EmbeddingService:
             else:
                 cache_misses.append((i, text))
 
+        # Track cache statistics (Task 7)
+        batch_cache_hits = len(embeddings)
+        batch_cache_misses = len(cache_misses)
+        self.cache_hits += batch_cache_hits
+        self.cache_misses += batch_cache_misses
+        self.total_requests += len(texts) - len(failed_items)  # Don't count empty texts
+
         logger.info(
-            f"Cache stats: {len(embeddings)} hits, {len(cache_misses)} misses "
-            f"({len(embeddings) / len(texts) * 100:.1f}% hit rate)"
+            f"Cache stats: {batch_cache_hits} hits, {batch_cache_misses} misses "
+            f"({batch_cache_hits / (batch_cache_hits + batch_cache_misses) * 100:.1f}% hit rate)"
         )
+        self._log_cache_hit_rate_if_needed()
 
         # Step 2: Batch generate embeddings for cache misses
         if cache_misses:
@@ -328,8 +350,9 @@ class EmbeddingService:
             embedding: Generated embedding vector
 
         Note:
-            Uses INSERT ... ON CONFLICT DO NOTHING to handle race conditions
-            when multiple workers try to cache the same text simultaneously.
+            Uses INSERT ... ON CONFLICT DO UPDATE to handle race conditions
+            and update access statistics when the same text is cached again.
+            (Task 7: Updates access_count and last_accessed_at on conflict)
         """
         content_hash = self._compute_content_hash(text)
 
@@ -339,7 +362,9 @@ class EmbeddingService:
                     """
                     INSERT INTO embedding_cache (content_hash, text_preview, embedding, model_name)
                     VALUES ($1, $2, $3, $4)
-                    ON CONFLICT (content_hash, model_name) DO NOTHING
+                    ON CONFLICT (content_hash, model_name) DO UPDATE
+                    SET access_count = embedding_cache.access_count + 1,
+                        last_accessed_at = NOW()
                     """,
                     content_hash,
                     text[:500],  # Store preview for debugging
@@ -476,7 +501,7 @@ class EmbeddingService:
 
                 return embeddings
 
-            except openai.RateLimitError as e:
+            except openai.RateLimitError:
                 if attempt < max_retries - 1:
                     # Exponential backoff: 2^attempt seconds + jitter
                     delay = (2 ** attempt) + random.uniform(0, 1)
@@ -516,3 +541,38 @@ class EmbeddingService:
             str: MD5 hash (32 hex characters)
         """
         return hashlib.md5(text.encode("utf-8")).hexdigest()
+
+    @property
+    def cache_hit_rate(self) -> float:
+        """Calculate current cache hit rate.
+
+        Returns:
+            float: Cache hit rate as percentage (0.0-100.0)
+
+        Example:
+            >>> service.cache_hit_rate
+            34.5  # 34.5% cache hit rate
+        """
+        if self.total_requests == 0:
+            return 0.0
+        return (self.cache_hits / self.total_requests) * 100.0
+
+    def _log_cache_hit_rate_if_needed(self) -> None:
+        """Log cache hit rate every 100 requests (Task 7).
+
+        Logs cache performance metrics to monitor cost savings.
+        Target: 20-40% hit rate (30% cost savings at scale).
+        """
+        if self.total_requests % 100 == 0 and self.total_requests > 0:
+            logger.info(
+                f"[Cache Performance] Total requests: {self.total_requests}, "
+                f"Hits: {self.cache_hits}, Misses: {self.cache_misses}, "
+                f"Hit rate: {self.cache_hit_rate:.1f}%"
+            )
+
+            # Warn if hit rate is unexpectedly low
+            if self.total_requests >= 500 and self.cache_hit_rate < 10.0:
+                logger.warning(
+                    f"Cache hit rate unusually low ({self.cache_hit_rate:.1f}%). "
+                    f"Expected 20-40%. Check for unique content or cache issues."
+                )
