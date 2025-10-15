@@ -28,14 +28,15 @@ Complete the RAG service implementation to match the architecture plan with:
 - Docker Compose with health checks
 - End-to-end integration test
 
-### ❌ What's Missing
-- MCP server not configured/tested
-- Frontend not implemented (structure only)
-- Hybrid search (vector + full-text)
-- Embedding cache (30% cost savings)
-- REST API routes (only health endpoint exists)
-- Unit tests (only integration test)
-- Service naming (`api` should be `backend`)
+### ❌ What's Missing / Needs Fixes
+- MCP server not configured/tested; still on STDIO transport and constructor mismatches cause runtime failures
+- OpenAI client wiring missing (EmbeddingService instantiation fails) and embedding cache INSERT uses non-existent `text_preview` column
+- Crawl4AI ingestion pipeline absent (no crawler service, crawl job executor, or MCP/REST hooks)
+- REST API routers beyond health endpoint unimplemented (documents, sources, search)
+- Frontend UI limited to scaffold; upload/search/source management still need constructing
+- Hybrid search exists in code but is unreachable until MCP wiring/REST surfaces it, and needs validation toggles
+- Test coverage thin (single integration test); unit/service/MCP tests required
+- Service naming (`api` should be `backend`) still inconsistent in Docker Compose and references
 
 ---
 
@@ -44,160 +45,55 @@ Complete the RAG service implementation to match the architecture plan with:
 ### 1. Rename Service (Quick Fix)
 **Priority**: Low | **Effort**: 5 minutes
 
-Rename `api` to `backend` in `docker-compose.yml` for semantic accuracy:
-- Service contains MCP server, Docling parsing, not just API
-- Changes: service name, container name, frontend dependency
-- Test: `docker-compose up` and verify all services start
+Rename `api` to `backend` in `docker-compose.yml` (and related health checks/container names) so the service label matches reality. Validate with `docker-compose up`.
 
-### 2. Migrate MCP Server to Streamable HTTP
-**Priority**: High | **Effort**: 2-3 hours
+### 2. Repair and Migrate MCP Server
+**Priority**: High | **Effort**: 0.5 day
 
-**2.1 Update MCP Server Configuration**
-Change from STDIO to Streamable HTTP transport (following vibesbox pattern):
+1. Instantiate `openai.AsyncOpenAI` and pass it into `EmbeddingService`; update Base/Hybrid strategy constructors in `backend/src/mcp_server.py` to match signatures.
+2. Switch FastMCP to streamable HTTP, expose the MCP port in docker-compose, and update local Claude config.
+3. Re-run MCP smoke tests (`search_knowledge_base`, `manage_document`, `rag_manage_source`) to confirm JSON responses and hybrid toggle behaviour.
 
-In `backend/src/mcp_server.py`:
-```python
-# Create FastMCP server with HTTP configuration
-# PATTERN FROM: vibesbox/src/mcp_server.py
-mcp = FastMCP(
-    "RAG Service",
-    host="0.0.0.0",
-    port=8000  # Internal port (mapped to 8052 externally)
-)
+### 3. Crawl4AI Ingestion Pipeline
+**Priority**: High | **Effort**: 1-2 days
 
-# In main():
-if __name__ == "__main__":
-    logger.info("Starting RAG Service MCP server...")
-    logger.info(f"   Mode: Streamable HTTP")
-    logger.info(f"   URL: http://0.0.0.0:8000/mcp")
+- Add a Crawl4AI client wrapper (Playwright setup, rate limiting, retries) and integrate it with `crawl_jobs` + `sources` tables.
+- Extend IngestionService to enqueue and process crawl jobs through Docling → chunking → embedding.
+- Expose crawl management via REST (create job, status) and MCP (action on manage_source or new tool).
+- Tests: unit tests for crawler service, e2e crawl smoke test with mocked outputs.
 
-    try:
-        mcp.run(transport="streamable-http")  # Changed from "stdio"
-    except KeyboardInterrupt:
-        logger.info("RAG Service MCP server stopped by user")
-```
-
-**2.2 Update Docker Compose**
-Add MCP port exposure to `docker-compose.yml`:
-
-```yaml
-backend:
-  ports:
-    - "${API_PORT:-8001}:8001"  # FastAPI server
-    - "${MCP_PORT:-8052}:8000"  # MCP server (internal 8000 -> external 8052)
-  environment:
-    - MCP_PORT=${MCP_PORT:-8052}
-```
-
-**2.3 Update Claude Desktop Configuration**
-Change to HTTP transport in `~/.config/claude/claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "rag-service": {
-      "transport": {
-        "type": "streamable-http",
-        "url": "http://localhost:8052/mcp"
-      },
-      "env": {
-        "OPENAI_API_KEY": "..."
-      }
-    }
-  }
-}
-```
-
-**2.4 Test MCP Tools**
-- Restart Docker services: `docker-compose restart backend`
-- Restart Claude Desktop
-- Test `search_knowledge_base(query="test", match_count=5)` - should search vectors
-- Test `manage_document(action="list")` - should list documents
-- Test `rag_manage_source(action="list")` - should list sources
-- Verify all tools return JSON strings (not dicts) per MCP spec
-
-**2.5 Validation**
-- MCP server accessible at `http://localhost:8052/mcp`
-- All 3 tools accessible from Claude Desktop
-- Tools return proper JSON strings
-- Search results include document content and scores
-- Error handling returns structured errors
-- Service persists across container restarts
-
-### 3. Implement Frontend
-**Priority**: Medium | **Effort**: 1-2 days
-
-**3.1 Document Upload Interface**
-- File upload component (PDF, DOCX, HTML, Markdown)
-- Source selection dropdown
-- Progress indicator during ingestion
-- Success/error feedback
-
-**3.2 Search Interface**
-- Query input with submit
-- Results list with:
-  - Document title
-  - Chunk content preview (1000 chars)
-  - Similarity score
-  - Source attribution
-- Pagination (20 results max)
-
-**3.3 Source Management**
-- List all sources
-- Create new source
-- View source details (document count)
-- Delete source (with confirmation)
-
-**Tech Stack**: React + TypeScript + Vite (already configured in docker-compose)
-
-### 4. Add Hybrid Search
+### 4. REST API Endpoints
 **Priority**: High | **Effort**: 1 day
 
-**4.1 PostgreSQL Schema Updates**
-Add to `database/scripts/init.sql`:
-```sql
--- Add tsvector columns for full-text search
-ALTER TABLE documents ADD COLUMN search_vector tsvector;
-ALTER TABLE chunks ADD COLUMN search_vector tsvector;
+- Implement `/api/documents`, `/api/sources`, `/api/search` routers (CRUD, search) following task-manager patterns.
+- Add request/response models, validation, pagination, and error handling.
+- Update OpenAPI docs and add route-level tests.
 
--- Create GIN indexes
-CREATE INDEX idx_documents_search_vector ON documents USING GIN(search_vector);
-CREATE INDEX idx_chunks_search_vector ON chunks USING GIN(search_vector);
+### 5. Frontend Experience
+**Priority**: Medium | **Effort**: 1-2 days
 
--- Add triggers for automatic updates
-CREATE OR REPLACE FUNCTION documents_search_vector_update()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.search_vector =
-        setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
-        setweight(to_tsvector('english', COALESCE(NEW.url, '')), 'B');
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+- Build document upload flow (file picker, source selector, progress, errors).
+- Create semantic search view (query, results with scores, filters, pagination) and source management page.
+- Integrate with new REST APIs and add basic unit/component tests.
 
-CREATE TRIGGER documents_search_vector_trigger
-    BEFORE INSERT OR UPDATE OF title, url
-    ON documents
-    FOR EACH ROW
-    EXECUTE FUNCTION documents_search_vector_update();
-```
+### 6. Hybrid Search Enablement
+**Priority**: Medium | **Effort**: 0.5 day
 
-**4.2 Implement HybridSearchStrategy**
-File: `backend/src/services/search/hybrid_search_strategy.py`
-- Fetch top 100 from Qdrant (vector search)
-- Fetch top 100 from PostgreSQL (ts_rank full-text search)
-- Combine scores: `0.7 * vector_score + 0.3 * text_score`
-- Deduplicate and sort by combined score
-- Return top N results
+- After MCP/REST wiring fixes, surface hybrid search configuration (env flags, runtime toggle) and verify combined scoring works end-to-end.
+- Add metrics/logging and regression tests comparing vector vs hybrid outputs.
 
-**4.3 Update RAGService**
-- Add `use_hybrid` parameter to `search_documents()`
-- Route to HybridSearchStrategy when enabled
-- Add `USE_HYBRID_SEARCH=true` to `.env`
+### 7. Embedding Cache Alignment
+**Priority**: Medium | **Effort**: 0.5 day
 
-**4.4 Validation**
-- Test hybrid search accuracy vs vector-only
-- Benchmark latency (should be 50-100ms)
-- Verify keyword queries improve with full-text matching
+- Align schema and SQL insert (add `text_preview` column or remove it from `_cache_embedding`).
+- Add cache hit-rate logging and tests covering cache read/write paths.
+
+### 8. Test Coverage & Tooling
+**Priority**: Medium | **Effort**: 1 day
+
+- Add unit tests for services (documents, sources, embeddings, vector, search strategies).
+- Introduce MCP integration tests and API contract tests.
+- Hook lint/type/test commands into CI guidance; target 80%+ coverage for backend modules.
 
 ### 5. Add Embedding Cache
 **Priority**: Medium | **Effort**: 4 hours

@@ -2,10 +2,6 @@
 trust_level = "trusted"
 
 # STDIO Servers (Docker-based)
-[mcp_servers.vibesbox]
-command = "docker"
-args = ["exec", "-i", "mcp-vibesbox-server", "python3", "/workspace/server.py"]
-
 [mcp_servers.basic_memory]
 command = "docker"
 args = ["exec", "-i", "basic-memory-mcp", "/app/start.sh"]
@@ -17,6 +13,9 @@ args = ["mcp", "gateway", "run"]
 # HTTP Server (Archon) - Requires experimental flag
 [mcp_servers.archon]
 url = "http://localhost:8051/mcp"
+
+[mcp_servers.vibesbox]
+url = "http://localhost:8053/mcp"
 
 [profiles.codex-prp]
 model = "gpt-5-codex"
