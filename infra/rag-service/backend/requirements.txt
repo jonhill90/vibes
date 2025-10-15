@@ -4,7 +4,8 @@
 # Core FastAPI and async support
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
-pydantic==2.9.2
+python-multipart==0.0.12  # Required for file uploads
+pydantic>=2.11.0,<3.0.0  # Compatible with crawl4ai (>=2.10) and docling-core (!=2.10.0-2.10.2)
 pydantic-settings==2.6.0
 
 # Database drivers

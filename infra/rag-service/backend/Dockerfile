@@ -22,12 +22,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY src/ ./src/
 
-# Expose FastAPI port
-EXPOSE 8001
+# Expose FastAPI port (default 8003, can be overridden by API_PORT env var)
+EXPOSE 8003
 
-# Health check
+# Health check (port will match API_PORT from docker-compose)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
+    CMD curl -f http://localhost:${API_PORT:-8003}/health || exit 1
 
-# Run FastAPI server
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+# Run FastAPI server (port from API_PORT env var)
+CMD uvicorn src.main:app --host 0.0.0.0 --port ${API_PORT:-8003} --reload
