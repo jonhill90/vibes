@@ -209,16 +209,17 @@ async def initialize_services():
         base_search_strategy = BaseSearchStrategy(
             vector_service=vector_service,
             embedding_service=embedding_service,
-            db_pool=db_pool,
         )
 
         # Initialize HybridSearchStrategy if enabled
         hybrid_search_strategy = None
         if settings.USE_HYBRID_SEARCH:
             hybrid_search_strategy = HybridSearchStrategy(
-                vector_service=vector_service,
-                embedding_service=embedding_service,
+                base_strategy=base_search_strategy,
                 db_pool=db_pool,
+                vector_weight=settings.HYBRID_VECTOR_WEIGHT,
+                text_weight=settings.HYBRID_TEXT_WEIGHT,
+                candidate_multiplier=settings.HYBRID_CANDIDATE_MULTIPLIER,
             )
             logger.info("✅ Hybrid search strategy initialized")
         else:

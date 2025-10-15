@@ -217,6 +217,25 @@ class HybridSearchStrategy:
             # Step 2: Normalize scores to 0-1 range
             normalize_start = time.time()
 
+            # Log raw scores before normalization for debugging
+            if vector_results:
+                vector_scores = [r.get("score", 0.0) for r in vector_results[:5]]
+                logger.debug(
+                    f"Vector raw scores (top 5): "
+                    f"min={min(r.get('score', 0.0) for r in vector_results):.4f}, "
+                    f"max={max(r.get('score', 0.0) for r in vector_results):.4f}, "
+                    f"samples={vector_scores}"
+                )
+
+            if text_results:
+                text_ranks = [r.get("rank", 0.0) for r in text_results[:5]]
+                logger.debug(
+                    f"BM25 raw ranks (top 5): "
+                    f"min={min(r.get('rank', 0.0) for r in text_results):.4f}, "
+                    f"max={max(r.get('rank', 0.0) for r in text_results):.4f}, "
+                    f"samples={text_ranks}"
+                )
+
             normalized_vector = self._normalize_scores(vector_results, "score")
             normalized_text = self._normalize_scores(text_results, "rank")
 
@@ -234,6 +253,24 @@ class HybridSearchStrategy:
                 normalized_vector,
                 normalized_text
             )
+
+            # Log combined score statistics for monitoring
+            if combined_results:
+                combined_scores = [r["score"] for r in combined_results[:10]]
+                vector_contributions = [r["vector_score"] * self.vector_weight for r in combined_results[:10]]
+                text_contributions = [r["text_score"] * self.text_weight for r in combined_results[:10]]
+
+                logger.debug(
+                    f"Combined scores (top 10): "
+                    f"min={min(r['score'] for r in combined_results):.4f}, "
+                    f"max={max(r['score'] for r in combined_results):.4f}, "
+                    f"samples={[f'{s:.4f}' for s in combined_scores]}"
+                )
+                logger.debug(
+                    f"Score contributions: "
+                    f"vector_weighted={[f'{v:.4f}' for v in vector_contributions]}, "
+                    f"text_weighted={[f'{t:.4f}' for t in text_contributions]}"
+                )
 
             combine_time = (time.time() - combine_start) * 1000
             logger.debug(

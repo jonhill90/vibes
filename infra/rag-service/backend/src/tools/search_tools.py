@@ -113,7 +113,7 @@ def register_search_tools(mcp: FastMCP):
     async def search_knowledge_base(
         ctx: Context,
         query: str,
-        search_type: str = "vector",
+        search_type: str = "auto",
         limit: int = 10,
         source_id: str | None = None,
     ) -> str:
@@ -132,10 +132,10 @@ def register_search_tools(mcp: FastMCP):
             query: Search query - Keep SHORT and FOCUSED (2-5 keywords).
                    Good: "vector search", "authentication JWT", "React hooks"
                    Bad: "how to implement user authentication with JWT tokens..."
-            search_type: Search strategy to use (default: "vector")
+            search_type: Search strategy to use (default: "auto")
                         - "vector": Vector similarity search only (<50ms p95)
                         - "hybrid": Vector + full-text search (<100ms p95)
-                        - "auto": Use hybrid if available, else vector
+                        - "auto": Use hybrid if enabled via USE_HYBRID_SEARCH, else vector (recommended)
             limit: Maximum number of results (default: 10, max: 20)
             source_id: Optional source ID filter from sources table.
                       This is the database 'id' field (UUID), not URL or domain.

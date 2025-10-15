@@ -371,8 +371,10 @@ class RAGService:
 
         except Exception as hybrid_error:
             # Graceful degradation: fallback to vector search
+            fallback_start = time.time()
             logger.warning(
-                f"Hybrid search failed, falling back to vector search: {hybrid_error}"
+                f"Hybrid search failed (error: {hybrid_error}), "
+                f"initiating graceful degradation to vector-only search"
             )
 
             try:
@@ -382,9 +384,11 @@ class RAGService:
                     limit=limit,
                     filters=filters,
                 )
+                fallback_time = (time.time() - fallback_start) * 1000
                 logger.info(
-                    f"Graceful degradation successful: "
-                    f"hybrid → vector, results={len(results)}"
+                    f"✓ Graceful degradation successful: "
+                    f"hybrid → vector, results={len(results)}, "
+                    f"fallback_time={fallback_time:.1f}ms"
                 )
                 return results
 

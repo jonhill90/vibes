@@ -2,18 +2,19 @@ import { useState } from 'react';
 import DocumentUpload from './components/DocumentUpload';
 import SearchInterface from './components/SearchInterface';
 import SourceManagement from './components/SourceManagement';
+import CrawlManagement from './components/CrawlManagement';
 
 /**
  * RAG Service Frontend Application
  *
  * Main application component with hash-based routing.
  * Features:
- * - Navigation between Document Upload, Search, and Source Management
+ * - Navigation between Document Upload, Search, Source Management, and Crawl Management
  * - Simple hash-based routing (no external router dependency)
  * - Responsive layout with navigation bar
  */
 
-type Page = 'upload' | 'search' | 'sources';
+type Page = 'upload' | 'search' | 'sources' | 'crawls';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('search');
@@ -26,6 +27,8 @@ export default function App() {
         return <SearchInterface />;
       case 'sources':
         return <SourceManagement />;
+      case 'crawls':
+        return <CrawlManagement />;
       default:
         return <SearchInterface />;
     }
@@ -69,6 +72,15 @@ export default function App() {
           }}
         >
           Manage Sources
+        </button>
+        <button
+          onClick={() => setCurrentPage('crawls')}
+          style={{
+            ...styles.navButton,
+            ...(currentPage === 'crawls' ? styles.navButtonActive : {}),
+          }}
+        >
+          Manage Crawls
         </button>
       </nav>
 

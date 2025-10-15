@@ -65,6 +65,43 @@ export interface ErrorResponse {
   details?: Record<string, unknown>;
 }
 
+export interface CrawlStartRequest {
+  source_id: string;
+  url: string;
+  max_pages?: number;
+  max_depth?: number;
+}
+
+export interface CrawlJobResponse {
+  id: string;
+  source_id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  pages_crawled: number;
+  pages_total?: number;
+  max_pages: number;
+  max_depth: number;
+  current_depth: number;
+  error_message?: string;
+  error_count: number;
+  metadata: Record<string, unknown>;
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CrawlJobListResponse {
+  crawl_jobs: CrawlJobResponse[];
+  total_count: number;
+  limit: number;
+  offset: number;
+}
+
+export interface MessageResponse {
+  success: boolean;
+  message: string;
+}
+
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8001',
@@ -169,6 +206,43 @@ export async function updateSource(id: string, data: Partial<SourceRequest>): Pr
  */
 export async function deleteSource(id: string): Promise<void> {
   await apiClient.delete(`/api/sources/${id}`);
+}
+
+/**
+ * Start a new web crawl job
+ */
+export async function startCrawl(data: CrawlStartRequest): Promise<CrawlJobResponse> {
+  const response = await apiClient.post<CrawlJobResponse>('/api/crawls', data);
+  return response.data;
+}
+
+/**
+ * List crawl jobs with optional filters and pagination
+ */
+export async function listCrawlJobs(params?: {
+  source_id?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<CrawlJobListResponse> {
+  const response = await apiClient.get<CrawlJobListResponse>('/api/crawls', { params });
+  return response.data;
+}
+
+/**
+ * Get a single crawl job by ID
+ */
+export async function getCrawlJob(jobId: string): Promise<CrawlJobResponse> {
+  const response = await apiClient.get<CrawlJobResponse>(`/api/crawls/${jobId}`);
+  return response.data;
+}
+
+/**
+ * Abort a running crawl job
+ */
+export async function abortCrawlJob(jobId: string): Promise<MessageResponse> {
+  const response = await apiClient.post<MessageResponse>(`/api/crawls/${jobId}/abort`);
+  return response.data;
 }
 
 export default apiClient;

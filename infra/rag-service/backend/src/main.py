@@ -30,7 +30,7 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import VectorParams, Distance, HnswConfigDiff
 
 from src.config.settings import settings
-from src.api.routes import health, documents, search, sources
+from src.api.routes import health, documents, search, sources, crawls
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +162,7 @@ app.include_router(health.router, tags=["health"])
 app.include_router(documents.router, tags=["documents"])
 app.include_router(search.router, tags=["search"])
 app.include_router(sources.router, tags=["sources"])
+app.include_router(crawls.router, tags=["crawls"])
 
 
 @app.get("/")

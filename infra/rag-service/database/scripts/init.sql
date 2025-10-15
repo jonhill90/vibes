@@ -123,6 +123,7 @@ CREATE INDEX idx_crawl_jobs_status_pages ON crawl_jobs(status, pages_crawled);
 CREATE TABLE embedding_cache (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     content_hash TEXT NOT NULL UNIQUE,
+    text_preview TEXT,
     embedding VECTOR(1536) NOT NULL,
     model_name TEXT NOT NULL DEFAULT 'text-embedding-3-small',
     created_at TIMESTAMPTZ DEFAULT NOW(),

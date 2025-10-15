@@ -25,6 +25,7 @@ from uuid import UUID, uuid4
 import asyncpg
 
 from ..services.chunker import TextChunker, Chunk
+from ..services.crawler.crawl_service import CrawlerService
 from ..services.document_parser import DocumentParser
 from ..services.document_service import DocumentService
 from ..services.embeddings.embedding_service import EmbeddingService
@@ -84,6 +85,7 @@ class IngestionService:
         embedding_service: EmbeddingService,
         vector_service: VectorService,
         document_service: DocumentService,
+        crawler_service: CrawlerService | None = None,
     ):
         """Initialize IngestionService with required dependencies.
 
@@ -94,6 +96,7 @@ class IngestionService:
             embedding_service: EmbeddingService instance
             vector_service: VectorService instance
             document_service: DocumentService instance
+            crawler_service: Optional CrawlerService for web crawling ingestion
         """
         self.db_pool = db_pool
         self.document_parser = document_parser
@@ -101,6 +104,7 @@ class IngestionService:
         self.embedding_service = embedding_service
         self.vector_service = vector_service
         self.document_service = document_service
+        self.crawler_service = crawler_service
 
         logger.info("IngestionService initialized with all dependencies")
 
@@ -493,3 +497,208 @@ class IngestionService:
         except Exception as e:
             logger.error(f"Error deleting document {document_id}: {e}", exc_info=True)
             return False, {"error": f"Error deleting document: {str(e)}"}
+
+    async def ingest_from_crawl(
+        self,
+        source_id: UUID,
+        url: str,
+        max_pages: int = 10,
+        recursive: bool = False,
+    ) -> tuple[bool, dict[str, Any]]:
+        """Crawl website and ingest content through full pipeline.
+
+        This method orchestrates the complete crawl → parse → chunk → embed → store pipeline:
+        1. Crawl URL using CrawlerService (with job tracking)
+        2. Parse markdown content (already in markdown from Crawl4AI)
+        3. Chunk text using TextChunker
+        4. Batch embed chunks using EmbeddingService
+        5. Store atomically in PostgreSQL + Qdrant
+
+        Args:
+            source_id: UUID of source this crawl belongs to
+            url: Starting URL to crawl
+            max_pages: Maximum pages to crawl (default 10)
+            recursive: If True, follow links (not yet implemented in CrawlerService)
+
+        Returns:
+            Tuple of (success, result_dict) where result_dict contains:
+                On success:
+                - document_id: UUID of created document
+                - crawl_job_id: UUID of crawl job
+                - chunks_stored: Number of chunks successfully stored
+                - pages_crawled: Number of pages crawled
+                - crawl_time_ms: Time spent crawling
+                - ingestion_time_ms: Total time including embedding/storage
+                On failure:
+                - error: Error message
+                - crawl_job_id: UUID of crawl job (if created)
+
+        Raises:
+            ValueError: If crawler_service not provided during initialization
+
+        Example:
+            success, result = await ingestion_service.ingest_from_crawl(
+                source_id=source_uuid,
+                url="https://docs.example.com",
+                max_pages=50,
+                recursive=True,
+            )
+
+            if success:
+                doc_id = result["document_id"]
+                job_id = result["crawl_job_id"]
+                print(f"Crawled and ingested {result['pages_crawled']} pages")
+            else:
+                print(f"Error: {result['error']}")
+        """
+        start_time = time.time()
+
+        # Validate crawler_service is available
+        if self.crawler_service is None:
+            return False, {
+                "error": "CrawlerService not initialized - crawl ingestion not available"
+            }
+
+        logger.info(f"Starting crawl ingestion for URL: {url}")
+
+        # Step 1: Crawl website using CrawlerService
+        try:
+            crawl_success, crawl_result = await self.crawler_service.crawl_website(
+                source_id=source_id,
+                url=url,
+                max_pages=max_pages,
+                recursive=recursive,
+            )
+        except Exception as e:
+            logger.error(f"Crawl failed: {e}", exc_info=True)
+            return False, {"error": f"Crawl failed: {str(e)}"}
+
+        if not crawl_success:
+            return False, {
+                "error": f"Crawl failed: {crawl_result.get('error')}",
+                "crawl_job_id": crawl_result.get("job_id"),
+            }
+
+        # Extract crawl metadata
+        crawl_job_id = crawl_result["job_id"]
+        pages_crawled = crawl_result["pages_crawled"]
+        markdown_content = crawl_result["content"]
+        crawl_time_ms = crawl_result["crawl_time_ms"]
+
+        logger.info(
+            f"Crawl completed: job={crawl_job_id}, pages={pages_crawled}, "
+            f"content_length={len(markdown_content)}, time={crawl_time_ms}ms"
+        )
+
+        # Step 2: Skip document parsing - Crawl4AI already provides markdown
+        # Step 3: Chunk text using TextChunker
+        logger.info("Chunking crawled markdown content")
+        try:
+            chunks: list[Chunk] = await self.text_chunker.chunk_text(markdown_content)
+        except Exception as e:
+            logger.error(f"Text chunking failed: {e}", exc_info=True)
+            return False, {
+                "error": f"Text chunking failed: {str(e)}",
+                "crawl_job_id": crawl_job_id,
+            }
+
+        if not chunks:
+            return False, {
+                "error": "Text chunking produced no chunks",
+                "crawl_job_id": crawl_job_id,
+            }
+
+        logger.info(
+            f"Successfully created {len(chunks)} chunks "
+            f"(avg {sum(c.token_count for c in chunks) / len(chunks):.1f} tokens/chunk)"
+        )
+
+        # Step 4: Batch embed chunks using EmbeddingService
+        logger.info(f"Batch embedding {len(chunks)} chunks")
+        chunk_texts = [chunk.text for chunk in chunks]
+
+        try:
+            embed_result = await self.embedding_service.batch_embed(chunk_texts)
+        except Exception as e:
+            logger.error(f"Batch embedding failed: {e}", exc_info=True)
+            return False, {
+                "error": f"Batch embedding failed: {str(e)}",
+                "crawl_job_id": crawl_job_id,
+            }
+
+        # CRITICAL (Gotcha #1): Check for failed embeddings
+        if embed_result.failure_count > 0:
+            logger.warning(
+                f"Embedding quota exhaustion detected: "
+                f"{embed_result.success_count} success, "
+                f"{embed_result.failure_count} failed"
+            )
+
+            # If ALL embeddings failed, abort ingestion
+            if embed_result.success_count == 0:
+                return False, {
+                    "error": "All embeddings failed - quota exhausted or API error",
+                    "crawl_job_id": crawl_job_id,
+                    "failed_items": embed_result.failed_items,
+                }
+
+            # Partial success - log warning and continue
+            logger.warning(
+                f"Partial embedding success: storing {embed_result.success_count} chunks, "
+                f"skipping {embed_result.failure_count} failed chunks"
+            )
+
+        logger.info(
+            f"Successfully embedded {embed_result.success_count}/{len(chunks)} chunks"
+        )
+
+        # Step 5: Atomic storage (PostgreSQL + Qdrant)
+        logger.info("Storing crawled document and chunks atomically")
+
+        # Extract document title from URL or metadata
+        from urllib.parse import urlparse
+        parsed_url = urlparse(url)
+        document_title = parsed_url.netloc + parsed_url.path or url
+
+        try:
+            document_id, chunks_stored = await self._store_document_atomic(
+                source_id=source_id,
+                title=document_title,
+                document_type="html",  # Crawled content is HTML
+                url=url,
+                metadata={
+                    "crawl_job_id": crawl_job_id,
+                    "pages_crawled": pages_crawled,
+                    "crawl_time_ms": crawl_time_ms,
+                    "recursive": recursive,
+                },
+                chunks=chunks,
+                embeddings=embed_result.embeddings,
+            )
+        except Exception as e:
+            logger.error(f"Atomic storage failed: {e}", exc_info=True)
+            return False, {
+                "error": f"Atomic storage failed: {str(e)}",
+                "crawl_job_id": crawl_job_id,
+            }
+
+        # Calculate total ingestion time
+        elapsed_ms = int((time.time() - start_time) * 1000)
+
+        logger.info(
+            f"Crawl ingestion complete: document_id={document_id}, "
+            f"crawl_job_id={crawl_job_id}, chunks_stored={chunks_stored}, "
+            f"total_time={elapsed_ms}ms (crawl={crawl_time_ms}ms)"
+        )
+
+        return True, {
+            "document_id": str(document_id),
+            "crawl_job_id": crawl_job_id,
+            "chunks_stored": chunks_stored,
+            "chunks_failed": embed_result.failure_count,
+            "total_chunks": len(chunks),
+            "pages_crawled": pages_crawled,
+            "crawl_time_ms": crawl_time_ms,
+            "ingestion_time_ms": elapsed_ms,
+            "message": "Website crawled and ingested successfully",
+        }
