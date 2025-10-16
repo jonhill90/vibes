@@ -118,7 +118,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8001}
+      VITE_API_URL: ${VITE_API_URL:-http://backend:8003}
       VITE_API_BASE_PATH: ${VITE_API_BASE_PATH:-/api}
     volumes:
       # Mount source code for development hot reload

@@ -9,5 +9,13 @@ export default defineConfig({
     host: '0.0.0.0',
     strictPort: true,
     allowedHosts: ['host.docker.internal', 'localhost', '127.0.0.1'],
+    proxy: {
+      '/api': {
+        target: 'http://backend:8003',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
+    },
   },
 })

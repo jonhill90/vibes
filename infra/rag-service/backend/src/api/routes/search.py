@@ -81,7 +81,6 @@ async def get_rag_service(
         base_strategy = BaseSearchStrategy(
             embedding_service=embedding_service,
             vector_service=vector_service,
-            db_pool=db_pool,
         )
 
         # Initialize hybrid search strategy if enabled

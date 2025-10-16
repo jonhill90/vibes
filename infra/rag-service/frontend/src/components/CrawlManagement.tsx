@@ -86,7 +86,7 @@ export default function CrawlManagement() {
   useEffect(() => {
     if (!autoRefresh) return;
 
-    const hasActiveJobs = crawlJobs.some(
+    const hasActiveJobs = crawlJobs?.some(
       (job) => job.status === 'pending' || job.status === 'running'
     );
 
@@ -194,7 +194,7 @@ export default function CrawlManagement() {
                 style={styles.select}
               >
                 <option value="">Select source...</option>
-                {sources.map((source) => (
+                {sources?.map((source) => (
                   <option key={source.id} value={source.id}>
                     {source.title || source.url || `Untitled ${source.source_type} (${new Date(source.created_at).toLocaleDateString()})`}
                   </option>
@@ -288,14 +288,14 @@ export default function CrawlManagement() {
           <div style={styles.loadingContainer}>
             <p style={styles.loadingText}>Loading crawl jobs...</p>
           </div>
-        ) : crawlJobs.length === 0 ? (
+        ) : crawlJobs?.length === 0 ? (
           <div style={styles.emptyState}>
             <p style={styles.emptyText}>No crawl jobs found</p>
             <p style={styles.emptyHint}>Start your first crawl using the form above</p>
           </div>
         ) : (
           <div style={styles.jobsContainer}>
-            {crawlJobs.map((job) => (
+            {crawlJobs?.map((job) => (
               <div key={job.id} style={styles.jobCard}>
                 {/* Job Header */}
                 <div style={styles.jobHeader} onClick={() => toggleJobDetails(job.id)}>

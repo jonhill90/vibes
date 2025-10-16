@@ -21,7 +21,7 @@ import { uploadDocument, listSources, SourceResponse } from '../api/client';
 
 interface DocumentUploadForm {
   title: string;
-  source_id?: string;
+  source_id: string;
 }
 
 interface UploadStatus {
@@ -89,7 +89,7 @@ export default function DocumentUpload() {
     try {
       const result = await uploadDocument({
         title: data.title,
-        source_id: data.source_id || undefined,
+        source_id: data.source_id,
         file: selectedFile,
       });
 
@@ -131,30 +131,31 @@ export default function DocumentUpload() {
           {errors.title && <span style={styles.error}>{errors.title.message}</span>}
         </div>
 
-        {/* Source Selection Dropdown (Optional) */}
+        {/* Source Selection Dropdown (Required) */}
         <div style={styles.formGroup}>
           <label htmlFor="source_id" style={styles.label}>
-            Source (optional)
+            Source *
           </label>
           {loadingSources ? (
             <div style={styles.loadingText}>Loading sources...</div>
           ) : (
             <select
               id="source_id"
-              {...register('source_id')}
+              {...register('source_id', { required: 'Source is required' })}
               style={styles.select}
               disabled={uploadStatus.type === 'loading'}
             >
-              <option value="">Select a source (optional)</option>
-              {sources.map((source) => (
+              <option value="">Select a source</option>
+              {sources?.map((source) => (
                 <option key={source.id} value={source.id}>
                   {source.title || source.url || `Untitled ${source.source_type} (${new Date(source.created_at).toLocaleDateString()})`}
                 </option>
               ))}
             </select>
           )}
+          {errors.source_id && <span style={styles.error}>{errors.source_id.message}</span>}
           <div style={styles.helpText}>
-            Associate this document with a source for better organization
+            Documents must be associated with a source for organization
           </div>
         </div>
 

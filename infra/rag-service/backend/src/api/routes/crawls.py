@@ -15,6 +15,7 @@ Pattern: Example 05 (FastAPI route pattern)
 Reference: infra/task-manager/backend/src/api/routes/
 """
 
+import json
 import logging
 from typing import Optional
 from uuid import UUID
@@ -234,7 +235,7 @@ async def start_crawl(
                 source_uuid,
                 request.max_pages,
                 request.max_depth,
-                '{"url": "' + request.url + '"}'  # Store URL in metadata
+                json.dumps({"url": request.url})  # JSON string for ::jsonb cast
             )
 
         job_id = job_row["id"]
@@ -248,6 +249,7 @@ async def start_crawl(
         # Start crawl and ingestion using CrawlerService integrated with IngestionService
         # NOTE: This is synchronous for now - for large crawls, consider async background tasks
         try:
+            import openai
             from src.services.ingestion_service import IngestionService
             from src.services.document_service import DocumentService
             from src.services.vector_service import VectorService
@@ -267,11 +269,18 @@ async def start_crawl(
 
             document_parser = DocumentParser()
             text_chunker = TextChunker()
+
+            # Initialize OpenAI client (PATTERN FROM: mcp_server.py line 178-182)
+            openai_client = openai.AsyncOpenAI(
+                api_key=settings.OPENAI_API_KEY.get_secret_value()
+            )
+
+            # Initialize EmbeddingService with correct parameters (db_pool + openai_client)
+            # FIX: Constructor takes (db_pool, openai_client), NOT (openai_api_key, model_name, batch_size)
+            # Model name and batch size are read from settings inside the constructor
             embedding_service = EmbeddingService(
                 db_pool=db_pool,
-                openai_api_key=settings.OPENAI_API_KEY.get_secret_value(),
-                model_name=settings.OPENAI_EMBEDDING_MODEL,
-                batch_size=settings.EMBEDDING_BATCH_SIZE,
+                openai_client=openai_client,
             )
 
             qdrant_client = AsyncQdrantClient(url=settings.QDRANT_URL)
@@ -352,6 +361,11 @@ async def start_crawl(
                 )
 
         # Convert to response model
+        # Parse metadata if it's a string (asyncpg may return JSONB as string)
+        metadata = job_row["metadata"]
+        if isinstance(metadata, str):
+            metadata = json.loads(metadata)
+
         return CrawlJobResponse(
             id=str(job_row["id"]),
             source_id=str(job_row["source_id"]),
@@ -363,7 +377,7 @@ async def start_crawl(
             current_depth=job_row["current_depth"],
             error_message=job_row["error_message"],
             error_count=job_row["error_count"],
-            metadata=job_row["metadata"],
+            metadata=metadata,
             started_at=job_row["started_at"].isoformat() if job_row["started_at"] else None,
             completed_at=job_row["completed_at"].isoformat() if job_row["completed_at"] else None,
             created_at=job_row["created_at"].isoformat(),
@@ -482,26 +496,32 @@ async def list_crawl_jobs(
             rows = await conn.fetch(query, *params)
 
         # Convert to response models
-        crawl_job_responses = [
-            CrawlJobResponse(
-                id=str(row["id"]),
-                source_id=str(row["source_id"]),
-                status=row["status"],
-                pages_crawled=row["pages_crawled"],
-                pages_total=row["pages_total"],
-                max_pages=row["max_pages"],
-                max_depth=row["max_depth"],
-                current_depth=row["current_depth"],
-                error_message=row["error_message"],
-                error_count=row["error_count"],
-                metadata=row["metadata"],
-                started_at=row["started_at"].isoformat() if row["started_at"] else None,
-                completed_at=row["completed_at"].isoformat() if row["completed_at"] else None,
-                created_at=row["created_at"].isoformat(),
-                updated_at=row["updated_at"].isoformat(),
+        crawl_job_responses = []
+        for row in rows:
+            # Parse metadata if it's a string (asyncpg may return JSONB as string)
+            metadata = row["metadata"]
+            if isinstance(metadata, str):
+                metadata = json.loads(metadata)
+
+            crawl_job_responses.append(
+                CrawlJobResponse(
+                    id=str(row["id"]),
+                    source_id=str(row["source_id"]),
+                    status=row["status"],
+                    pages_crawled=row["pages_crawled"],
+                    pages_total=row["pages_total"],
+                    max_pages=row["max_pages"],
+                    max_depth=row["max_depth"],
+                    current_depth=row["current_depth"],
+                    error_message=row["error_message"],
+                    error_count=row["error_count"],
+                    metadata=metadata,
+                    started_at=row["started_at"].isoformat() if row["started_at"] else None,
+                    completed_at=row["completed_at"].isoformat() if row["completed_at"] else None,
+                    created_at=row["created_at"].isoformat(),
+                    updated_at=row["updated_at"].isoformat(),
+                )
             )
-            for row in rows
-        ]
 
         logger.info(
             f"Listed {len(crawl_job_responses)} crawl jobs "
@@ -594,6 +614,11 @@ async def get_crawl_job(
                 },
             )
 
+        # Parse metadata if it's a string (asyncpg may return JSONB as string)
+        metadata = row["metadata"]
+        if isinstance(metadata, str):
+            metadata = json.loads(metadata)
+
         return CrawlJobResponse(
             id=str(row["id"]),
             source_id=str(row["source_id"]),
@@ -605,7 +630,7 @@ async def get_crawl_job(
             current_depth=row["current_depth"],
             error_message=row["error_message"],
             error_count=row["error_count"],
-            metadata=row["metadata"],
+            metadata=metadata,
             started_at=row["started_at"].isoformat() if row["started_at"] else None,
             completed_at=row["completed_at"].isoformat() if row["completed_at"] else None,
             created_at=row["created_at"].isoformat(),

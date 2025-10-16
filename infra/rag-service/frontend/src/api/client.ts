@@ -10,7 +10,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 // Type definitions
 export interface DocumentUploadRequest {
   title: string;
-  source_id?: string;
+  source_id: string;
   file: File;
 }
 
@@ -108,8 +108,9 @@ export interface MessageResponse {
 }
 
 // Create axios instance with base configuration
+// Use localhost:8003 which works for Mac browsers accessing Docker-exposed port
 const apiClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8001',
+  baseURL: 'http://localhost:8003',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -143,9 +144,7 @@ export async function uploadDocument(data: DocumentUploadRequest): Promise<Docum
   const formData = new FormData();
   formData.append('file', data.file);
   formData.append('title', data.title);
-  if (data.source_id) {
-    formData.append('source_id', data.source_id);
-  }
+  formData.append('source_id', data.source_id);
 
   const response = await apiClient.post<DocumentResponse>('/api/documents', formData, {
     headers: {

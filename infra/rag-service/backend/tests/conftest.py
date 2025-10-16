@@ -299,7 +299,6 @@ def mock_mcp_context(mock_db_pool, mock_openai_client, mock_qdrant_client):
     base_strategy = BaseSearchStrategy(
         vector_service=vector_service,
         embedding_service=embedding_service,
-        db_pool=mock_db_pool,
     )
 
     rag_service = RAGService(

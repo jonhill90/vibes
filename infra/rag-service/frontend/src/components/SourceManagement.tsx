@@ -163,7 +163,7 @@ export default function SourceManagement() {
           <div style={styles.loadingContainer}>
             <p style={styles.loadingText}>Loading sources...</p>
           </div>
-        ) : sources.length === 0 ? (
+        ) : sources?.length === 0 ? (
           <div style={styles.emptyState}>
             <p style={styles.emptyText}>No sources found</p>
             <p style={styles.emptyHint}>Create your first source using the form above</p>
@@ -181,7 +181,7 @@ export default function SourceManagement() {
                 </tr>
               </thead>
               <tbody>
-                {sources.map((source) => (
+                {sources?.map((source) => (
                   <tr key={source.id} style={styles.tableRow}>
                     <td style={styles.tableCell}>
                       {editingSource?.id === source.id ? (

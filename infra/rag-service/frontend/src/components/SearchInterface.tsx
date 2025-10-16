@@ -157,7 +157,7 @@ export default function SearchInterface() {
               disabled={searchState.loading}
             >
               <option value="">All Sources</option>
-              {sources.map((source) => (
+              {sources?.map((source) => (
                 <option key={source.id} value={source.id}>
                   {source.title || source.url || `Untitled ${source.source_type} (${new Date(source.created_at).toLocaleDateString()})`}
                 </option>
