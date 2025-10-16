@@ -3,6 +3,7 @@ import DocumentUpload from './components/DocumentUpload';
 import SearchInterface from './components/SearchInterface';
 import SourceManagement from './components/SourceManagement';
 import CrawlManagement from './components/CrawlManagement';
+import DocumentsManagement from './components/DocumentsManagement';
 
 /**
  * RAG Service Frontend Application
@@ -14,7 +15,7 @@ import CrawlManagement from './components/CrawlManagement';
  * - Responsive layout with navigation bar
  */
 
-type Page = 'upload' | 'search' | 'sources' | 'crawls';
+type Page = 'upload' | 'search' | 'sources' | 'crawls' | 'documents';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('search');
@@ -29,6 +30,8 @@ export default function App() {
         return <SourceManagement />;
       case 'crawls':
         return <CrawlManagement />;
+      case 'documents':
+        return <DocumentsManagement />;
       default:
         return <SearchInterface />;
     }
@@ -81,6 +84,15 @@ export default function App() {
           }}
         >
           Manage Crawls
+        </button>
+        <button
+          onClick={() => setCurrentPage('documents')}
+          style={{
+            ...styles.navButton,
+            ...(currentPage === 'documents' ? styles.navButtonActive : {}),
+          }}
+        >
+          Manage Documents
         </button>
       </nav>
 
