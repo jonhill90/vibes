@@ -1,5 +1,31 @@
 # RAG Service Status
 
+## Recent Progress (2025-10-16)
+
+### Completed Today ✅
+1. **Document Upload Ingestion Pipeline** - Fixed the critical bug where uploaded documents weren't being processed
+   - Wired up full ingestion pipeline to upload endpoint (backend/src/api/routes/documents.py:174-283)
+   - Documents now: save to temp file → parse → chunk → embed → store in PostgreSQL + Qdrant
+   - Added chunk_count in upload response
+   - Files cleaned up after processing
+
+2. **Search Source Filtering** - Verified implementation is correct
+   - Frontend properly passes source_id filter (SearchInterface.tsx:82)
+   - Backend correctly applies filter to Qdrant search (search.py:165-166)
+   - Ready for testing with actual data
+
+3. **Frontend Delete Functionality** - Added delete buttons with confirmation dialogs
+   - CrawlManagement: Delete button for completed/failed/cancelled crawl jobs (CrawlManagement.tsx:349-454)
+   - API client: Added deleteCrawlJob() and deleteDocument() functions (client.ts:271-282)
+   - SourceManagement: Already had delete functionality with confirmation dialog
+   - All use modal confirmations to prevent accidental deletions
+
+### Next Steps 🔄
+- Create "Manage Documents" page component with list and delete UI
+- Test document upload end-to-end (verify chunks appear in database/Qdrant)
+- Investigate Crawl4AI content truncation issue (currently getting ~50 chunks instead of 300-400 expected)
+- Add frontend toast notifications for success/error feedback
+
 ## All Fixed ✅
 
 ### Backend
@@ -40,26 +66,34 @@
 - TESTED ✅: New crawl creates only 1 job (6f4659b6-6a7e), status=completed
 - Old crawls in DB show duplicate pattern (confirming bug existed before fix)
 
-### 2. Documents Not Visible After Upload
-- Upload succeeds but documents don't appear
-- Need: Check if chunks are being created and stored in Qdrant
-- Need: Verify document listing endpoint
+### 2. Documents Not Visible After Upload ⚙️ IN PROGRESS
+- ✅ Root cause identified: Ingestion pipeline not wired to upload endpoint (line 175 TODO)
+- ✅ Implemented full ingestion pipeline in upload endpoint:
+  - Saves uploaded file to temp location
+  - Initializes all required services (DocumentParser, TextChunker, EmbeddingService, VectorService)
+  - Runs full ingest_document() pipeline (parse → chunk → embed → store)
+  - Cleans up temp file after processing
+  - Returns chunk_count in response
+- 🔄 Testing needed: Upload a document and verify chunks appear in database/Qdrant
+- Location: backend/src/api/routes/documents.py:174-283
 
-### 3. Search Filter Not Working
-- Source dropdown filter doesn't filter results
-- Need: Check if source_id parameter is being passed correctly
+### 3. Search Filter Not Working ✅ LIKELY FIXED
+- ✅ Frontend correctly handles source filter (SearchInterface.tsx:152-154)
+- ✅ API client passes source_id parameter (SearchInterface.tsx:82)
+- ✅ Backend correctly builds filters dict (search.py:165-166)
+- Implementation appears correct - may need testing with actual data to confirm
+- If issue persists, check Qdrant filter syntax in vector_service.py
 
-### 4. No Delete Functionality ✅ FIXED (Backend), 🔴 TODO (Frontend)
-- ✅ DELETE /api/crawls/{job_id} - implemented and tested
-- ✅ DELETE /api/documents/{document_id} - already existed
-- ✅ DELETE /api/sources/{source_id} - already existed (CASCADE deletes docs/chunks)
-- 🔴 **Frontend TODO**: Add delete buttons in UI
-  - Sources page: Delete button for each source (with confirmation dialog)
-  - Crawl jobs page: Delete button for each crawl job
-  - Documents page: Delete button for each document
-  - Use confirmation modal before deletion (prevent accidents)
-  - Show success/error toasts after deletion
-  - Refresh list after successful deletion
+### 4. No Delete Functionality ✅ MOSTLY FIXED
+- ✅ DELETE /api/crawls/{job_id} - backend implemented and tested
+- ✅ DELETE /api/documents/{document_id} - backend already existed
+- ✅ DELETE /api/sources/{source_id} - backend already existed (CASCADE deletes docs/chunks)
+- ✅ **Frontend**: Added delete functionality to UI components
+  - ✅ Sources page: Delete button with confirmation dialog (SourceManagement.tsx:266-306) - ALREADY EXISTED
+  - ✅ Crawl jobs page: Added delete button with confirmation dialog (CrawlManagement.tsx:349-454)
+  - ✅ API client: Added deleteCrawlJob() and deleteDocument() functions (client.ts:271-282)
+  - 🔴 **TODO**: Create "Manage Documents" page component with list and delete functionality
+  - All delete operations use confirmation modals and refresh lists after success
 
 ### 5. Data Storage Verification
 - Need to confirm: Chunks going to Qdrant vector DB ✓

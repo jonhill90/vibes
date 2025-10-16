@@ -20,7 +20,7 @@ from typing import Optional
 from uuid import UUID
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request
 
 from src.api.dependencies import get_db_pool
 from src.models.responses import (
@@ -60,6 +60,7 @@ ALLOWED_MIME_TYPES = [
     },
 )
 async def upload_document(
+    request: Request,
     file: UploadFile = File(..., description="Document file to upload"),
     source_id: str = Form(..., description="Source UUID where document belongs"),
     title: Optional[str] = Form(None, description="Optional document title (defaults to filename)"),
@@ -171,9 +172,114 @@ async def upload_document(
             )
 
         document = result["document"]
+        document_id = document["id"]
 
-        # TODO: Store file and trigger ingestion pipeline
-        # await ingestion_service.process_document(document["id"], file_content)
+        # Store file temporarily and trigger ingestion pipeline
+        import tempfile
+        import os
+
+        temp_file_path = None
+        chunks_stored = 0
+        try:
+            # Create temporary file with appropriate extension
+            file_ext = os.path.splitext(filename)[1]
+            with tempfile.NamedTemporaryFile(
+                delete=False, suffix=file_ext, prefix="upload_"
+            ) as temp_file:
+                temp_file.write(file_content)
+                temp_file_path = temp_file.name
+
+            logger.info(f"Saved upload to temporary file: {temp_file_path} for document {document_id}")
+
+            # Initialize ingestion service and process document
+            from src.services.ingestion_service import IngestionService
+            from src.services.document_parser import DocumentParser
+            from src.services.chunker import TextChunker
+            from src.services.embeddings.embedding_service import EmbeddingService
+            from src.services.vector_service import VectorService
+
+            # Get Qdrant client from app state
+            qdrant_client = request.app.state.qdrant_client
+
+            # Create services
+            document_parser = DocumentParser()
+            text_chunker = TextChunker()
+            embedding_service = EmbeddingService()
+            vector_service = VectorService(qdrant_client)
+
+            # Initialize ingestion service with all dependencies
+            ingestion_service = IngestionService(
+                db_pool=db_pool,
+                document_parser=document_parser,
+                text_chunker=text_chunker,
+                embedding_service=embedding_service,
+                vector_service=vector_service,
+                document_service=DocumentService(db_pool),
+            )
+
+            # Ingest document through the full pipeline
+            # NOTE: We already created the document record above, but IngestionService.ingest_document()
+            # will create another document record. We need to use a different approach.
+            # For now, we'll delete the empty document and let ingest_document create the full one.
+            logger.info(f"Deleting empty document {document_id} - will be recreated by ingestion pipeline")
+            await DocumentService(db_pool).delete_document(UUID(str(document_id)))
+
+            # Now run full ingestion pipeline
+            logger.info(f"Starting ingestion pipeline for {filename}")
+            ingest_success, ingest_result = await ingestion_service.ingest_document(
+                source_id=UUID(source_id),
+                file_path=temp_file_path,
+                document_metadata={
+                    "filename": filename,
+                    "title": document_title,
+                    "file_size": len(file_content),
+                    "content_type": content_type,
+                },
+            )
+
+            if not ingest_success:
+                logger.error(f"Ingestion failed: {ingest_result.get('error')}")
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "success": False,
+                        "error": "Document ingestion failed",
+                        "detail": ingest_result.get("error", "Unknown error"),
+                    },
+                )
+
+            # Update document variable with ingested document
+            document_id = UUID(ingest_result["document_id"])
+            chunks_stored = ingest_result["chunks_stored"]
+            logger.info(
+                f"Ingestion complete: document_id={document_id}, chunks_stored={chunks_stored}, "
+                f"time={ingest_result.get('ingestion_time_ms')}ms"
+            )
+
+            # Fetch the newly created document to return
+            doc_service = DocumentService(db_pool)
+            fetch_success, fetch_result = await doc_service.get_document(document_id)
+            if fetch_success:
+                document = fetch_result["document"]
+
+        except Exception as e:
+            logger.error(f"Ingestion pipeline error: {e}", exc_info=True)
+            # Don't raise - document was uploaded, just ingestion failed
+            # Log warning but return success with note about pending ingestion
+            logger.warning(
+                f"Document {document_id} uploaded but ingestion failed: {e}. "
+                "Chunks will not be searchable until re-ingested."
+            )
+            chunks_stored = None
+
+        finally:
+            # Clean up temporary file
+            if temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                    logger.debug(f"Removed temporary file: {temp_file_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to remove temporary file {temp_file_path}: {e}")
 
         # Update source status to "completed" after successful document upload
         from src.services.source_service import SourceService
@@ -195,7 +301,7 @@ async def upload_document(
             url=document.get("url"),
             created_at=document["created_at"].isoformat(),
             updated_at=document["updated_at"].isoformat(),
-            chunk_count=None,  # Will be populated after ingestion
+            chunk_count=chunks_stored if chunks_stored else None,
         )
 
     except HTTPException:

@@ -4,6 +4,7 @@ import {
   listCrawlJobs,
   startCrawl,
   abortCrawlJob,
+  deleteCrawlJob,
   listSources,
   CrawlJobResponse,
   CrawlStartRequest,
@@ -40,6 +41,7 @@ export default function CrawlManagement() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<CrawlFormData>({
     defaultValues: {
@@ -128,6 +130,19 @@ export default function CrawlManagement() {
     } catch (err) {
       console.error('Failed to abort job:', err);
       setError(err instanceof Error ? err.message : 'Failed to abort job');
+    }
+  };
+
+  // Delete crawl job
+  const handleDeleteJob = async (jobId: string) => {
+    setError(null);
+    try {
+      await deleteCrawlJob(jobId);
+      setDeletingJobId(null);
+      await loadCrawlJobs();
+    } catch (err) {
+      console.error('Failed to delete job:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete job');
     }
   };
 
@@ -331,6 +346,17 @@ export default function CrawlManagement() {
                         Abort
                       </button>
                     )}
+                    {(job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingJobId(job.id);
+                        }}
+                        style={styles.deleteButton}
+                      >
+                        Delete
+                      </button>
+                    )}
                     <button style={styles.expandButton}>
                       {expandedJobId === job.id ? '▲' : '▼'}
                     </button>
@@ -400,6 +426,32 @@ export default function CrawlManagement() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deletingJobId && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3 style={styles.modalTitle}>Confirm Delete</h3>
+            <p style={styles.modalText}>
+              Are you sure you want to delete this crawl job? This action cannot be undone.
+            </p>
+            <div style={styles.modalActions}>
+              <button
+                onClick={() => handleDeleteJob(deletingJobId)}
+                style={styles.confirmDeleteButton}
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setDeletingJobId(null)}
+                style={styles.cancelModalButton}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -651,9 +703,74 @@ const styles = {
     borderRadius: '4px',
     cursor: 'pointer',
   },
+  deleteButton: {
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#fff',
+    backgroundColor: '#dc3545',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
   expandButton: {
     padding: '6px 12px',
     fontSize: '12px',
+    fontWeight: '500',
+    color: '#333',
+    backgroundColor: '#f8f9fa',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  modalOverlay: {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modal: {
+    backgroundColor: '#fff',
+    padding: '24px',
+    borderRadius: '8px',
+    maxWidth: '400px',
+    width: '90%',
+  },
+  modalTitle: {
+    fontSize: '20px',
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: '16px',
+  },
+  modalText: {
+    fontSize: '14px',
+    color: '#666',
+    marginBottom: '24px',
+  },
+  modalActions: {
+    display: 'flex',
+    gap: '12px',
+    justifyContent: 'flex-end',
+  },
+  confirmDeleteButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#fff',
+    backgroundColor: '#dc3545',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  cancelModalButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
     fontWeight: '500',
     color: '#333',
     backgroundColor: '#f8f9fa',

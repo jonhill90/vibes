@@ -265,4 +265,20 @@ export async function abortCrawlJob(jobId: string): Promise<MessageResponse> {
   return response.data;
 }
 
+/**
+ * Delete a crawl job
+ */
+export async function deleteCrawlJob(jobId: string): Promise<MessageResponse> {
+  const response = await apiClient.delete<MessageResponse>(`/api/crawls/${jobId}`);
+  return response.data;
+}
+
+/**
+ * Delete a document
+ */
+export async function deleteDocument(documentId: string): Promise<MessageResponse> {
+  const response = await apiClient.delete<MessageResponse>(`/api/documents/${documentId}`);
+  return response.data;
+}
+
 export default apiClient;
