@@ -108,8 +108,9 @@ class VectorService:
     async def upsert_vectors(
         self,
         points: List[Dict[str, Any]],
+        batch_size: int = 100,
     ) -> int:
-        """Upsert vectors to Qdrant collection.
+        """Upsert vectors to Qdrant collection with batching for large datasets.
 
         Args:
             points: List of point dicts with structure:
@@ -118,6 +119,8 @@ class VectorService:
                     "embedding": List[float],  # 1536-dimensional vector
                     "payload": dict  # Metadata (document_id, chunk_index, text, etc.)
                 }
+            batch_size: Number of points to upsert per batch (default 100)
+                        Smaller batches prevent httpx.WriteTimeout on large documents
 
         Returns:
             int: Number of points successfully upserted
@@ -125,7 +128,9 @@ class VectorService:
         Raises:
             ValueError: If embeddings are invalid (wrong dimension or all zeros)
 
-        Pattern: Validate ALL embeddings before upserting (fail fast)
+        Pattern: Batch upserts to prevent timeout on large documents (e.g., 2.7MB → 400 chunks)
+        Critical Fix: Large documents were failing with httpx.WriteTimeout when upserting
+                      all chunks at once. Batching fixes this by breaking into smaller requests.
         """
         if not points:
             logger.warning("No points to upsert")
@@ -150,14 +155,21 @@ class VectorService:
                     )
                 )
 
-            # Upsert to Qdrant (overwrites if ID exists)
-            await self.client.upsert(
-                collection_name=self.collection_name,
-                points=point_structs,
-            )
+            # Batch upsert to prevent timeout on large documents
+            total_upserted = 0
+            for i in range(0, len(point_structs), batch_size):
+                batch = point_structs[i:i + batch_size]
 
-            logger.info(f"Upserted {len(point_structs)} vectors to '{self.collection_name}'")
-            return len(point_structs)
+                await self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=batch,
+                )
+
+                total_upserted += len(batch)
+                logger.info(f"Upserted batch {i // batch_size + 1}/{(len(point_structs) + batch_size - 1) // batch_size}: {len(batch)} vectors")
+
+            logger.info(f"Successfully upserted {total_upserted} vectors to '{self.collection_name}'")
+            return total_upserted
 
         except ValueError as e:
             # Re-raise validation errors with context

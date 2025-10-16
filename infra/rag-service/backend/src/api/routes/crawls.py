@@ -254,7 +254,10 @@ async def start_crawl(
                 openai_client=openai_client,
             )
 
-            qdrant_client = AsyncQdrantClient(url=settings.QDRANT_URL)
+            qdrant_client = AsyncQdrantClient(
+                url=settings.QDRANT_URL,
+                timeout=60,  # 60s timeout for large batch operations
+            )
             vector_service = VectorService(
                 qdrant_client=qdrant_client,
                 collection_name=settings.QDRANT_COLLECTION_NAME,

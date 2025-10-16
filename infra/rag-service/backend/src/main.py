@@ -75,9 +75,14 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
-        # Initialize Qdrant vector database client
-        app.state.qdrant_client = AsyncQdrantClient(url=settings.QDRANT_URL)
-        logger.info(f"✅ Qdrant client initialized (url={settings.QDRANT_URL})")
+        # Initialize Qdrant vector database client with increased timeout
+        # Default timeout (5s) was causing httpx.WriteTimeout on large document uploads (2.7MB → 400 chunks)
+        # Increased to 60s to handle batch upserts of large documents
+        app.state.qdrant_client = AsyncQdrantClient(
+            url=settings.QDRANT_URL,
+            timeout=60,  # 60 second timeout for large batch operations
+        )
+        logger.info(f"✅ Qdrant client initialized (url={settings.QDRANT_URL}, timeout=60s)")
     except Exception as e:
         logger.error(f"❌ Failed to initialize Qdrant client: {e}")
         # Clean up database pool if Qdrant fails

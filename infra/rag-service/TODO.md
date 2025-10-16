@@ -79,7 +79,7 @@
 **Available Options**:
 - ~~**Option A**: Fix the failing tests by aligning mocks with actual DocumentService API~~ ✅ COMPLETED (21/21 passing)
 - ~~**Option B**: Create the missing DocumentsManagement.tsx frontend component with list and delete functionality~~ ✅ COMPLETED (integrated into App.tsx)
-- **Option C**: Investigate the Crawl4AI content truncation issue (currently only getting ~50 chunks from 2.7MB docs)
+- ~~**Option C**: Investigate the Crawl4AI content truncation issue (currently only getting ~50 chunks from 2.7MB docs)~~ ✅ COMPLETED (see issue #6 below)
 - **Option D**: Run the integration and browser tests to validate the end-to-end functionality
   - Integration tests: document API, search API, cascade deletes
   - Browser tests: Upload, search filtering, delete operations
@@ -159,18 +159,54 @@
 - Need to confirm: Documents going to PostgreSQL
 - Need to confirm: Search querying Qdrant properly
 
-### 6. Web Crawl Content Truncation 🔴 STILL AN ISSUE
-- ✅ Removed 100K char truncation in crawl_service.py:159
-- ❌ Still only getting ~50 chunks from 2.7MB Pydantic AI docs (expected 300-400)
-- **ROOT CAUSE**: Crawl4AI library itself returns truncated markdown
-  - `result.markdown` from Crawl4AI is already truncated before our code sees it
-  - Issue is in Crawl4AI AsyncWebCrawler, not our wrapper code
-- **Investigation needed**:
-  - Check Crawl4AI configuration options for content length limits
-  - May need to use Crawl4AI's chunking strategy instead of post-processing
-  - Consider alternative: Use Crawl4AI's LLM extraction mode for large docs
-- Location: backend/src/services/crawler/crawl_service.py line 155-169
-- Test case: https://ai.pydantic.dev/llms-full.txt (2.7MB → ~50 chunks instead of 300-400)
+### 6. Web Crawl Content Truncation ✅ FIXED (Was NOT Crawl4AI - Was Qdrant Timeout!)
+- **DIAGNOSIS COMPLETE**: The issue was NOT Crawl4AI truncation as originally thought
+  - ✅ Crawl4AI returns FULL 2.7MB content (2,746,527 chars - verified with test script)
+  - ✅ Text chunker creates ~400 chunks successfully
+  - ✅ Embedding service creates embeddings for all chunks
+  - ❌ **ROOT CAUSE**: Qdrant upsert was timing out (httpx.WriteTimeout) when uploading all chunks at once
+
+- **FIXES APPLIED (2025-10-16 18:50)**:
+  1. ✅ **Batch Upserts** in vector_service.py
+     - Added batching (100 chunks per batch) to prevent timeout on large documents
+     - Changed from single upsert to batched loop: `upsert_vectors(points, batch_size=100)`
+     - Location: backend/src/services/vector_service.py:108-180
+
+  2. ✅ **Increased Qdrant Client Timeout** from 5s to 60s
+     - Applied to main.py (FastAPI startup)
+     - Applied to mcp_server.py (MCP server startup)
+     - Applied to crawls.py (crawl endpoint)
+     - Configuration: `AsyncQdrantClient(url=..., timeout=60)`
+
+- **TEST RESULTS**:
+  - Diagnostic script confirmed Crawl4AI returns full 2.62 MB (not truncated)
+  - word_count_threshold setting has no effect on content size (confirmed with threshold=1)
+  - Original error: `httpx.WriteTimeout` during batch upsert
+  - Fix: Batch uploads (100 chunks at a time) + 60s timeout
+
+- **VERIFICATION COMPLETE (2025-10-16 22:54)** ✅:
+  - Re-crawled Pydantic AI docs successfully
+  - **1,225 chunks stored** in Qdrant (previously 0 due to timeout)
+  - Search functionality confirmed working with new content
+  - Query "PydanticAI agent framework" returns relevant results (0.68 similarity)
+  - Batch upsert logs show successful processing in 100-chunk batches
+  - **FIX CONFIRMED WORKING** 🎉
+
+### 7. Cascade Delete Missing Qdrant Cleanup ❌ TODO
+- **Issue**: Deleting documents only removes from PostgreSQL, not Qdrant
+  - PostgreSQL CASCADE constraint deletes chunks from database automatically
+  - Qdrant vectors remain orphaned in vector database
+  - No cleanup mechanism implemented
+- **Impact**:
+  - Wasting storage in Qdrant (orphaned embeddings)
+  - Orphaned vectors may appear in search results (pointing to non-existent documents)
+  - No automatic cleanup mechanism - requires manual intervention
+- **Location**: backend/src/api/routes/documents.py delete_document() endpoint (lines 224-297)
+- **Fix Needed**:
+  - Query chunk IDs before deletion (SELECT chunk_id FROM chunks WHERE document_id = ?)
+  - Delete vectors from Qdrant using vector_service.delete_vectors(chunk_ids)
+  - Make deletion atomic (both succeed or both fail)
+  - Order: Delete from Qdrant first, then PostgreSQL (so rollback works)
 
 ## Notes
 - Crawl4AI uses Playwright internally (not a separate crawler)

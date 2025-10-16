@@ -124,10 +124,15 @@ async def initialize_services():
         raise
 
     try:
-        # Initialize Qdrant vector database client
+        # Initialize Qdrant vector database client with increased timeout
+        # Default timeout (5s) was causing httpx.WriteTimeout on large document uploads (2.7MB → 400 chunks)
+        # Increased to 60s to handle batch upserts of large documents
         logger.info("Step 3/10: Initializing Qdrant client...")
-        qdrant_client = AsyncQdrantClient(url=settings.QDRANT_URL)
-        logger.info(f"✅ Qdrant client initialized (url={settings.QDRANT_URL})")
+        qdrant_client = AsyncQdrantClient(
+            url=settings.QDRANT_URL,
+            timeout=60,  # 60 second timeout for large batch operations
+        )
+        logger.info(f"✅ Qdrant client initialized (url={settings.QDRANT_URL}, timeout=60s)")
     except Exception as e:
         logger.error(f"❌ Failed to initialize Qdrant client: {e}")
         await db_pool.close()
