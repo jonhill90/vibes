@@ -236,13 +236,13 @@ class DocumentService:
                     metadata_json,
                 )
 
-            document = dict(row)
-            logger.info(f"Created document {document['id']} with title '{title}'")
+                document = dict(row)
+                logger.info(f"Created document {document['id']} with title '{title}'")
 
-            return True, {
-                "document": document,
-                "message": "Document created successfully",
-            }
+                return True, {
+                    "document": document,
+                    "message": "Document created successfully",
+                }
 
         except asyncpg.ForeignKeyViolationError as e:
             logger.error(f"Foreign key violation creating document: {e}")
@@ -357,12 +357,12 @@ class DocumentService:
                 query = "DELETE FROM documents WHERE id = $1 RETURNING id"
                 row = await conn.fetchrow(query, document_id)
 
-            if row is None:
-                return False, {"error": f"Document with ID {document_id} not found"}
+                if row is None:
+                    return False, {"error": f"Document with ID {document_id} not found"}
 
-            logger.info(f"Deleted document {document_id}")
+                logger.info(f"Deleted document {document_id}")
 
-            return True, {"message": f"Document {document_id} deleted successfully"}
+                return True, {"message": f"Document {document_id} deleted successfully"}
 
         except asyncpg.PostgresError as e:
             logger.error(f"Database error deleting document {document_id}: {e}")

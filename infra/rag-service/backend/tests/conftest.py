@@ -24,6 +24,11 @@ from openai import AsyncOpenAI
 def mock_db_pool():
     """Mock asyncpg connection pool for unit tests.
 
+    CRITICAL PATTERN: Must properly mock async context manager
+    - pool.acquire() returns object with __aenter__ and __aexit__
+    - __aenter__ returns the connection
+    - __aexit__ handles cleanup and must return False to not suppress exceptions
+
     Returns:
         MagicMock: Mocked connection pool with acquire() context manager
 
@@ -33,19 +38,10 @@ def mock_db_pool():
                 result = await conn.fetchrow("SELECT 1")
     """
     pool = MagicMock()
-    conn = MagicMock()
 
-    # Mock connection methods
-    conn.fetchrow = AsyncMock()
-    conn.fetchval = AsyncMock()
-    conn.fetch = AsyncMock()
-    conn.execute = AsyncMock()
-
-    # Mock acquire() as async context manager
-    async def mock_acquire():
-        yield conn
-
-    pool.acquire = MagicMock(return_value=mock_acquire())
+    # Mock acquire() to return a proper async context manager
+    pool.acquire.return_value.__aenter__ = AsyncMock()
+    pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
     pool.close = AsyncMock()
 
     return pool

@@ -33,6 +33,22 @@ def document_service(mock_db_pool):
     return DocumentService(db_pool=mock_db_pool)
 
 
+def setup_mock_connection(mock_db_pool, mock_conn):
+    """Helper to properly configure async context manager for database pool.
+
+    CRITICAL PATTERN: asyncpg pool.acquire() returns async context manager
+    - Must mock __aenter__ to return connection
+    - Must mock __aexit__ to handle context exit
+    - __aexit__ must return False/None to not suppress exceptions
+
+    Args:
+        mock_db_pool: Mocked database pool
+        mock_conn: Mocked connection to return from acquire()
+    """
+    mock_db_pool.acquire.return_value.__aenter__.return_value = mock_conn
+    mock_db_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
+
+
 # =============================================================================
 # Test list_documents() - Filtering
 # =============================================================================
@@ -53,11 +69,7 @@ class TestListDocumentsFiltering:
         mock_conn = MagicMock()
         mock_conn.fetchval = AsyncMock(return_value=1)  # total_count
         mock_conn.fetch = AsyncMock(return_value=[sample_document])
-
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method
         success, result = await document_service.list_documents()
@@ -85,10 +97,7 @@ class TestListDocumentsFiltering:
         mock_conn.fetchval = AsyncMock(return_value=1)  # total_count
         mock_conn.fetch = AsyncMock(return_value=[sample_document])
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method with source_id filter
         success, result = await document_service.list_documents(
@@ -117,10 +126,7 @@ class TestListDocumentsFiltering:
         mock_conn.fetchval = AsyncMock(return_value=1)  # total_count
         mock_conn.fetch = AsyncMock(return_value=[sample_document])
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method with document_type filter
         success, result = await document_service.list_documents(
@@ -166,10 +172,7 @@ class TestListDocumentsFiltering:
         mock_conn.fetchval = AsyncMock(return_value=1)  # total_count
         mock_conn.fetch = AsyncMock(return_value=[sample_document])
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method with combined filters
         success, result = await document_service.list_documents(
@@ -204,10 +207,7 @@ class TestListDocumentsPagination:
         mock_conn.fetchval = AsyncMock(return_value=100)  # total_count
         mock_conn.fetch = AsyncMock(return_value=[sample_document])
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method (no pagination params = defaults)
         success, result = await document_service.list_documents()
@@ -231,10 +231,7 @@ class TestListDocumentsPagination:
         mock_conn.fetchval = AsyncMock(return_value=50)  # total_count
         mock_conn.fetch = AsyncMock(return_value=[sample_document])
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method with custom pagination
         success, result = await document_service.list_documents(
@@ -271,10 +268,7 @@ class TestListDocumentsPagination:
         mock_conn.fetchval = AsyncMock(return_value=1)
         mock_conn.fetch = AsyncMock(return_value=[doc_without_metadata])
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method with exclude_large_fields=True
         success, result = await document_service.list_documents(
@@ -322,10 +316,7 @@ class TestCreateDocumentSuccess:
         mock_conn = MagicMock()
         mock_conn.fetchrow = AsyncMock(return_value=created_doc)
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method
         success, result = await document_service.create_document(
@@ -369,10 +360,7 @@ class TestCreateDocumentSuccess:
         mock_conn = MagicMock()
         mock_conn.fetchrow = AsyncMock(return_value=created_doc)
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method with all fields
         success, result = await document_service.create_document(
@@ -473,10 +461,7 @@ class TestCreateDocumentErrors:
             side_effect=asyncpg.ForeignKeyViolationError("source_id constraint violated")
         )
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method with non-existent source_id
         success, result = await document_service.create_document(
@@ -505,10 +490,7 @@ class TestCreateDocumentErrors:
             side_effect=asyncpg.PostgresError("Connection lost")
         )
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method
         success, result = await document_service.create_document(
@@ -546,10 +528,7 @@ class TestDeleteDocument:
         mock_conn = MagicMock()
         mock_conn.fetchrow = AsyncMock(return_value={"id": doc_id})
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method
         success, result = await document_service.delete_document(doc_id)
@@ -574,10 +553,7 @@ class TestDeleteDocument:
         mock_conn = MagicMock()
         mock_conn.fetchrow = AsyncMock(return_value=None)
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method
         success, result = await document_service.delete_document(doc_id)
@@ -606,10 +582,7 @@ class TestDeleteDocument:
         mock_conn = MagicMock()
         mock_conn.fetchrow = AsyncMock(return_value={"id": doc_id})
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method
         success, result = await document_service.delete_document(doc_id)
@@ -643,10 +616,7 @@ class TestDeleteDocument:
             side_effect=asyncpg.PostgresError("Connection lost")
         )
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method
         success, result = await document_service.delete_document(doc_id)
@@ -678,10 +648,7 @@ class TestGetDocument:
         mock_conn = MagicMock()
         mock_conn.fetchrow = AsyncMock(return_value=sample_document)
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method
         success, result = await document_service.get_document(doc_id)
@@ -706,10 +673,7 @@ class TestGetDocument:
         mock_conn = MagicMock()
         mock_conn.fetchrow = AsyncMock(return_value=None)
 
-        async def mock_acquire():
-            yield mock_conn
-
-        mock_db_pool.acquire = MagicMock(return_value=mock_acquire())
+        setup_mock_connection(mock_db_pool, mock_conn)
 
         # Call service method
         success, result = await document_service.get_document(doc_id)
