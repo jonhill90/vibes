@@ -158,6 +158,7 @@ class SourceResponse(BaseModel):
     id: str = Field(..., description="Source UUID")
     source_type: str = Field(..., description="Source type: 'upload', 'crawl', or 'api'")
     url: Optional[str] = Field(None, description="Source URL")
+    title: Optional[str] = Field(None, description="Human-readable title (from metadata)")
     status: str = Field(..., description="Status: 'pending', 'processing', 'completed', or 'failed'")
     metadata: Optional[dict] = Field(None, description="Source metadata as JSON")
     error_message: Optional[str] = Field(None, description="Error message if status is 'failed'")

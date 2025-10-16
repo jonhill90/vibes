@@ -23,7 +23,7 @@ import {
 
 interface EditingSource {
   id: string;
-  name: string;
+  title: string;
   source_type: string;
 }
 
@@ -75,7 +75,7 @@ export default function SourceManagement() {
     setError(null);
     try {
       await updateSource(editingSource.id, {
-        name: editingSource.name,
+        title: editingSource.title,
         source_type: editingSource.source_type,
       });
       setEditingSource(null);
@@ -116,17 +116,17 @@ export default function SourceManagement() {
         <form onSubmit={handleSubmit(onCreateSource)} style={styles.form}>
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
-              <label htmlFor="name" style={styles.label}>
-                Source Name *
+              <label htmlFor="title" style={styles.label}>
+                Source Title
               </label>
               <input
-                id="name"
+                id="title"
                 type="text"
-                {...register('name', { required: 'Name is required' })}
+                {...register('title')}
                 style={styles.input}
                 placeholder="e.g., Documentation, Research Papers"
               />
-              {errors.name && <span style={styles.error}>{errors.name.message}</span>}
+              {errors.title && <span style={styles.error}>{errors.title.message}</span>}
             </div>
 
             <div style={styles.formGroup}>
@@ -139,11 +139,9 @@ export default function SourceManagement() {
                 style={styles.select}
               >
                 <option value="">Select type...</option>
-                <option value="document">Document</option>
-                <option value="web">Web</option>
+                <option value="upload">Upload</option>
+                <option value="crawl">Web Crawl</option>
                 <option value="api">API</option>
-                <option value="database">Database</option>
-                <option value="other">Other</option>
               </select>
               {errors.source_type && (
                 <span style={styles.error}>{errors.source_type.message}</span>
@@ -175,8 +173,9 @@ export default function SourceManagement() {
             <table style={styles.table}>
               <thead>
                 <tr style={styles.tableHeaderRow}>
-                  <th style={styles.tableHeader}>Name</th>
+                  <th style={styles.tableHeader}>Title</th>
                   <th style={styles.tableHeader}>Type</th>
+                  <th style={styles.tableHeader}>Status</th>
                   <th style={styles.tableHeader}>Created</th>
                   <th style={styles.tableHeader}>Actions</th>
                 </tr>
@@ -188,14 +187,14 @@ export default function SourceManagement() {
                       {editingSource?.id === source.id ? (
                         <input
                           type="text"
-                          value={editingSource.name}
+                          value={editingSource.title}
                           onChange={(e) =>
-                            setEditingSource({ ...editingSource, name: e.target.value })
+                            setEditingSource({ ...editingSource, title: e.target.value })
                           }
                           style={styles.editInput}
                         />
                       ) : (
-                        source.name
+                        source.title || source.url || `Untitled ${source.source_type} (${new Date(source.created_at).toLocaleDateString()})`
                       )}
                     </td>
                     <td style={styles.tableCell}>
@@ -210,15 +209,25 @@ export default function SourceManagement() {
                           }
                           style={styles.editSelect}
                         >
-                          <option value="document">Document</option>
-                          <option value="web">Web</option>
+                          <option value="upload">Upload</option>
+                          <option value="crawl">Web Crawl</option>
                           <option value="api">API</option>
-                          <option value="database">Database</option>
-                          <option value="other">Other</option>
                         </select>
                       ) : (
                         source.source_type
                       )}
+                    </td>
+                    <td style={styles.tableCell}>
+                      <span style={{
+                        ...styles.statusBadge,
+                        backgroundColor:
+                          source.status === 'completed' ? '#d4edda' :
+                          source.status === 'failed' ? '#f8d7da' :
+                          source.status === 'processing' ? '#fff3cd' :
+                          '#e2e3e5'
+                      }}>
+                        {source.status}
+                      </span>
                     </td>
                     <td style={styles.tableCell}>
                       {new Date(source.created_at).toLocaleDateString()}
@@ -245,7 +254,7 @@ export default function SourceManagement() {
                             onClick={() =>
                               setEditingSource({
                                 id: source.id,
-                                name: source.name,
+                                title: source.title || '',
                                 source_type: source.source_type,
                               })
                             }
@@ -557,5 +566,13 @@ const styles = {
     border: '1px solid #ddd',
     borderRadius: '4px',
     cursor: 'pointer',
+  },
+  statusBadge: {
+    display: 'inline-block',
+    padding: '4px 8px',
+    fontSize: '12px',
+    fontWeight: '500',
+    borderRadius: '4px',
+    textTransform: 'capitalize' as const,
   },
 };

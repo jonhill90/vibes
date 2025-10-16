@@ -175,6 +175,12 @@ async def upload_document(
         # TODO: Store file and trigger ingestion pipeline
         # await ingestion_service.process_document(document["id"], file_content)
 
+        # Update source status to "completed" after successful document upload
+        from src.services.source_service import SourceService
+        source_service = SourceService(db_pool)
+        source_uuid = UUID(source_id)
+        await source_service.update_source(source_uuid, {"status": "completed"})
+
         logger.info(
             f"Document uploaded successfully: {document['id']} "
             f"(filename: {filename}, size: {len(file_content)} bytes)"

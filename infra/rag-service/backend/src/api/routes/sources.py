@@ -85,6 +85,11 @@ async def create_source(
         HTTPException: 400 for validation errors, 500 for server errors
     """
     try:
+        # Build metadata with title if provided
+        metadata = request.metadata or {}
+        if request.title:
+            metadata["title"] = request.title
+
         # Create source
         source_service = SourceService(db_pool)
         success, result = await source_service.create_source(
@@ -92,7 +97,7 @@ async def create_source(
                 "source_type": request.source_type,
                 "url": request.url,
                 "status": "pending",
-                "metadata": request.metadata or {},
+                "metadata": metadata,
             }
         )
 
@@ -107,6 +112,7 @@ async def create_source(
             )
 
         source = result["source"]
+        metadata = parse_metadata(source.get("metadata"))
 
         logger.info(
             f"Source created: {source['id']} "
@@ -117,8 +123,9 @@ async def create_source(
             id=str(source["id"]),
             source_type=source["source_type"],
             url=source.get("url"),
+            title=metadata.get("title"),
             status=source["status"],
-            metadata=parse_metadata(source.get("metadata")),
+            metadata=metadata,
             error_message=source.get("error_message"),
             created_at=source["created_at"].isoformat(),
             updated_at=source["updated_at"].isoformat(),
@@ -194,19 +201,22 @@ async def list_sources(
         total_count = result["total_count"]
 
         # Convert sources to response model
-        source_responses = [
-            SourceResponse(
-                id=str(source["id"]),
-                source_type=source["source_type"],
-                url=source.get("url"),
-                status=source["status"],
-                metadata=parse_metadata(source.get("metadata")),
-                error_message=source.get("error_message"),
-                created_at=source["created_at"].isoformat(),
-                updated_at=source["updated_at"].isoformat(),
+        source_responses = []
+        for source in sources:
+            metadata = parse_metadata(source.get("metadata"))
+            source_responses.append(
+                SourceResponse(
+                    id=str(source["id"]),
+                    source_type=source["source_type"],
+                    url=source.get("url"),
+                    title=metadata.get("title"),
+                    status=source["status"],
+                    metadata=metadata,
+                    error_message=source.get("error_message"),
+                    created_at=source["created_at"].isoformat(),
+                    updated_at=source["updated_at"].isoformat(),
+                )
             )
-            for source in sources
-        ]
 
         return SourceListResponse(
             sources=source_responses,
@@ -284,13 +294,15 @@ async def get_source(
             )
 
         source = result["source"]
+        metadata = parse_metadata(source.get("metadata"))
 
         return SourceResponse(
             id=str(source["id"]),
             source_type=source["source_type"],
             url=source.get("url"),
+            title=metadata.get("title"),
             status=source["status"],
-            metadata=parse_metadata(source.get("metadata")),
+            metadata=metadata,
             error_message=source.get("error_message"),
             created_at=source["created_at"].isoformat(),
             updated_at=source["updated_at"].isoformat(),
@@ -362,10 +374,24 @@ async def update_source(
             updates["url"] = request.url
         if request.status is not None:
             updates["status"] = request.status
-        if request.metadata is not None:
-            updates["metadata"] = request.metadata
         if request.error_message is not None:
             updates["error_message"] = request.error_message
+
+        # Handle title in metadata
+        if request.title is not None or request.metadata is not None:
+            # Get existing metadata if updating title
+            if request.title is not None:
+                # Fetch current source to merge metadata
+                source_service_temp = SourceService(db_pool)
+                success_temp, result_temp = await source_service_temp.get_source(src_uuid)
+                current_metadata = parse_metadata(result_temp.get("source", {}).get("metadata")) if success_temp else {}
+
+                # Merge with provided metadata or use existing
+                metadata = request.metadata if request.metadata is not None else current_metadata
+                metadata["title"] = request.title
+                updates["metadata"] = metadata
+            elif request.metadata is not None:
+                updates["metadata"] = request.metadata
 
         if not updates:
             raise HTTPException(
@@ -399,6 +425,7 @@ async def update_source(
             )
 
         source = result["source"]
+        metadata = parse_metadata(source.get("metadata"))
 
         logger.info(f"Source updated: {source_id}")
 
@@ -406,8 +433,9 @@ async def update_source(
             id=str(source["id"]),
             source_type=source["source_type"],
             url=source.get("url"),
+            title=metadata.get("title"),
             status=source["status"],
-            metadata=parse_metadata(source.get("metadata")),
+            metadata=metadata,
             error_message=source.get("error_message"),
             created_at=source["created_at"].isoformat(),
             updated_at=source["updated_at"].isoformat(),

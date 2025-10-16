@@ -106,6 +106,12 @@ class SourceCreateRequest(BaseModel):
         max_length=2000
     )
 
+    title: Optional[str] = Field(
+        default=None,
+        description="Optional human-readable title for the source",
+        max_length=500
+    )
+
     metadata: Optional[dict] = Field(
         default=None,
         description="Optional metadata as JSON object"
@@ -152,6 +158,12 @@ class SourceUpdateRequest(BaseModel):
         default=None,
         description="Source URL",
         max_length=2000
+    )
+
+    title: Optional[str] = Field(
+        default=None,
+        description="Optional human-readable title for the source",
+        max_length=500
     )
 
     status: Optional[str] = Field(

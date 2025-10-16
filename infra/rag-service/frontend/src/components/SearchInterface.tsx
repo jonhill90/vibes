@@ -159,7 +159,7 @@ export default function SearchInterface() {
               <option value="">All Sources</option>
               {sources.map((source) => (
                 <option key={source.id} value={source.id}>
-                  {source.name}
+                  {source.title || source.url || `Untitled ${source.source_type} (${new Date(source.created_at).toLocaleDateString()})`}
                 </option>
               ))}
             </select>

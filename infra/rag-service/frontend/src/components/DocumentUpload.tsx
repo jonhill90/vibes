@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useDropzone } from 'react-dropzone';
-import { uploadDocument } from '../api/client';
+import { uploadDocument, listSources, SourceResponse } from '../api/client';
 
 /**
  * DocumentUpload Component
@@ -32,8 +32,30 @@ interface UploadStatus {
 export default function DocumentUpload() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({ type: 'idle' });
+  const [sources, setSources] = useState<SourceResponse[]>([]);
+  const [loadingSources, setLoadingSources] = useState(true);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<DocumentUploadForm>();
+
+  // Load available sources for the dropdown
+  useEffect(() => {
+    const loadSources = async () => {
+      try {
+        const data = await listSources();
+        setSources(data);
+      } catch (error) {
+        console.error('Failed to load sources:', error);
+        setUploadStatus({
+          type: 'error',
+          message: 'Failed to load sources. Please refresh the page.',
+        });
+      } finally {
+        setLoadingSources(false);
+      }
+    };
+
+    loadSources();
+  }, []);
 
   // Configure dropzone
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
@@ -109,19 +131,31 @@ export default function DocumentUpload() {
           {errors.title && <span style={styles.error}>{errors.title.message}</span>}
         </div>
 
-        {/* Source ID Input (Optional) */}
+        {/* Source Selection Dropdown (Optional) */}
         <div style={styles.formGroup}>
           <label htmlFor="source_id" style={styles.label}>
-            Source ID (optional)
+            Source (optional)
           </label>
-          <input
-            id="source_id"
-            type="text"
-            {...register('source_id')}
-            style={styles.input}
-            placeholder="Enter source ID (optional)"
-            disabled={uploadStatus.type === 'loading'}
-          />
+          {loadingSources ? (
+            <div style={styles.loadingText}>Loading sources...</div>
+          ) : (
+            <select
+              id="source_id"
+              {...register('source_id')}
+              style={styles.select}
+              disabled={uploadStatus.type === 'loading'}
+            >
+              <option value="">Select a source (optional)</option>
+              {sources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.title || source.url || `Untitled ${source.source_type} (${new Date(source.created_at).toLocaleDateString()})`}
+                </option>
+              ))}
+            </select>
+          )}
+          <div style={styles.helpText}>
+            Associate this document with a source for better organization
+          </div>
         </div>
 
         {/* Dropzone */}
@@ -232,6 +266,25 @@ const styles = {
     border: '1px solid #ddd',
     borderRadius: '4px',
     outline: 'none',
+  },
+  select: {
+    padding: '10px',
+    fontSize: '14px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    outline: 'none',
+    backgroundColor: '#fff',
+    cursor: 'pointer',
+  },
+  loadingText: {
+    fontSize: '14px',
+    color: '#666',
+    fontStyle: 'italic' as const,
+  },
+  helpText: {
+    fontSize: '12px',
+    color: '#666',
+    marginTop: '4px',
   },
   error: {
     fontSize: '12px',

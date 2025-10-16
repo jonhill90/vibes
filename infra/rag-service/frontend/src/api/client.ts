@@ -46,17 +46,22 @@ export interface SearchResponse {
 }
 
 export interface SourceRequest {
-  name: string;
+  title?: string;
   source_type: string;
-  config?: Record<string, unknown>;
+  url?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SourceResponse {
   id: string;
-  name: string;
+  title?: string;
   source_type: string;
+  url?: string;
+  status: string;
+  metadata?: Record<string, unknown>;
+  error_message?: string;
   created_at: string;
-  config?: Record<string, unknown>;
+  updated_at: string;
 }
 
 export interface ErrorResponse {
