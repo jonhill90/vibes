@@ -221,6 +221,66 @@ def sample_document_id():
 
 
 @pytest.fixture
+def sample_document():
+    """Sample document record for testing.
+
+    Returns:
+        dict: Document data structure with all required fields
+
+    Example:
+        def test_document(sample_document):
+            assert sample_document["id"] is not None
+            assert sample_document["title"] == "Test Document"
+    """
+    from datetime import datetime
+
+    doc_id = str(uuid4())
+    source_id = str(uuid4())
+
+    return {
+        "id": doc_id,
+        "title": "Test Document",
+        "type": "pdf",
+        "source_id": source_id,
+        "created_at": datetime.now(),
+        "chunk_count": 5,
+        "metadata": {
+            "filename": "test-document.pdf",
+            "file_size": 102400,
+        }
+    }
+
+
+@pytest.fixture
+def sample_source():
+    """Sample source record for testing.
+
+    Returns:
+        dict: Source data structure with all required fields
+
+    Example:
+        def test_source(sample_source):
+            assert sample_source["id"] is not None
+            assert sample_source["title"] == "Test Source"
+    """
+    from datetime import datetime
+
+    source_id = str(uuid4())
+
+    return {
+        "id": source_id,
+        "title": "Test Source",
+        "type": "manual",
+        "url": "https://example.com/test",
+        "created_at": datetime.now(),
+        "document_count": 3,
+        "metadata": {
+            "description": "Test source for unit tests",
+        }
+    }
+
+
+@pytest.fixture
 def sample_chunk():
     """Sample chunk dictionary.
 
@@ -243,6 +303,32 @@ def sample_chunk():
             "created": "2025-10-14T10:00:00",
         }
     }
+
+
+@pytest.fixture
+def mock_uploaded_file():
+    """Mock PDF file for upload testing.
+
+    Returns:
+        BytesIO: Mock file with PDF header and content
+
+    Example:
+        def test_upload(mock_uploaded_file):
+            content = mock_uploaded_file.read()
+            assert content.startswith(b"%PDF-")
+    """
+    from io import BytesIO
+
+    # PDF header + minimal body + EOF marker
+    content = b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n"
+    content += b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
+    content += b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n"
+    content += b"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\n"
+    content += b"xref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n"
+    content += b"0000000058 00000 n\n0000000115 00000 n\n"
+    content += b"trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n203\n%%EOF"
+
+    return BytesIO(content)
 
 
 # =============================================================================

@@ -6,3 +6,4 @@ pytest-mock>=3.12.0
 ruff>=0.3.0
 mypy>=1.8.0
 httpx>=0.27.0  # For testing FastAPI
+playwright>=1.40.0  # For browser automation tests

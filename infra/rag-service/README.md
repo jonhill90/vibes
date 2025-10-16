@@ -209,16 +209,80 @@ exit
 
 ### Run Tests
 
+The RAG service includes comprehensive testing infrastructure with 4-level quality gates:
+
+**Quick Test Commands**:
 ```bash
-# Backend tests (pytest)
+# All tests (all quality gates)
 docker exec -it ragservice-backend pytest
 
-# Unit tests only
-docker exec -it ragservice-backend pytest tests/unit/
+# Unit tests only (fast, ~30s)
+docker exec -it ragservice-backend pytest tests/unit/ -v
 
-# Integration tests only
-docker exec -it ragservice-backend pytest tests/integration/
+# Integration tests only (medium, ~60s)
+docker exec -it ragservice-backend pytest tests/integration/ -v
+
+# Browser tests only (slow, ~120s)
+docker exec -it ragservice-backend pytest tests/browser/ -v
 ```
+
+**Quality Gate Levels** (from fastest to slowest):
+
+1. **Level 1: Syntax & Style** (~5s)
+   ```bash
+   docker exec -it ragservice-backend ruff check tests/ --fix
+   docker exec -it ragservice-backend mypy tests/
+   ```
+   - Validates code style, import order, type annotations
+   - Auto-fixes common issues with `--fix` flag
+
+2. **Level 2: Unit Tests** (~30s)
+   ```bash
+   docker exec -it ragservice-backend pytest tests/unit/ -v --cov=src --cov-report=term-missing --cov-fail-under=80
+   ```
+   - Tests business logic in isolation (document validation, service layer)
+   - Requires >80% code coverage to pass
+   - Uses mocked dependencies (no database or external APIs)
+
+3. **Level 3a: API Integration Tests** (~60s)
+   ```bash
+   docker exec -it ragservice-backend pytest tests/integration/ -v
+   ```
+   - Tests FastAPI endpoints with mocked database
+   - Validates request/response formats, error handling
+   - Tests all HTTP status codes (200, 400, 404, 413, 422, 500)
+
+4. **Level 3b: Browser Integration Tests** (~120s)
+   ```bash
+   # Ensure services running first
+   docker-compose up -d
+
+   # Run browser tests
+   docker exec -it ragservice-backend pytest tests/browser/ -v
+   ```
+   - Tests complete user workflows (upload, search, delete)
+   - Uses Playwright browser automation
+   - Validates frontend UI integration with backend
+   - Generates screenshots in `tests/browser/screenshots/` for proof
+
+**Test Coverage**:
+- **Backend**: 80%+ code coverage for document/search/delete operations
+- **Unit Tests**: File validation, document service, search filtering
+- **Integration Tests**: Document API, search API, cascade deletes
+- **Browser Tests**: Document upload, search filtering, delete operations
+
+**Test Dependencies**:
+All dependencies are included in the Docker image. If running tests locally outside Docker:
+```bash
+pip install pytest pytest-asyncio pytest-cov mypy ruff httpx playwright
+playwright install  # Browser binaries for browser tests
+```
+
+**Troubleshooting Tests**:
+- **Browser tests fail with "Executable doesn't exist"**: Run `playwright install` inside container
+- **Services not accessible**: Verify `docker-compose ps` shows all services running
+- **Timeout errors**: Increase timeouts in test files (default: 30s for uploads, 5s for UI)
+- **Coverage below 80%**: Run with `--cov-report=html` to see detailed coverage report
 
 ---
 

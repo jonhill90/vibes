@@ -18,6 +18,8 @@ export interface DocumentResponse {
   id: string;
   title: string;
   source_id?: string;
+  document_type?: string;
+  url?: string;
   created_at: string;
   chunk_count?: number;
 }
