@@ -216,37 +216,8 @@ async def start_crawl(
                 },
             )
 
-        # Create crawl job record
-        async with db_pool.acquire() as conn:
-            job_row = await conn.fetchrow(
-                """
-                INSERT INTO crawl_jobs (
-                    source_id, status, max_pages, max_depth,
-                    pages_crawled, current_depth, error_count,
-                    metadata
-                )
-                VALUES ($1, 'pending', $2, $3, 0, 0, 0, $4::jsonb)
-                RETURNING
-                    id, source_id, status, pages_crawled, pages_total,
-                    max_pages, max_depth, current_depth, error_message,
-                    error_count, metadata, started_at, completed_at,
-                    created_at, updated_at
-                """,
-                source_uuid,
-                request.max_pages,
-                request.max_depth,
-                json.dumps({"url": request.url})  # JSON string for ::jsonb cast
-            )
-
-        job_id = job_row["id"]
-
-        logger.info(
-            f"Crawl job created: {job_id} "
-            f"(source: {request.source_id}, url: {request.url}, "
-            f"max_pages: {request.max_pages}, max_depth: {request.max_depth})"
-        )
-
         # Start crawl and ingestion using CrawlerService integrated with IngestionService
+        # NOTE: crawl_website() will create the crawl job, NOT this endpoint
         # NOTE: This is synchronous for now - for large crawls, consider async background tasks
         try:
             import openai
@@ -310,6 +281,9 @@ async def start_crawl(
                 recursive=(request.max_depth > 1),  # Recursive if depth > 1
             )
 
+            # Extract job_id from crawl_result (created by crawl_website)
+            job_id = UUID(crawl_result.get("crawl_job_id"))
+
             if not success:
                 logger.error(
                     f"Crawl ingestion failed for job {job_id}: {crawl_result.get('error')}"
@@ -339,26 +313,33 @@ async def start_crawl(
                 )
 
         except Exception as crawl_error:
-            logger.error(f"Crawl execution failed for job {job_id}: {crawl_error}", exc_info=True)
-            # Update job status to failed
-            async with db_pool.acquire() as conn:
-                job_row = await conn.fetchrow(
-                    """
-                    UPDATE crawl_jobs
-                    SET status = 'failed',
-                        error_message = $2,
-                        completed_at = NOW(),
-                        updated_at = NOW()
-                    WHERE id = $1
-                    RETURNING
-                        id, source_id, status, pages_crawled, pages_total,
-                        max_pages, max_depth, current_depth, error_message,
-                        error_count, metadata, started_at, completed_at,
-                        created_at, updated_at
-                    """,
-                    job_id,
-                    str(crawl_error)
-                )
+            logger.error(f"Crawl execution failed: {crawl_error}", exc_info=True)
+            # If crawl_result has job_id, update it to failed, otherwise re-raise
+            if 'crawl_result' in locals() and crawl_result.get("crawl_job_id"):
+                job_id = UUID(crawl_result.get("crawl_job_id"))
+                logger.error(f"Updating failed job {job_id}")
+                # Update job status to failed
+                async with db_pool.acquire() as conn:
+                    job_row = await conn.fetchrow(
+                        """
+                        UPDATE crawl_jobs
+                        SET status = 'failed',
+                            error_message = $2,
+                            completed_at = NOW(),
+                            updated_at = NOW()
+                        WHERE id = $1
+                        RETURNING
+                            id, source_id, status, pages_crawled, pages_total,
+                            max_pages, max_depth, current_depth, error_message,
+                            error_count, metadata, started_at, completed_at,
+                            created_at, updated_at
+                        """,
+                        job_id,
+                        str(crawl_error)
+                    )
+            else:
+                # No job created yet, re-raise to outer exception handler
+                raise
 
         # Convert to response model
         # Parse metadata if it's a string (asyncpg may return JSONB as string)
