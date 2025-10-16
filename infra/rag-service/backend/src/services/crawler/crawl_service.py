@@ -155,12 +155,16 @@ class CrawlerService:
                         result = await crawler.arun(url=url)
 
                         if result.success and result.markdown:
-                            # Truncate to 100K chars to prevent memory issues
-                            markdown = result.markdown[:100_000]
+                            # No truncation - allow full content for documentation sites
+                            # Memory is managed by chunking service downstream
+                            markdown = result.markdown
+
+                            truncation_note = ""
+                            if len(markdown) > 100_000:
+                                truncation_note = f" (large document: {len(markdown):,} chars)"
 
                             logger.info(
-                                f"Successfully crawled {url}: {len(markdown)} chars "
-                                f"(truncated from {len(result.markdown)} chars)"
+                                f"Successfully crawled {url}: {len(markdown):,} chars{truncation_note}"
                             )
 
                             # Rate limiting: delay before next request

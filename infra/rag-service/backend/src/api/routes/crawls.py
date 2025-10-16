@@ -746,3 +746,92 @@ async def abort_crawl_job(
                 "detail": str(e),
             },
         )
+
+
+@router.delete(
+    "/{job_id}",
+    response_model=MessageResponse,
+    responses={
+        200: {"description": "Crawl job deleted successfully"},
+        404: {"model": ErrorResponse, "description": "Crawl job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+async def delete_crawl_job(
+    job_id: str,
+    db_pool: asyncpg.Pool = Depends(get_db_pool),
+) -> MessageResponse:
+    """Delete a crawl job by ID.
+
+    This removes the crawl job record from the database.
+    Note: This does NOT delete the documents/chunks created by the crawl.
+    To delete those, use DELETE /api/sources/{source_id} to remove the entire source.
+
+    Args:
+        job_id: UUID of the crawl job to delete
+        db_pool: Database pool (injected)
+
+    Returns:
+        MessageResponse with success confirmation
+
+    Raises:
+        HTTPException: 404 if not found, 500 for server errors
+    """
+    try:
+        # Parse UUID
+        try:
+            job_uuid = UUID(job_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "success": False,
+                    "error": "Invalid job ID",
+                    "detail": f"'{job_id}' is not a valid UUID",
+                },
+            )
+
+        # Delete crawl job
+        async with db_pool.acquire() as conn:
+            # Check if job exists
+            job_exists = await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM crawl_jobs WHERE id = $1)",
+                job_uuid
+            )
+
+            if not job_exists:
+                raise HTTPException(
+                    status_code=404,
+                    detail={
+                        "success": False,
+                        "error": "Crawl job not found",
+                        "detail": f"No crawl job found with ID {job_id}",
+                    },
+                )
+
+            # Delete the job
+            await conn.execute(
+                "DELETE FROM crawl_jobs WHERE id = $1",
+                job_uuid
+            )
+
+        logger.info(f"Crawl job deleted: {job_id}")
+
+        return MessageResponse(
+            success=True,
+            message=f"Crawl job {job_id} deleted successfully"
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Delete crawl job error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "error": "Failed to delete crawl job",
+                "detail": str(e),
+            },
+        )
