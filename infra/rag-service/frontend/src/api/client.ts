@@ -108,9 +108,25 @@ export interface MessageResponse {
 }
 
 // Create axios instance with base configuration
-// Use localhost:8003 which works for Mac browsers accessing Docker-exposed port
+// Runtime detection: if accessing via host.docker.internal, use that for backend too
+// This handles both Mac browsers (localhost) and Docker browsers (host.docker.internal)
+function getApiBaseUrl(): string {
+  // Check if env var is set (build time)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // Runtime detection: if frontend accessed via host.docker.internal, use it for backend too
+  if (typeof window !== 'undefined' && window.location.hostname === 'host.docker.internal') {
+    return 'http://host.docker.internal:8003';
+  }
+
+  // Default: Mac browser accessing localhost
+  return 'http://localhost:8003';
+}
+
 const apiClient: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:8003',
+  baseURL: getApiBaseUrl(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
