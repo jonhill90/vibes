@@ -340,29 +340,68 @@ class DocumentService:
             logger.error(f"Error updating document {document_id}: {e}")
             return False, {"error": f"Error updating document: {str(e)}"}
 
-    async def delete_document(self, document_id: UUID) -> tuple[bool, dict[str, Any]]:
-        """Delete a document by ID.
+    async def delete_document(
+        self,
+        document_id: UUID,
+        vector_service = None,
+    ) -> tuple[bool, dict[str, Any]]:
+        """Delete a document by ID with Qdrant vector cleanup.
 
-        NOTE: Deleting a document will CASCADE delete all associated chunks
-        due to ON DELETE CASCADE foreign key constraint.
+        CRITICAL: This method performs atomic deletion from both PostgreSQL and Qdrant:
+        1. Query chunk IDs from PostgreSQL
+        2. Delete vectors from Qdrant using chunk IDs
+        3. Delete document from PostgreSQL (CASCADE deletes chunks)
+
+        If Qdrant deletion fails, PostgreSQL deletion is skipped to prevent orphaned vectors.
+
+        NOTE: PostgreSQL CASCADE constraint deletes chunks automatically after document deletion.
 
         Args:
             document_id: UUID of document to delete
+            vector_service: Optional VectorService instance for Qdrant cleanup
 
         Returns:
             Tuple of (success, result_dict with message or error)
         """
         try:
             async with self.db_pool.acquire() as conn:
-                query = "DELETE FROM documents WHERE id = $1 RETURNING id"
-                row = await conn.fetchrow(query, document_id)
+                # Step 1: Get all chunk IDs for this document before deletion
+                chunk_query = "SELECT id FROM chunks WHERE document_id = $1"
+                chunk_rows = await conn.fetch(chunk_query, document_id)
+                chunk_ids = [str(row["id"]) for row in chunk_rows]
+
+                logger.info(f"Found {len(chunk_ids)} chunks to delete for document {document_id}")
+
+                # Step 2: Delete vectors from Qdrant first (if vector_service provided)
+                if vector_service and chunk_ids:
+                    try:
+                        deleted_count = await vector_service.delete_vectors(chunk_ids)
+                        logger.info(f"Deleted {deleted_count} vectors from Qdrant for document {document_id}")
+                    except Exception as e:
+                        # Qdrant deletion failed - abort to prevent orphaned vectors
+                        logger.error(f"Qdrant deletion failed for document {document_id}: {e}")
+                        return False, {
+                            "error": f"Failed to delete vectors from Qdrant: {str(e)}",
+                            "detail": "Document not deleted to prevent orphaned vectors"
+                        }
+
+                # Step 3: Delete document from PostgreSQL (CASCADE deletes chunks)
+                delete_query = "DELETE FROM documents WHERE id = $1 RETURNING id"
+                row = await conn.fetchrow(delete_query, document_id)
 
                 if row is None:
                     return False, {"error": f"Document with ID {document_id} not found"}
 
-                logger.info(f"Deleted document {document_id}")
+                logger.info(
+                    f"Deleted document {document_id} with {len(chunk_ids)} chunks "
+                    f"(Qdrant cleanup: {bool(vector_service and chunk_ids)})"
+                )
 
-                return True, {"message": f"Document {document_id} deleted successfully"}
+                return True, {
+                    "message": f"Document {document_id} deleted successfully",
+                    "chunks_deleted": len(chunk_ids),
+                    "qdrant_cleanup": bool(vector_service and chunk_ids),
+                }
 
         except asyncpg.PostgresError as e:
             logger.error(f"Database error deleting document {document_id}: {e}")

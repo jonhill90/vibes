@@ -515,22 +515,30 @@ class TestDeleteDocument:
 
     @pytest.mark.asyncio
     async def test_delete_document_success(self, document_service, mock_db_pool, sample_document_id):
-        """Test successful document deletion.
+        """Test successful document deletion with Qdrant cleanup.
 
         Expected:
+        - Query chunk IDs from database
+        - Delete vectors from Qdrant (if vector_service provided)
         - Document deleted from database
-        - Returns success tuple with message
-        - RETURNING id verifies deletion
+        - Returns success tuple with message and cleanup details
         """
         doc_id = sample_document_id
 
         # Mock database response
         mock_conn = MagicMock()
+        # Mock chunk query (returns 3 chunks)
+        mock_conn.fetch = AsyncMock(return_value=[
+            {"chunk_id": uuid4()},
+            {"chunk_id": uuid4()},
+            {"chunk_id": uuid4()},
+        ])
+        # Mock delete query
         mock_conn.fetchrow = AsyncMock(return_value={"id": doc_id})
 
         setup_mock_connection(mock_db_pool, mock_conn)
 
-        # Call service method
+        # Call service method (without vector_service for simplicity)
         success, result = await document_service.delete_document(doc_id)
 
         # Verify results
@@ -538,20 +546,27 @@ class TestDeleteDocument:
         assert "message" in result
         assert str(doc_id) in result["message"]
         assert "deleted successfully" in result["message"]
+        assert "chunks_deleted" in result
+        assert result["chunks_deleted"] == 3
+        assert "qdrant_cleanup" in result
+        assert result["qdrant_cleanup"] is False  # No vector_service provided
 
     @pytest.mark.asyncio
     async def test_delete_document_not_found(self, document_service, mock_db_pool):
         """Test deleting non-existent document.
 
         Expected:
+        - Query chunks returns empty list
+        - Delete query returns no row
         - Returns error tuple (False, {"error": "..."})
         - Error message mentions document not found
         """
         doc_id = uuid4()
 
-        # Mock database response (no row returned)
+        # Mock database response (no chunks, no row returned)
         mock_conn = MagicMock()
-        mock_conn.fetchrow = AsyncMock(return_value=None)
+        mock_conn.fetch = AsyncMock(return_value=[])  # No chunks
+        mock_conn.fetchrow = AsyncMock(return_value=None)  # Document not found
 
         setup_mock_connection(mock_db_pool, mock_conn)
 
@@ -568,18 +583,25 @@ class TestDeleteDocument:
     async def test_delete_document_cascade_to_chunks(self, document_service, mock_db_pool, sample_document_id):
         """Test document deletion cascades to chunks.
 
-        NOTE: This is a documentation test - actual cascade happens via
-        ON DELETE CASCADE foreign key constraint in database schema.
+        NOTE: Actual cascade happens via ON DELETE CASCADE foreign key
+        constraint in database schema. Service now queries chunk IDs first
+        for Qdrant cleanup, then deletes document (which cascades to chunks).
 
         Expected:
+        - Query chunk IDs first (for Qdrant cleanup)
         - Document deletion succeeds
-        - Associated chunks automatically deleted by database
-        - Service doesn't need explicit chunk deletion code
+        - Associated chunks automatically deleted by database CASCADE
         """
         doc_id = sample_document_id
 
         # Mock database response
         mock_conn = MagicMock()
+        # Mock chunk query (returns 2 chunks)
+        mock_conn.fetch = AsyncMock(return_value=[
+            {"chunk_id": uuid4()},
+            {"chunk_id": uuid4()},
+        ])
+        # Mock delete query
         mock_conn.fetchrow = AsyncMock(return_value={"id": doc_id})
 
         setup_mock_connection(mock_db_pool, mock_conn)
@@ -589,30 +611,27 @@ class TestDeleteDocument:
 
         # Verify deletion succeeds
         assert success is True
+        assert result["chunks_deleted"] == 2
 
-        # Verify only one DELETE query (document only, chunks cascade automatically)
-        mock_conn.fetchrow.assert_called_once()
-        call_args = mock_conn.fetchrow.call_args
-        query = call_args[0][0]
-
-        # Should be single DELETE from documents (not multiple queries)
-        assert "DELETE FROM documents" in query
-        assert "WHERE id = $1" in query
-        assert "RETURNING id" in query
+        # Verify queries were made in correct order
+        # 1. SELECT chunk_id FROM chunks WHERE document_id = $1
+        # 2. DELETE FROM documents WHERE id = $1 RETURNING id
+        assert mock_conn.fetch.call_count == 1
+        assert mock_conn.fetchrow.call_count == 1
 
     @pytest.mark.asyncio
     async def test_delete_document_database_error(self, document_service, mock_db_pool):
         """Test deleting document when database error occurs.
 
         Expected:
-        - Database raises PostgresError
+        - Database raises PostgresError during chunk query
         - Service returns error tuple with error message
         """
         doc_id = uuid4()
 
-        # Mock database error
+        # Mock database error during chunk query
         mock_conn = MagicMock()
-        mock_conn.fetchrow = AsyncMock(
+        mock_conn.fetch = AsyncMock(
             side_effect=asyncpg.PostgresError("Connection lost")
         )
 

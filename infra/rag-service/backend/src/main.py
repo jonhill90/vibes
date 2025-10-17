@@ -90,6 +90,18 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
+        # Initialize OpenAI client for embeddings
+        from openai import AsyncOpenAI
+        app.state.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        logger.info(f"✅ OpenAI client initialized (model={settings.OPENAI_EMBEDDING_MODEL})")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize OpenAI client: {e}")
+        # Clean up resources if OpenAI client fails
+        await app.state.qdrant_client.close()
+        await app.state.db_pool.close()
+        raise
+
+    try:
         # CRITICAL: Initialize Qdrant collection with HNSW disabled for bulk upload (Gotcha #9)
         # HNSW enabled during bulk upload is 60-90x slower - disable with m=0, re-enable after bulk
         collections = await app.state.qdrant_client.get_collections()

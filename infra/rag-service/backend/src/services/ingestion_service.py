@@ -457,9 +457,11 @@ class IngestionService:
         """Delete document and all associated chunks from PostgreSQL + Qdrant.
 
         This is the inverse of ingest_document(). It removes:
-        1. Vectors from Qdrant (by document_id filter)
-        2. Chunks from PostgreSQL (CASCADE delete via foreign key)
-        3. Document from PostgreSQL
+        1. Chunk IDs from PostgreSQL
+        2. Vectors from Qdrant (using chunk IDs)
+        3. Document from PostgreSQL (CASCADE deletes chunks)
+
+        The deletion is atomic - if Qdrant deletion fails, PostgreSQL deletion is aborted.
 
         Args:
             document_id: UUID of document to delete
@@ -472,26 +474,26 @@ class IngestionService:
         try:
             logger.info(f"Deleting document {document_id} and all chunks")
 
-            # Step 1: Delete vectors from Qdrant
-            try:
-                await self.vector_service.delete_by_filter(
-                    {"document_id": str(document_id)}
-                )
-                logger.info(f"Deleted vectors for document {document_id} from Qdrant")
-            except Exception as e:
-                logger.error(f"Qdrant deletion failed: {e}", exc_info=True)
-                # Continue anyway - PostgreSQL deletion will clean up database
-
-            # Step 2: Delete document from PostgreSQL (CASCADE deletes chunks)
-            success, result = await self.document_service.delete_document(document_id)
+            # Use DocumentService.delete_document which handles Qdrant cleanup atomically
+            success, result = await self.document_service.delete_document(
+                document_id,
+                vector_service=self.vector_service
+            )
 
             if not success:
                 return False, result
 
-            logger.info(f"Successfully deleted document {document_id}")
+            chunks_deleted = result.get("chunks_deleted", 0)
+            logger.info(
+                f"Successfully deleted document {document_id} "
+                f"with {chunks_deleted} chunks (Qdrant cleanup: {result.get('qdrant_cleanup', False)})"
+            )
+
             return True, {
                 "message": f"Document {document_id} deleted successfully",
                 "document_id": str(document_id),
+                "chunks_deleted": chunks_deleted,
+                "qdrant_cleanup": result.get("qdrant_cleanup", False),
             }
 
         except Exception as e:

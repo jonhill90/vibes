@@ -198,14 +198,15 @@ async def upload_document(
             from src.services.embeddings.embedding_service import EmbeddingService
             from src.services.vector_service import VectorService
 
-            # Get Qdrant client from app state
+            # Get dependencies from app state
             qdrant_client = request.app.state.qdrant_client
+            openai_client = request.app.state.openai_client
 
             # Create services
             document_parser = DocumentParser()
             text_chunker = TextChunker()
-            embedding_service = EmbeddingService()
-            vector_service = VectorService(qdrant_client)
+            embedding_service = EmbeddingService(db_pool=db_pool, openai_client=openai_client)
+            vector_service = VectorService(qdrant_client, collection_name="documents")
 
             # Initialize ingestion service with all dependencies
             ingestion_service = IngestionService(
@@ -222,7 +223,8 @@ async def upload_document(
             # will create another document record. We need to use a different approach.
             # For now, we'll delete the empty document and let ingest_document create the full one.
             logger.info(f"Deleting empty document {document_id} - will be recreated by ingestion pipeline")
-            await DocumentService(db_pool).delete_document(UUID(str(document_id)))
+            # No vector_service needed here - document has no chunks yet (just created)
+            await DocumentService(db_pool).delete_document(UUID(str(document_id)), vector_service=None)
 
             # Now run full ingestion pipeline
             logger.info(f"Starting ingestion pipeline for {filename}")
@@ -515,20 +517,26 @@ async def get_document(
     },
 )
 async def delete_document(
+    request: Request,
     document_id: str,
     db_pool: asyncpg.Pool = Depends(get_db_pool),
 ) -> MessageResponse:
-    """Delete a document by ID.
+    """Delete a document by ID with Qdrant vector cleanup.
 
-    NOTE: Deleting a document will CASCADE delete all associated chunks
-    due to ON DELETE CASCADE foreign key constraint.
+    CRITICAL: This endpoint performs atomic deletion from both PostgreSQL and Qdrant:
+    1. Query chunk IDs from PostgreSQL
+    2. Delete vectors from Qdrant
+    3. Delete document from PostgreSQL (CASCADE deletes chunks)
+
+    If Qdrant deletion fails, PostgreSQL deletion is aborted to prevent orphaned vectors.
 
     Args:
+        request: FastAPI request object (for accessing app state)
         document_id: UUID of the document
         db_pool: Database pool (injected)
 
     Returns:
-        MessageResponse with success message
+        MessageResponse with success message and cleanup details
 
     Raises:
         HTTPException: 404 if not found, 500 for server errors
@@ -547,23 +555,51 @@ async def delete_document(
                 },
             )
 
-        # Delete document
+        # Initialize VectorService with Qdrant client from app state
+        from src.services.vector_service import VectorService
+        qdrant_client = request.app.state.qdrant_client
+        vector_service = VectorService(qdrant_client, collection_name="documents")
+
+        # Delete document with Qdrant cleanup
         document_service = DocumentService(db_pool)
-        success, result = await document_service.delete_document(doc_uuid)
+        success, result = await document_service.delete_document(
+            doc_uuid,
+            vector_service=vector_service
+        )
 
         if not success:
+            # Check if it's a not found error or Qdrant cleanup failure
+            error_msg = result.get("error", "Unknown error")
+            if "not found" in error_msg.lower():
+                status_code = 404
+            else:
+                status_code = 500
+
             raise HTTPException(
-                status_code=404,
+                status_code=status_code,
                 detail={
                     "success": False,
-                    "error": "Document not found",
-                    "detail": result.get("error", "Unknown error"),
+                    "error": result.get("error", "Failed to delete document"),
+                    "detail": result.get("detail", error_msg),
                 },
             )
 
+        # Build success message with cleanup details
+        chunks_deleted = result.get("chunks_deleted", 0)
+        qdrant_cleanup = result.get("qdrant_cleanup", False)
+        message = result.get("message", "Document deleted successfully")
+
+        if chunks_deleted > 0:
+            message += f" ({chunks_deleted} chunk{'s' if chunks_deleted != 1 else ''} removed"
+            if qdrant_cleanup:
+                message += " from PostgreSQL and Qdrant"
+            else:
+                message += " from PostgreSQL only"
+            message += ")"
+
         return MessageResponse(
             success=True,
-            message=result.get("message", "Document deleted successfully"),
+            message=message,
         )
 
     except HTTPException:
