@@ -2,10 +2,27 @@
 
 ## 📋 Active Issues
 
+### CRITICAL: Multi-Collection Implementation Status (2025-10-16)
+1. **✅ RESOLVED: 500 Error on Source List**
+   - **Root Cause**: Migration 003 not applied to database
+   - **Fix**: Applied migration 003 → Added `enabled_collections` column
+   - **Status**: API working, sources loading successfully
+   - **Verification**: Browser testing confirmed UI working with collection checkboxes
+   - **Screenshot**: source-management-ui.png shows 📄 Documents, 💻 Code, 🖼️ Media (disabled)
+
 ### UI/UX Issues
-1. **Crawl page count incorrect** - Frontend showing wrong number of pages crawled
-2. **Chunk count missing** - Documents don't display chunk count (shows "TODO" in API)
-3. **Document viewer missing** - No way to view original imported document or rendered markdown/HTML version of crawled websites
+1. **Remove Source Type dropdown** - UX confusion (Priority: HIGH)
+   - **Issue**: "Create New Source" form shows dropdown with "Upload", "Web Crawl", "API" options
+   - **Impact**: Confusing UX - users don't understand the difference, creates unnecessary complexity
+   - **Desired**: Remove source type selection entirely, auto-detect or simplify
+   - **Files**: `frontend/src/components/SourceManagement.tsx`
+   - **Related**: Backend source_type field may need to be optional or auto-set
+
+2. **Crawl page count incorrect** - Frontend showing wrong number of pages crawled
+
+3. **Chunk count missing** - Documents don't display chunk count (shows "TODO" in API)
+
+4. **Document viewer missing** - No way to view original imported document or rendered markdown/HTML version of crawled websites
 
 ---
 
@@ -214,6 +231,22 @@ docker system prune -a --volumes
 ---
 
 ## 📂 Recent Fixes (Reference Only)
+
+### Multi-Collection Migration Applied (2025-10-17 00:15)
+- **Issue**: 500 error on GET /api/sources - "column 'enabled_collections' does not exist"
+- **Root Cause**: Migration 003 not applied to database (code deployed without schema update)
+- **Fix**: Applied migration 003 to ragservice database
+  ```bash
+  docker exec -i rag-postgres psql -U raguser -d ragservice < \
+    infra/rag-service/database/migrations/003_add_enabled_collections.sql
+  ```
+- **Result**:
+  - enabled_collections column added with default ["documents"]
+  - 2 existing sources migrated successfully
+  - Status enum updated (pending/completed → active/archived)
+  - API now returns enabled_collections field
+  - Frontend collection checkboxes working
+- **Pattern**: Always apply migrations before deploying code changes that depend on schema
 
 ### DateTime Serialization Bug (2025-10-16 22:07)
 - **Issue**: Document list/get endpoints returned 500 errors
