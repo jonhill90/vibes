@@ -250,7 +250,7 @@ export default function SourceManagement() {
               <thead>
                 <tr style={styles.tableHeaderRow}>
                   <th style={styles.tableHeader}>Title</th>
-                  <th style={styles.tableHeader}>Type</th>
+                  <th style={styles.tableHeader}>Collections</th>
                   <th style={styles.tableHeader}>Status</th>
                   <th style={styles.tableHeader}>Created</th>
                   <th style={styles.tableHeader}>Actions</th>
@@ -274,7 +274,10 @@ export default function SourceManagement() {
                       )}
                     </td>
                     <td style={styles.tableCell}>
-                      {source.source_type}
+                      {source.enabled_collections?.map((collection) => {
+                        const option = collectionOptions.find(opt => opt.value === collection);
+                        return option ? `${option.icon} ${option.label}` : collection;
+                      }).join(', ') || '📄 Documents'}
                     </td>
                     <td style={styles.tableCell}>
                       <span style={{
