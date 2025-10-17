@@ -1,37 +1,44 @@
 # RAG Service - Current Status & Action Items
 
-## ✅ FIXED: Cache Volume Mount Configuration (2025-10-16 20:15)
+## ✅ FIXED: OpenAI API Key SecretStr Bug (2025-10-16 20:15)
+
+**Problem Solved**: OpenAI API returning 401 "Incorrect API key" despite valid key
+- Root cause: `OPENAI_API_KEY` is `SecretStr` type but wasn't unwrapped before passing to OpenAI client
+- API key was valid, code bug prevented proper authentication
+
+**Solution Implemented**: Unwrap SecretStr in OpenAI client initialization
+- ✅ Fixed `backend/src/main.py:96` - Added `.get_secret_value()` call
+- ✅ Services restarted and tested successfully
+- ✅ Document upload end-to-end working (upload → parse → chunk → embed → store)
+- ✅ Search functionality validated with uploaded documents
+
+**Fix**:
+```python
+# backend/src/main.py:96
+# Before: AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+# After:  AsyncOpenAI(api_key=settings.OPENAI_API_KEY.get_secret_value())
+```
+
+**Verification**:
+- Uploaded HTML test document: ✅ Success (1 chunk created)
+- OpenAI embeddings: ✅ Generated successfully
+- Qdrant vector storage: ✅ 1 vector upserted
+- PostgreSQL metadata: ✅ Document and chunk records created
+- Search functionality: ✅ Returns relevant results (score: 0.35)
+
+---
+
+## ✅ FIXED: Cache Volume Mount Configuration (2025-10-16 20:10)
 
 **Problem Solved**: Container disk space exhaustion (was 100% full)
 - Root cause: ML models downloading into container overlay filesystem
 - Cache breakdown: HuggingFace (1GB) + Playwright (895MB) + Pip (28MB) = ~2GB
 
 **Solution Implemented**: Unified cache volume mount
-- ✅ Added `APP_CACHE_DIR` to `.env` with Option A (relative) and Option B (absolute) documented
-- ✅ Updated `docker-compose.yml` to mount `/root/.cache` to `${APP_CACHE_DIR:-./cache}`
-- ✅ Created `.gitignore` to exclude cache directory from version control
-
-**Configuration**:
-```yaml
-# docker-compose.yml - backend service
-volumes:
-  - ${APP_CACHE_DIR:-./cache}:/root/.cache  # All caches persisted
-```
-
-```bash
-# .env - Default (Option A)
-APP_CACHE_DIR=./cache
-
-# .env - Alternative (Option B) - Uncomment to use
-# APP_CACHE_DIR=/Users/jon/.cache/rag-service
-```
-
-**Next Step**: Restart services to apply volume mount
-```bash
-docker-compose down
-docker-compose up -d
-# Cache will persist across restarts, models download once
-```
+- ✅ Added `APP_CACHE_DIR` to `.env`
+- ✅ Updated `docker-compose.yml` to mount `/root/.cache`
+- ✅ Services restarted successfully
+- ✅ Cache directory persists across container restarts
 
 ---
 
@@ -74,24 +81,21 @@ docker-compose up -d
 
 ## 📋 Active Issues
 
-### OpenAI API Key Issue
-- Current API key returns 401 authentication error
-- This is a deployment/configuration issue, not a code issue
-- Document upload will fail at embedding stage until key is updated
-- **Action**: Update `OPENAI_API_KEY` in `.env` with valid key
+**None** - All critical issues resolved! 🎉
 
 ---
 
 ## 🎯 Recommended Next Steps
 
-### 1. Test Document Upload (Priority: CRITICAL)
+### 1. ✅ Document Upload - FULLY WORKING
 - [x] Add cache volume mount to docker-compose.yml ✅
 - [x] Add `APP_CACHE_DIR` to .env ✅
 - [x] Create .gitignore for cache directory ✅
-- [ ] **ACTION REQUIRED**: Restart services (`docker-compose down && docker-compose up -d`)
-- [ ] Update OpenAI API key in .env (current key returns 401 error)
-- [ ] Test document upload end-to-end with valid API key
-- [ ] Verify cache persistence (models downloaded once, reused on restart)
+- [x] Restart services ✅
+- [x] Fix OpenAI API key bug (SecretStr unwrapping) ✅
+- [x] Test document upload end-to-end ✅
+- [x] Verify embeddings and vector storage ✅
+- [x] Test search functionality ✅
 
 ### 2. Architecture Decision: Single vs Multi-Collection (Priority: HIGH)
 **Current**: Single Qdrant collection for all sources (metadata filtering)
@@ -129,20 +133,22 @@ Once disk space issue is fixed:
 **Working Features**:
 - ✅ Source management (create, list, update, delete)
 - ✅ Web crawling with Crawl4AI + Playwright
+- ✅ Document upload (HTML, PDF, DOCX) with full ingestion pipeline
+- ✅ OpenAI embeddings (text-embedding-3-small, 1536 dimensions)
 - ✅ Vector search with source filtering
 - ✅ Document deletion with Qdrant cleanup
 - ✅ Frontend UI for all core operations
+- ✅ Cache persistence across container restarts
 
 **Known Limitations**:
-- ❌ Document upload fails (disk space + invalid API key)
-- ⚠️ Container disk: 100% full (needs cleanup or volume mount)
-- ⚠️ OpenAI API key invalid (401 authentication error)
+- ⚠️ Document parser only supports: `.docx`, `.html`, `.htm`, `.pdf` (not `.txt` or `.md`)
+- ⚠️ Container disk at 98% usage (persisted cache prevents exhaustion)
 
 **Current Data**:
-- Sources: 1 (Pydantic AI Documentation)
-- Documents: ~multiple pages from crawl
-- Chunks: 1,225 in Qdrant
-- Vectors: 1,225 in "documents" collection
+- Sources: 2 (Pydantic AI Documentation + Xerox test source)
+- Documents: ~1,227 chunks from crawl + test uploads
+- Chunks: 1,227+ in Qdrant
+- Vectors: 1,227+ in "documents" collection
 
 ---
 
@@ -166,6 +172,7 @@ Once disk space issue is fixed:
 - ✅ Gotcha #8: CORS with specific origins, not ["*"]
 - ✅ Gotcha #9: HNSW disabled (m=0) for bulk upload (60-90x faster)
 - ✅ Gotcha #12: async with pool.acquire() for connections
+- ✅ **NEW Gotcha #13**: SecretStr must be unwrapped with `.get_secret_value()` before passing to external libraries
 
 ### Database Schema
 ```
@@ -207,4 +214,4 @@ docker system prune -a --volumes
 
 ---
 
-**Last Updated**: 2025-10-16 19:55 PST
+**Last Updated**: 2025-10-16 20:15 PST

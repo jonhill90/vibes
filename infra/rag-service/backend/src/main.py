@@ -92,7 +92,8 @@ async def lifespan(app: FastAPI):
     try:
         # Initialize OpenAI client for embeddings
         from openai import AsyncOpenAI
-        app.state.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        # CRITICAL: SecretStr must be unwrapped with .get_secret_value()
+        app.state.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.get_secret_value())
         logger.info(f"✅ OpenAI client initialized (model={settings.OPENAI_EMBEDDING_MODEL})")
     except Exception as e:
         logger.error(f"❌ Failed to initialize OpenAI client: {e}")

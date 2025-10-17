@@ -7,10 +7,13 @@ FROM python:3.11-slim as base
 WORKDIR /app
 
 # Install system dependencies
+# Added libgl1 and libglib2.0-0 for Docling PDF parsing (fixes libGL.so.1 error)
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     curl \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching

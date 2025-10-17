@@ -183,12 +183,23 @@ export async function listDocuments(params?: {
 }): Promise<{ documents: DocumentResponse[]; total: number; page: number; pages: number }> {
   const response = await apiClient.get<{
     documents: DocumentResponse[];
-    total: number;
+    total_count: number;
     page: number;
-    pages: number;
+    per_page: number;
+    has_next: boolean;
+    has_prev: boolean;
   }>('/api/documents', { params });
 
-  return response.data;
+  // Transform backend response to match frontend expectations
+  const { documents, total_count, page, per_page } = response.data;
+  const pages = Math.ceil(total_count / per_page);
+
+  return {
+    documents,
+    total: total_count,
+    page,
+    pages,
+  };
 }
 
 /**
