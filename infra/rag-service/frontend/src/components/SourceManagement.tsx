@@ -24,7 +24,6 @@ import {
 interface EditingSource {
   id: string;
   title: string;
-  source_type: string;
 }
 
 export default function SourceManagement() {
@@ -103,6 +102,7 @@ export default function SourceManagement() {
     try {
       await createSource({
         ...data,
+        source_type: 'upload', // Always default to 'upload' type
         enabled_collections: enabledCollections,
       });
       reset();
@@ -122,7 +122,6 @@ export default function SourceManagement() {
     try {
       await updateSource(editingSource.id, {
         title: editingSource.title,
-        source_type: editingSource.source_type,
       });
       setEditingSource(null);
       await loadSources();
@@ -173,25 +172,6 @@ export default function SourceManagement() {
                 placeholder="e.g., Documentation, Research Papers"
               />
               {errors.title && <span style={styles.error}>{errors.title.message}</span>}
-            </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="source_type" style={styles.label}>
-                Source Type *
-              </label>
-              <select
-                id="source_type"
-                {...register('source_type', { required: 'Type is required' })}
-                style={styles.select}
-              >
-                <option value="">Select type...</option>
-                <option value="upload">Upload</option>
-                <option value="crawl">Web Crawl</option>
-                <option value="api">API</option>
-              </select>
-              {errors.source_type && (
-                <span style={styles.error}>{errors.source_type.message}</span>
-              )}
             </div>
           </div>
 
@@ -294,24 +274,7 @@ export default function SourceManagement() {
                       )}
                     </td>
                     <td style={styles.tableCell}>
-                      {editingSource?.id === source.id ? (
-                        <select
-                          value={editingSource.source_type}
-                          onChange={(e) =>
-                            setEditingSource({
-                              ...editingSource,
-                              source_type: e.target.value,
-                            })
-                          }
-                          style={styles.editSelect}
-                        >
-                          <option value="upload">Upload</option>
-                          <option value="crawl">Web Crawl</option>
-                          <option value="api">API</option>
-                        </select>
-                      ) : (
-                        source.source_type
-                      )}
+                      {source.source_type}
                     </td>
                     <td style={styles.tableCell}>
                       <span style={{
@@ -351,7 +314,6 @@ export default function SourceManagement() {
                               setEditingSource({
                                 id: source.id,
                                 title: source.title || '',
-                                source_type: source.source_type,
                               })
                             }
                             style={styles.editButton}

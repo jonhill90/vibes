@@ -1,5 +1,22 @@
 # RAG Service - Current Status & Action Items
 
+## ✅ Task List (Priority Order)
+
+1. ✅ **Remove Source Type dropdown** (HIGH - 15 min) - `frontend/src/components/SourceManagement.tsx` - COMPLETED
+2. **Fix crawl page count display** (10 min) - Frontend/backend mismatch
+3. **Add chunk count to documents** (30 min) - `document_service.py`, `DocumentResponse`
+4. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
+5. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
+6. **Fix service mocking paths** (15 min) - IngestionService import location
+7. **Debug hybrid search test collection** (1 hour) - Import errors
+8. **Re-run full integration suite** (30 min) - Target 80%+ pass rate
+9. **Add volume mounts for temp file storage** (15 min) - Document uploads
+10. **Configure log rotation** (30 min) - Backend logs
+11. **Add monitoring/metrics endpoints** (1-2 hours) - Production readiness
+12. **Document deployment guide** (1 hour) - Production documentation
+
+---
+
 ## 📋 Active Issues
 
 ### CRITICAL: Multi-Collection Implementation Status (2025-10-16)
