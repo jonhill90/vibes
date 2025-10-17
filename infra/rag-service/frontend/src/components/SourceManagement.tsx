@@ -274,10 +274,24 @@ export default function SourceManagement() {
                       )}
                     </td>
                     <td style={styles.tableCell}>
-                      {source.enabled_collections?.map((collection) => {
-                        const option = collectionOptions.find(opt => opt.value === collection);
-                        return option ? `${option.icon} ${option.label}` : collection;
-                      }).join(', ') || '📄 Documents'}
+                      {source.collection_names ? (
+                        <div style={styles.collectionList}>
+                          {Object.entries(source.collection_names).map(([type, name]) => {
+                            const option = collectionOptions.find(opt => opt.value === type);
+                            return (
+                              <div key={type} style={styles.collectionBadge}>
+                                <span style={styles.badgeIcon}>{option?.icon || '📦'}</span>
+                                <span style={styles.badgeName}>{name}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        source.enabled_collections?.map((collection) => {
+                          const option = collectionOptions.find(opt => opt.value === collection);
+                          return option ? `${option.icon} ${option.label}` : collection;
+                        }).join(', ') || '📄 Documents'
+                      )}
                     </td>
                     <td style={styles.tableCell}>
                       <span style={{
@@ -712,5 +726,29 @@ const styles = {
     backgroundColor: '#f8d7da',
     border: '1px solid #f5c6cb',
     borderRadius: '4px',
+  },
+  collectionList: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '4px',
+  },
+  collectionBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px 8px',
+    backgroundColor: '#e7f3ff',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#0066cc',
+    width: 'fit-content',
+  },
+  badgeIcon: {
+    fontSize: '14px',
+  },
+  badgeName: {
+    fontSize: '12px',
+    fontFamily: 'monospace',
   },
 };

@@ -69,7 +69,12 @@ class SearchRequest(BaseModel):
 
     source_id: Optional[str] = Field(
         default=None,
-        description="Optional source UUID filter"
+        description="Optional source UUID filter (deprecated - use source_ids instead)"
+    )
+
+    source_ids: Optional[list[str]] = Field(
+        default=None,
+        description="Optional list of source UUIDs to search within (domain-scoped search)"
     )
 
     search_type: str = Field(
@@ -86,6 +91,26 @@ class SearchRequest(BaseModel):
             raise ValueError(
                 f"search_type must be one of: {', '.join(allowed_types)}. Got: {v}"
             )
+        return v
+
+    @field_validator("source_ids")
+    @classmethod
+    def validate_source_ids(cls, v):
+        """Validate source_ids is a non-empty list of valid UUIDs."""
+        if v is not None:
+            if len(v) == 0:
+                raise ValueError("source_ids must be a non-empty list if provided")
+
+            # Validate each UUID
+            from uuid import UUID
+            for source_id in v:
+                try:
+                    UUID(source_id)
+                except ValueError:
+                    raise ValueError(
+                        f"Invalid UUID in source_ids: '{source_id}'"
+                    )
+
         return v
 
 

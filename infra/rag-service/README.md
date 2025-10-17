@@ -4,22 +4,25 @@ A containerized Retrieval-Augmented Generation (RAG) service with vector search 
 
 ## Overview
 
-This service provides semantic search over documents using OpenAI embeddings and PostgreSQL pgvector. External AI assistants like Claude Code can search the knowledge base via the Model Context Protocol (MCP) server while humans manage documents through the web interface.
+This service provides semantic search over documents using OpenAI embeddings and Qdrant vector database. External AI assistants like Claude Code can search the knowledge base via the Model Context Protocol (MCP) server while humans manage documents through the web interface.
 
 **Architecture**:
-- **Backend**: FastAPI + SQLAlchemy with async PostgreSQL support
+- **Backend**: FastAPI + asyncpg with async PostgreSQL support
 - **Frontend**: React + TypeScript with document upload and search interface
-- **Database**: PostgreSQL 16 with pgvector extension for vector similarity search
+- **Database**: PostgreSQL 16 for metadata and Qdrant for vector storage
+- **Vector Storage**: Qdrant with per-domain collection architecture
 - **Deployment**: Docker Compose with health checks and hot reload support
 - **MCP Server**: Knowledge base search tools for AI assistant integration
 
 **Key Features**:
-- Document ingestion with automatic chunking and embedding generation
-- Vector similarity search with configurable thresholds
-- Source attribution and metadata tracking
-- MCP server for AI assistant knowledge base access
-- Web UI for document management and search testing
-- Data persistence across container restarts
+- **Per-Domain Collections**: Each source creates isolated Qdrant collections (domain-specific vector storage)
+- **Document Ingestion**: Automatic chunking, content classification, and embedding generation
+- **Vector Search**: Domain-filtered similarity search with configurable thresholds
+- **Content Classification**: Automatic routing to documents/code/media collections
+- **Source Management**: Create, update, delete sources with cascade collection cleanup
+- **MCP Server**: AI assistant knowledge base access with domain-filtered search
+- **Web UI**: Document management, search testing, and source configuration
+- **Data Persistence**: Persistent volumes for database and vector storage
 
 ---
 
@@ -288,6 +291,44 @@ playwright install  # Browser binaries for browser tests
 
 ## Architecture Details
 
+### Per-Domain Collection Architecture
+
+**Concept**: Each source (knowledge domain) creates its own isolated Qdrant collections.
+
+**Collection Naming Pattern**: `{sanitized_source_title}_{collection_type}`
+
+**Examples**:
+- Source "AI Knowledge" + [Documents, Code] → `AI_Knowledge_documents`, `AI_Knowledge_code`
+- Source "Network & Security" + [Documents] → `Network_Security_documents`
+- Source "DevOps-2024" + [Documents, Code] → `DevOps_2024_documents`, `DevOps_2024_code`
+
+**Benefits**:
+- **Domain Isolation**: Search results are never contaminated by other domains
+- **Clean Deletion**: Deleting a source removes all its collections (no orphaned vectors)
+- **Unique Collections**: Each source has dedicated vector space
+- **Scalability**: Supports 100+ domains (300+ collections total)
+
+**Collection Types**:
+- **documents**: General text, articles, documentation (text-embedding-3-small, 1536 dimensions)
+- **code**: Source code, technical examples (text-embedding-3-large, 3072 dimensions)
+- **media**: Images, diagrams, visual content (clip-vit, 512 dimensions, FUTURE - currently disabled)
+
+**How It Works**:
+1. User creates source "AI Knowledge" with enabled_collections=["documents", "code"]
+2. System sanitizes title: "AI Knowledge" → "AI_Knowledge"
+3. System creates two Qdrant collections: `AI_Knowledge_documents`, `AI_Knowledge_code`
+4. Database stores collection_names mapping: `{"documents": "AI_Knowledge_documents", "code": "AI_Knowledge_code"}`
+5. During ingestion, chunks are classified and routed to appropriate domain collections
+6. During search, queries are filtered to specific domain collections (by source_ids)
+7. Deleting the source deletes both collections from Qdrant
+
+**Database Fields**:
+- `enabled_collections`: Array of collection types to enable (e.g., ["documents", "code"])
+- `collection_names`: JSONB mapping of collection_type → Qdrant collection name
+
+**Migration**:
+See "Migration from Shared Collections" section below for upgrading from global collections.
+
 ### Database Schema
 
 **Documents Table**:
@@ -302,15 +343,20 @@ playwright install  # Browser binaries for browser tests
 
 **Sources Table**:
 - `id` (UUID, primary key)
-- `title` (VARCHAR 255, required)
+- `title` (VARCHAR 255, required) - Stored in metadata JSONB field
 - `url` (VARCHAR 1000, optional)
-- `source_type` (ENUM: documentation, code, markdown, pdf)
+- `source_type` (ENUM: upload, crawl, api)
+- `status` (ENUM: active, processing, failed, archived)
+- `enabled_collections` (TEXT[], default: ["documents"]) - Collection types to enable
+- `collection_names` (JSONB, default: {}) - Mapping of collection_type → Qdrant collection name
+- `metadata` (JSONB) - Additional source configuration (title, crawl settings, etc.)
 - `created_at` (TIMESTAMP, auto-generated)
 
 **Indexes**:
-- HNSW index on `embedding` for vector similarity search
-- Index on `source_id` for filtering by source
-- Full-text search index on `content` for keyword matching
+- GIN index on `enabled_collections` for array queries
+- GIN index on `collection_names` for JSON queries
+- HNSW index on vector embeddings in Qdrant collections (per-domain)
+- Payload index on `source_id` in each Qdrant collection for filtering
 
 ### API Endpoints
 
@@ -324,9 +370,11 @@ playwright install  # Browser binaries for browser tests
 - `GET /search/sources` - List available sources
 
 **Source Endpoints**:
-- `GET /sources` - List all sources
-- `POST /sources` - Create source
-- `DELETE /sources/{source_id}` - Delete source and documents
+- `GET /sources` - List all sources (includes collection_names field)
+- `POST /sources` - Create source (auto-creates Qdrant collections)
+  - Request body: `{"title": "AI Knowledge", "enabled_collections": ["documents", "code"]}`
+  - Response includes: `collection_names` mapping (e.g., `{"documents": "AI_Knowledge_documents", "code": "AI_Knowledge_code"}`)
+- `DELETE /sources/{source_id}` - Delete source and all its collections (cascade delete from Qdrant)
 
 **Health Endpoints**:
 - `GET /health` - Backend health check
@@ -362,6 +410,151 @@ playwright install  # Browser binaries for browser tests
 1. Reduce batch size in `.env`: `EMBEDDING_BATCH_SIZE=50`
 2. Use smaller embedding model: `EMBEDDING_MODEL=text-embedding-3-small`
 3. Check OpenAI API rate limits in logs
+
+---
+
+## Migration from Shared Collections
+
+If you're upgrading from the older shared collection architecture (AI_DOCUMENTS, AI_CODE, AI_MEDIA), follow these steps to migrate to per-domain collections.
+
+### Prerequisites
+
+1. **Backup Data**: Backup your PostgreSQL database and Qdrant collections
+   ```bash
+   # Backup PostgreSQL
+   docker exec ragservice-db pg_dump -U raguser ragservice > backup.sql
+
+   # Backup Qdrant (optional - collections will be recreated)
+   # Qdrant data is in Docker volume: qdrant_storage
+   ```
+
+2. **Apply Migration 004**: Ensure database schema is updated
+   ```bash
+   # Check if migration applied
+   docker exec -i ragservice-db psql -U raguser -d ragservice -c \
+     "SELECT column_name FROM information_schema.columns WHERE table_name='sources' AND column_name='collection_names';"
+
+   # If not applied, run migration
+   docker exec -i ragservice-db psql -U raguser -d ragservice < \
+     infra/rag-service/database/migrations/004_add_collection_names.sql
+   ```
+
+### Migration Steps
+
+1. **Run Migration Script**: Create Qdrant collections for all sources
+   ```bash
+   # Access backend container
+   docker exec -it ragservice-backend bash
+
+   # Dry run (preview only)
+   python scripts/migrate_to_per_domain_collections.py --dry-run
+
+   # Execute migration
+   python scripts/migrate_to_per_domain_collections.py
+
+   # Exit container
+   exit
+   ```
+
+2. **Verify Migration**: Check that collections were created
+   ```bash
+   # View migration log
+   docker exec -it ragservice-backend cat migration_to_per_domain_collections.log
+
+   # Check Qdrant collections (via Qdrant UI at http://localhost:6333/dashboard)
+   # Or use API
+   curl http://localhost:6333/collections
+   ```
+
+3. **Test Search**: Verify domain-filtered search works
+   ```bash
+   # Test search via API (replace {source_id} with actual UUID)
+   curl -X POST http://localhost:8001/api/search \
+     -H "Content-Type: application/json" \
+     -d '{"query": "test query", "source_ids": ["{source_id}"], "limit": 5}'
+   ```
+
+4. **Optional: Re-ingest Documents**: If you want to migrate existing vectors
+   ```bash
+   # Currently, the migration script only creates collections
+   # To migrate existing vectors, you have two options:
+
+   # Option A: Re-ingest documents (recommended)
+   # - Delete old documents via UI
+   # - Re-upload or re-crawl sources
+   # - New vectors will be stored in per-domain collections
+
+   # Option B: Manual vector migration (advanced)
+   # - Query old shared collections for each source_id
+   # - Copy vectors to new per-domain collections
+   # - Verify vector counts match
+   # - Delete old shared collections
+   ```
+
+### Migration Script Details
+
+**Location**: `infra/rag-service/backend/scripts/migrate_to_per_domain_collections.py`
+
+**What it does**:
+- Reads all sources from database (with collection_names populated by Migration 004)
+- Creates Qdrant collections using collection_names mapping
+- Sets proper vector dimensions per collection type (1536d for documents, 3072d for code)
+- Creates payload index for source_id filtering on each collection
+- Logs progress and errors to console and log file
+
+**Usage**:
+```bash
+# Dry run (preview only)
+python scripts/migrate_to_per_domain_collections.py --dry-run
+
+# Execute migration
+python scripts/migrate_to_per_domain_collections.py
+
+# Custom database URL
+python scripts/migrate_to_per_domain_collections.py --database-url postgresql://...
+
+# Verbose logging
+python scripts/migrate_to_per_domain_collections.py -v
+```
+
+**Idempotent**: Safe to run multiple times - skips collections that already exist.
+
+### Rollback Procedure
+
+If you need to rollback to shared collections:
+
+1. **Stop Backend**: Prevent new operations during rollback
+   ```bash
+   docker-compose stop backend
+   ```
+
+2. **Revert Database Schema**: Remove collection_names column
+   ```bash
+   docker exec -i ragservice-db psql -U raguser -d ragservice <<EOF
+   DROP INDEX IF EXISTS idx_sources_collection_names;
+   ALTER TABLE sources DROP COLUMN IF EXISTS collection_names;
+   ANALYZE sources;
+   EOF
+   ```
+
+3. **Delete Per-Domain Collections**: Remove from Qdrant (optional)
+   ```bash
+   # Use Qdrant UI or API to delete per-domain collections
+   # Collections follow pattern: {source_title}_{collection_type}
+   ```
+
+4. **Recreate Shared Collections**: Use old collection names
+   ```bash
+   # Recreate AI_DOCUMENTS, AI_CODE, AI_MEDIA collections
+   # Use qdrant_init.py or Qdrant API
+   ```
+
+5. **Restart Backend**: Resume operations
+   ```bash
+   docker-compose start backend
+   ```
+
+**Note**: Rollback requires re-ingesting documents to populate shared collections.
 
 ---
 

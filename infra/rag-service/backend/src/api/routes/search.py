@@ -5,18 +5,21 @@ This module provides REST API endpoints for semantic and hybrid search with:
 - Hybrid search (vector + full-text)
 - Auto mode (uses best available strategy)
 - Performance metrics (latency tracking)
+- Domain-scoped search (search specific sources via source_ids)
 
 Critical Gotchas Addressed:
 - Gotcha #2: Inject db_pool and qdrant_client, services manage connections
 - Search result validation and error handling
+- Source_ids validation (must be non-empty list of UUIDs)
 
 Pattern: Example 05 (FastAPI route pattern)
-Reference: RAGService for search delegation
+Reference: RAGService for legacy search, SearchService for domain-scoped search
 """
 
 import logging
 import time
 from typing import Optional, Dict, Any
+from uuid import UUID
 
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,6 +33,7 @@ from src.services.vector_service import VectorService
 from src.services.search.base_search_strategy import BaseSearchStrategy
 from src.services.search.hybrid_search_strategy import HybridSearchStrategy
 from src.services.search.rag_service import RAGService
+from src.services.search_service import SearchService
 from src.config.settings import settings
 from openai import AsyncOpenAI
 
@@ -138,6 +142,8 @@ async def get_rag_service(
 async def search_documents(
     request: SearchRequest,
     rag_service: RAGService = Depends(get_rag_service),
+    db_pool: asyncpg.Pool = Depends(get_db_pool),
+    qdrant_client: AsyncQdrantClient = Depends(get_qdrant_client),
 ) -> SearchResponse:
     """Semantic search across documents.
 
@@ -146,13 +152,20 @@ async def search_documents(
     2. "hybrid": Combined vector + full-text search (if enabled)
     3. "auto": Use hybrid if available, otherwise vector
 
+    Domain-scoped search:
+    - Use source_ids parameter to search specific knowledge domains
+    - Returns results from specified sources only with source_id and collection_type metadata
+
     Performance:
     - Vector mode: <50ms p95 latency
     - Hybrid mode: <100ms p95 latency
+    - Domain search: <200ms for 2-3 sources
 
     Args:
         request: SearchRequest with query and filters
-        rag_service: RAG service (injected)
+        rag_service: RAG service (injected, used for legacy search)
+        db_pool: Database pool (injected, used for domain-scoped search)
+        qdrant_client: Qdrant client (injected, used for domain-scoped search)
 
     Returns:
         SearchResponse with ranked results and performance metrics
@@ -163,6 +176,84 @@ async def search_documents(
     start_time = time.time()
 
     try:
+        # Domain-scoped search: Use SearchService if source_ids provided
+        if request.source_ids:
+            logger.info(
+                f"Domain search request: query='{request.query[:50]}...', "
+                f"source_ids={request.source_ids}, limit={request.limit}"
+            )
+
+            # Convert source_ids to UUIDs
+            try:
+                source_uuids = [UUID(sid) for sid in request.source_ids]
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "success": False,
+                        "error": "Invalid source_ids",
+                        "detail": f"Invalid UUID format: {e}",
+                    },
+                )
+
+            # Initialize SearchService (domain-based search)
+            openai_client = AsyncOpenAI(
+                api_key=settings.OPENAI_API_KEY.get_secret_value(),
+                max_retries=3,
+                timeout=30.0,
+            )
+            embedding_service = EmbeddingService(
+                db_pool=db_pool,
+                openai_client=openai_client,
+            )
+            vector_service = VectorService(
+                qdrant_client=qdrant_client,
+                collection_name=settings.QDRANT_COLLECTION_NAME,
+            )
+            search_service = SearchService(
+                db_pool=db_pool,
+                embedding_service=embedding_service,
+                vector_service=vector_service,
+            )
+
+            # Execute domain search
+            results = await search_service.search(
+                query=request.query,
+                source_ids=source_uuids,
+                limit=request.limit,
+            )
+
+            # Calculate latency
+            latency_ms = (time.time() - start_time) * 1000
+
+            # Convert results to response model (SearchService format)
+            result_items = [
+                SearchResultItem(
+                    chunk_id=result.get("id", ""),
+                    text=result.get("text", ""),
+                    score=result.get("score", 0.0),
+                    match_type="vector",  # SearchService uses vector search
+                    source_id=str(result.get("source_id", "")),
+                    collection_type=result.get("collection_type", ""),
+                    metadata=result.get("metadata", {}),
+                )
+                for result in results
+            ]
+
+            logger.info(
+                f"Domain search completed: results={len(result_items)}, "
+                f"latency={latency_ms:.1f}ms"
+            )
+
+            return SearchResponse(
+                results=result_items,
+                query=request.query,
+                search_type="vector",  # Domain search uses vector strategy
+                count=len(result_items),
+                latency_ms=round(latency_ms, 2),
+            )
+
+        # Legacy search: Use RAGService (backward compatibility)
         # Build filters dict from request
         filters: Optional[Dict[str, Any]] = None
         if request.source_id:
@@ -192,6 +283,8 @@ async def search_documents(
                 text=result.get("text", ""),
                 score=result.get("score", 0.0),
                 match_type=result.get("match_type"),
+                source_id=None,
+                collection_type=None,
                 metadata=result.get("metadata", {}),
             )
             for result in results
@@ -211,7 +304,7 @@ async def search_documents(
         )
 
     except ValueError as e:
-        # Validation errors from RAGService
+        # Validation errors from RAGService or SearchService
         logger.warning(f"Search validation error: {e}")
         raise HTTPException(
             status_code=400,

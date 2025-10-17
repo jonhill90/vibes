@@ -711,7 +711,7 @@ async def abort_crawl_job(
                 )
 
             # Update status to cancelled
-            updated_row = await conn.fetchrow(
+            await conn.fetchrow(
                 """
                 UPDATE crawl_jobs
                 SET status = 'cancelled',

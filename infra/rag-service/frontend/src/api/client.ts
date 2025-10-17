@@ -28,6 +28,7 @@ export interface SearchRequest {
   query: string;
   limit?: number;
   source_id?: string;
+  source_ids?: string[];
   search_type?: 'vector' | 'hybrid';
 }
 
@@ -38,6 +39,7 @@ export interface SearchResult {
   text: string;
   score: number;
   source_id?: string;
+  collection_type?: string;
 }
 
 export interface SearchResponse {
@@ -66,6 +68,7 @@ export interface SourceResponse {
   created_at: string;
   updated_at: string;
   enabled_collections?: ('documents' | 'code' | 'media')[];
+  collection_names?: Record<string, string>;
 }
 
 export interface ErrorResponse {

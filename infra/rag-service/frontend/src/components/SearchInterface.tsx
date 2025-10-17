@@ -17,6 +17,7 @@ import { searchDocuments, listSources, SearchResult, SourceResponse } from '../a
 interface SearchFilters {
   query: string;
   source_id?: string;
+  source_ids?: string[];
   search_type: 'vector' | 'hybrid';
   limit: number;
 }
@@ -34,6 +35,7 @@ export default function SearchInterface() {
     query: '',
     search_type: 'vector',
     limit: 10,
+    source_ids: [],
   });
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [searchState, setSearchState] = useState<SearchState>({
@@ -80,6 +82,7 @@ export default function SearchInterface() {
         query: debouncedQuery,
         limit: filters.limit,
         source_id: filters.source_id,
+        source_ids: filters.source_ids && filters.source_ids.length > 0 ? filters.source_ids : undefined,
         search_type: filters.search_type,
       });
 
@@ -99,11 +102,25 @@ export default function SearchInterface() {
         error: error instanceof Error ? error.message : 'Search failed',
       });
     }
-  }, [debouncedQuery, filters.limit, filters.source_id, filters.search_type]);
+  }, [debouncedQuery, filters.limit, filters.source_id, filters.source_ids, filters.search_type]);
 
   useEffect(() => {
     executeSearch();
   }, [executeSearch]);
+
+  // Handle source filter change
+  const handleSourceToggle = (sourceId: string) => {
+    setFilters(prev => {
+      const currentIds = prev.source_ids || [];
+      if (currentIds.includes(sourceId)) {
+        // Remove source
+        return { ...prev, source_ids: currentIds.filter(id => id !== sourceId) };
+      } else {
+        // Add source
+        return { ...prev, source_ids: [...currentIds, sourceId] };
+      }
+    });
+  };
 
   // Pagination
   const resultsPerPage = filters.limit;
@@ -142,27 +159,35 @@ export default function SearchInterface() {
 
         {/* Filters Row */}
         <div style={styles.filtersRow}>
-          {/* Source Filter */}
+          {/* Domain/Source Filter */}
           <div style={styles.filterGroup}>
-            <label htmlFor="source-filter" style={styles.filterLabel}>
-              Source:
+            <label style={styles.filterLabel}>
+              Domains (Sources):
             </label>
-            <select
-              id="source-filter"
-              value={filters.source_id || ''}
-              onChange={(e) =>
-                setFilters({ ...filters, source_id: e.target.value || undefined })
-              }
-              style={styles.select}
-              disabled={searchState.loading}
-            >
-              <option value="">All Sources</option>
+            <div style={styles.sourceCheckboxContainer}>
               {sources?.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {source.title || source.url || `Untitled ${source.source_type} (${new Date(source.created_at).toLocaleDateString()})`}
-                </option>
+                <label key={source.id} style={styles.sourceCheckboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={filters.source_ids?.includes(source.id) || false}
+                    onChange={() => handleSourceToggle(source.id)}
+                    style={styles.checkbox}
+                    disabled={searchState.loading}
+                  />
+                  <span style={styles.sourceTitle}>
+                    {source.title || source.url || `Untitled ${source.source_type}`}
+                  </span>
+                  {source.collection_names && (
+                    <span style={styles.collectionCount}>
+                      ({Object.keys(source.collection_names).length} collection{Object.keys(source.collection_names).length !== 1 ? 's' : ''})
+                    </span>
+                  )}
+                </label>
               ))}
-            </select>
+              {sources?.length === 0 && (
+                <span style={styles.noSourcesText}>No sources available</span>
+              )}
+            </div>
           </div>
 
           {/* Search Type Filter */}
@@ -257,7 +282,14 @@ export default function SearchInterface() {
               <div style={styles.resultMeta}>
                 <span style={styles.metaItem}>Doc ID: {result.document_id}</span>
                 {result.source_id && (
-                  <span style={styles.metaItem}>Source: {result.source_id}</span>
+                  <span style={styles.metaItem}>
+                    Source: {sources?.find(s => s.id === result.source_id)?.title || result.source_id}
+                  </span>
+                )}
+                {result.collection_type && (
+                  <span style={styles.metaItem}>
+                    Collection: {result.collection_type}
+                  </span>
                 )}
               </div>
             </div>
@@ -457,5 +489,42 @@ const styles = {
   paginationInfo: {
     fontSize: '14px',
     color: '#666',
+  },
+  sourceCheckboxContainer: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '8px',
+    padding: '12px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '4px',
+    border: '1px solid #ddd',
+    maxHeight: '200px',
+    overflowY: 'auto' as const,
+  },
+  sourceCheckboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    color: '#333',
+  },
+  checkbox: {
+    width: '16px',
+    height: '16px',
+    cursor: 'pointer',
+  },
+  sourceTitle: {
+    fontWeight: '500',
+  },
+  collectionCount: {
+    fontSize: '12px',
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  noSourcesText: {
+    fontSize: '14px',
+    color: '#999',
+    fontStyle: 'italic',
   },
 };

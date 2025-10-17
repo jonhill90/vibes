@@ -114,26 +114,30 @@ class IngestionService:
         file_path: str,
         document_metadata: dict[str, Any] | None = None,
     ) -> tuple[bool, dict[str, Any]]:
-        """Ingest a document: parse → chunk → classify → embed → store (multi-collection).
+        """Ingest a document: parse → chunk → classify → embed → store (per-domain collection).
 
         This is the main entry point for document ingestion. It coordinates
         the complete pipeline and ensures atomic storage using database
         transactions.
 
-        Process (Multi-Collection Architecture):
-        1. Get source configuration (enabled_collections from DB)
+        Process (Per-Domain Collection Architecture):
+        1. Get source configuration (enabled_collections, collection_names from DB)
         2. Parse document using DocumentParser
         3. Chunk text using TextChunker (~500 tokens per chunk)
         4. Classify chunks by content type (code/documents/media)
         5. Filter chunks based on enabled_collections
         6. Group chunks by collection type
-        7. For each collection: embed with appropriate model → store in collection
+        7. For each collection: embed with appropriate model → store in domain-specific collection
         8. Handle partial failures (EmbeddingBatchResult)
 
         CRITICAL (Gotcha #1):
         On quota exhaustion, embedding_service returns failed_items.
         These chunks are NOT stored - they would have null embeddings and
         corrupt search results.
+
+        CRITICAL (Per-Domain Collections):
+        Chunks are stored in domain-specific collections (e.g., "AI_Knowledge_documents")
+        instead of global shared collections (e.g., "AI_DOCUMENTS").
 
         Args:
             source_id: UUID of the source this document belongs to
@@ -147,7 +151,7 @@ class IngestionService:
                 - chunks_stored: Number of chunks successfully stored
                 - chunks_failed: Number of chunks that failed to embed
                 - total_chunks: Total chunks created
-                - collections_used: List of collections used
+                - collections_used: List of domain-specific collections used
                 - ingestion_time_ms: Total time in milliseconds
                 On failure:
                 - error: Error message
@@ -170,11 +174,11 @@ class IngestionService:
         start_time = time.time()
 
         try:
-            # Step 1: Get source configuration (enabled_collections)
+            # Step 1: Get source configuration (enabled_collections, collection_names)
             logger.info(f"Step 1/7: Getting source configuration for {source_id}")
             async with self.db_pool.acquire() as conn:
                 source_row = await conn.fetchrow(
-                    "SELECT enabled_collections FROM sources WHERE id = $1",
+                    "SELECT enabled_collections, collection_names FROM sources WHERE id = $1",
                     source_id
                 )
 
@@ -182,7 +186,20 @@ class IngestionService:
                 return False, {"error": f"Source {source_id} not found"}
 
             enabled_collections = source_row["enabled_collections"]
-            logger.info(f"Source {source_id} enabled collections: {enabled_collections}")
+            collection_names_raw = source_row["collection_names"]
+
+            # Parse collection_names from JSONB (could be string or dict)
+            if isinstance(collection_names_raw, str):
+                collection_names = json.loads(collection_names_raw)
+            elif isinstance(collection_names_raw, dict):
+                collection_names = collection_names_raw
+            else:
+                collection_names = {}
+
+            logger.info(
+                f"Source {source_id} enabled collections: {enabled_collections}, "
+                f"collection_names: {collection_names}"
+            )
 
             # Step 2: Parse document using DocumentParser
             logger.info(f"Step 2/7: Parsing document: {file_path}")
@@ -277,13 +294,24 @@ class IngestionService:
                 chunks_only = [chunk for chunk, _ in chunk_tuples]
                 chunk_texts = [chunk.text for chunk in chunks_only]
 
+                # Get domain-specific collection name for this collection type
+                collection_name = collection_names.get(collection_type)
+                if not collection_name:
+                    logger.warning(
+                        f"No collection_name found for collection_type '{collection_type}'. "
+                        f"Skipping {len(chunk_texts)} chunks. "
+                        f"Available collection_names: {collection_names}"
+                    )
+                    total_chunks_failed += len(chunk_texts)
+                    continue
+
                 # Get appropriate embedding model for this collection
                 model_name = settings.COLLECTION_EMBEDDING_MODELS[collection_type]
 
                 # Embed with collection-specific model
                 logger.info(
                     f"Step 6/7 ({collection_type}): Embedding {len(chunk_texts)} chunks "
-                    f"using {model_name}"
+                    f"using {model_name} for domain collection '{collection_name}'"
                 )
 
                 try:
@@ -316,15 +344,12 @@ class IngestionService:
 
                 logger.info(
                     f"Successfully embedded {embed_result.success_count}/{len(chunk_texts)} "
-                    f"chunks for {collection_type} collection"
+                    f"chunks for {collection_type} collection (model: {model_name})"
                 )
-
-                # Store in collection-specific Qdrant collection
-                collection_name = f"{settings.COLLECTION_NAME_PREFIX}{collection_type.upper()}"
 
                 logger.info(
                     f"Step 7/7 ({collection_type}): Storing {embed_result.success_count} chunks "
-                    f"in '{collection_name}' collection"
+                    f"in domain-specific collection '{collection_name}'"
                 )
 
                 try:
@@ -347,8 +372,8 @@ class IngestionService:
                     document_ids.append(str(document_id))
 
                     logger.info(
-                        f"Stored {chunks_stored} chunks for {collection_type} "
-                        f"(document_id={document_id})"
+                        f"Stored {chunks_stored} chunks in domain collection '{collection_name}' "
+                        f"(type={collection_type}, model={model_name}, document_id={document_id})"
                     )
 
                 except Exception as e:
@@ -362,10 +387,11 @@ class IngestionService:
             # Calculate ingestion time
             elapsed_ms = int((time.time() - start_time) * 1000)
 
-            # Determine collections actually used (had chunks stored)
+            # Determine domain-specific collections actually used (had chunks stored)
             collections_used = [
-                ctype for ctype, chunk_tuples in classified_chunks.items()
-                if chunk_tuples
+                collection_names.get(ctype, f"UNKNOWN_{ctype}")
+                for ctype, chunk_tuples in classified_chunks.items()
+                if chunk_tuples and collection_names.get(ctype)
             ]
 
             if total_chunks_stored == 0:
@@ -376,10 +402,11 @@ class IngestionService:
                 }
 
             logger.info(
-                f"Multi-collection ingestion complete: "
+                f"Per-domain collection ingestion complete: "
+                f"source_id={source_id}, "
                 f"document_ids={document_ids}, "
                 f"chunks_stored={total_chunks_stored}, "
-                f"collections={collections_used}, "
+                f"domain_collections={collections_used}, "
                 f"time={elapsed_ms}ms"
             )
 
@@ -390,7 +417,7 @@ class IngestionService:
                 "total_chunks": len(chunks),
                 "collections_used": collections_used,
                 "ingestion_time_ms": elapsed_ms,
-                "message": f"Document ingested across {len(document_ids)} collections",
+                "message": f"Document ingested across {len(document_ids)} domain-specific collections",
             }
 
         except Exception as e:

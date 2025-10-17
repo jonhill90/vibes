@@ -22,8 +22,9 @@ from uuid import UUID
 
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query
+from qdrant_client import AsyncQdrantClient
 
-from src.api.dependencies import get_db_pool
+from src.api.dependencies import get_db_pool, get_qdrant_client
 from src.models.requests import SourceCreateRequest, SourceUpdateRequest
 from src.models.responses import (
     SourceResponse,
@@ -66,6 +67,7 @@ def parse_metadata(metadata):
 async def create_source(
     request: SourceCreateRequest,
     db_pool: asyncpg.Pool = Depends(get_db_pool),
+    qdrant_client: AsyncQdrantClient = Depends(get_qdrant_client),
 ) -> SourceResponse:
     """Create a new source.
 
@@ -90,8 +92,8 @@ async def create_source(
         if request.title:
             metadata["title"] = request.title
 
-        # Create source
-        source_service = SourceService(db_pool)
+        # Create source (with qdrant_client for per-domain collection creation)
+        source_service = SourceService(db_pool, qdrant_client=qdrant_client)
         success, result = await source_service.create_source(
             {
                 "source_type": request.source_type,
@@ -114,16 +116,19 @@ async def create_source(
 
         source = result["source"]
         metadata = parse_metadata(source.get("metadata"))
+        collection_names = parse_metadata(source.get("collection_names"))
 
         logger.info(
             f"Source created: {source['id']} "
-            f"(type: {source['source_type']}, url: {source.get('url')})"
+            f"(type: {source['source_type']}, url: {source.get('url')}, "
+            f"collections: {list(collection_names.keys()) if collection_names else []})"
         )
 
         return SourceResponse(
             id=str(source["id"]),
             source_type=source["source_type"],
             enabled_collections=source.get("enabled_collections", ["documents"]),
+            collection_names=collection_names if collection_names else None,
             url=source.get("url"),
             title=metadata.get("title"),
             status=source["status"],
@@ -206,11 +211,13 @@ async def list_sources(
         source_responses = []
         for source in sources:
             metadata = parse_metadata(source.get("metadata"))
+            collection_names = parse_metadata(source.get("collection_names"))
             source_responses.append(
                 SourceResponse(
                     id=str(source["id"]),
                     source_type=source["source_type"],
                     enabled_collections=source.get("enabled_collections", ["documents"]),
+                    collection_names=collection_names if collection_names else None,
                     url=source.get("url"),
                     title=metadata.get("title"),
                     status=source["status"],
@@ -298,11 +305,13 @@ async def get_source(
 
         source = result["source"]
         metadata = parse_metadata(source.get("metadata"))
+        collection_names = parse_metadata(source.get("collection_names"))
 
         return SourceResponse(
             id=str(source["id"]),
             source_type=source["source_type"],
             enabled_collections=source.get("enabled_collections", ["documents"]),
+            collection_names=collection_names if collection_names else None,
             url=source.get("url"),
             title=metadata.get("title"),
             status=source["status"],
@@ -430,6 +439,7 @@ async def update_source(
 
         source = result["source"]
         metadata = parse_metadata(source.get("metadata"))
+        collection_names = parse_metadata(source.get("collection_names"))
 
         logger.info(f"Source updated: {source_id}")
 
@@ -437,6 +447,7 @@ async def update_source(
             id=str(source["id"]),
             source_type=source["source_type"],
             enabled_collections=source.get("enabled_collections", ["documents"]),
+            collection_names=collection_names if collection_names else None,
             url=source.get("url"),
             title=metadata.get("title"),
             status=source["status"],
@@ -473,6 +484,7 @@ async def update_source(
 async def delete_source(
     source_id: str,
     db_pool: asyncpg.Pool = Depends(get_db_pool),
+    qdrant_client: AsyncQdrantClient = Depends(get_qdrant_client),
 ) -> MessageResponse:
     """Delete a source by ID.
 
@@ -505,8 +517,8 @@ async def delete_source(
                 },
             )
 
-        # Delete source
-        source_service = SourceService(db_pool)
+        # Delete source (with qdrant_client for per-domain collection deletion)
+        source_service = SourceService(db_pool, qdrant_client=qdrant_client)
         success, result = await source_service.delete_source(src_uuid)
 
         if not success:

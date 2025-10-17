@@ -6,6 +6,11 @@ This service handles all database operations for source management
 
 Pattern: Service Layer with asyncpg Connection Pooling
 Returns: All methods return tuple[bool, dict] for consistent error handling
+
+Per-Domain Collection Integration (Task 3 - per_domain_collections):
+- Creates unique Qdrant collections for each source
+- Automatically deletes collections when source is deleted
+- Stores collection_names mapping in database
 """
 
 from typing import Any
@@ -13,6 +18,10 @@ import asyncpg
 import logging
 import json
 from uuid import UUID
+
+from qdrant_client import AsyncQdrantClient
+
+from .collection_manager import CollectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -27,15 +36,19 @@ class SourceService:
     VALID_SOURCE_TYPES = ["upload", "crawl", "api"]
     VALID_STATUSES = ["active", "processing", "failed", "archived"]
 
-    def __init__(self, db_pool: asyncpg.Pool):
-        """Initialize SourceService with database connection pool.
+    def __init__(self, db_pool: asyncpg.Pool, qdrant_client: AsyncQdrantClient | None = None):
+        """Initialize SourceService with database connection pool and Qdrant client.
 
         Args:
             db_pool: asyncpg connection pool for database operations
+            qdrant_client: Optional AsyncQdrantClient for collection management
+                          If None, collection management will be skipped
 
         Critical Gotcha #2: Store pool NOT connection
         """
         self.db_pool = db_pool
+        self.qdrant_client = qdrant_client
+        self.collection_manager = CollectionManager(qdrant_client) if qdrant_client else None
 
     def validate_source_type(self, source_type: str) -> tuple[bool, str]:
         """Validate source_type against allowed enum values.
@@ -70,21 +83,27 @@ class SourceService:
         return True, ""
 
     async def create_source(self, source_data: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
-        """Create a new source in the database.
+        """Create a new source in the database and Qdrant collections.
 
         Args:
             source_data: Dictionary with keys:
                 - source_type (required): 'upload', 'crawl', or 'api'
                 - url (optional): Source URL
                 - status (optional): Defaults to 'active'
-                - metadata (optional): JSONB metadata
+                - metadata (optional): JSONB metadata (must contain 'title' for collection naming)
                 - error_message (optional): Error details
+                - enabled_collections (optional): List of collection types, defaults to ["documents"]
 
         Returns:
             Tuple of (success, result_dict with source or error)
 
         Critical Gotcha #3: Use $1, $2 placeholders (asyncpg), NOT %s
         Critical Gotcha #8: Always use async with pool.acquire()
+
+        Per-Domain Collections (Task 3):
+        - Creates Qdrant collections for each enabled_collection type
+        - Stores collection_names mapping in database
+        - Rolls back database insert if collection creation fails
         """
         try:
             # Validate required fields
@@ -109,25 +128,87 @@ class SourceService:
             error_message = source_data.get("error_message")
             enabled_collections = source_data.get("enabled_collections", ["documents"])
 
+            # Extract source title from metadata (required for collection naming)
+            source_title = metadata.get("title", "Untitled")
+
             # Convert metadata dict to JSON string for JSONB column
             metadata_json = json.dumps(metadata) if isinstance(metadata, dict) else metadata
 
             # Insert source using asyncpg $1, $2 placeholders
             query = """
-                INSERT INTO sources (source_type, enabled_collections, url, status, metadata, error_message)
-                VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+                INSERT INTO sources (source_type, enabled_collections, url, status, metadata, error_message, collection_names)
+                VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7::jsonb)
                 RETURNING id, source_type, enabled_collections, url, status, metadata, error_message,
-                          created_at, updated_at
+                          collection_names, created_at, updated_at
             """
 
             # Critical Gotcha #8: Always use async with for connection management
             async with self.db_pool.acquire() as conn:
+                # Step 1: Insert source with empty collection_names (will be updated)
                 row = await conn.fetchrow(
-                    query, source_type, enabled_collections, url, status, metadata_json, error_message
+                    query, source_type, enabled_collections, url, status, metadata_json, error_message, json.dumps({})
                 )
 
             source = dict(row)
-            logger.info(f"Created source: {source['id']}")
+            source_id = source["id"]
+
+            # Step 2: Create Qdrant collections (if CollectionManager available)
+            collection_names = {}
+            if self.collection_manager and enabled_collections:
+                try:
+                    logger.info(
+                        f"Creating Qdrant collections for source '{source_title}' "
+                        f"(id={source_id}): {enabled_collections}"
+                    )
+
+                    collection_names = await self.collection_manager.create_collections_for_source(
+                        source_id=source_id,
+                        source_title=source_title,
+                        enabled_collections=enabled_collections
+                    )
+
+                    logger.info(
+                        f"Created {len(collection_names)} collections for source {source_id}: "
+                        f"{list(collection_names.values())}"
+                    )
+
+                except Exception as e:
+                    # CRITICAL: Rollback database insert if Qdrant collection creation fails
+                    logger.error(
+                        f"Failed to create Qdrant collections for source {source_id}: {e}. "
+                        f"Rolling back source creation."
+                    )
+
+                    # Delete the source from database
+                    async with self.db_pool.acquire() as conn:
+                        await conn.execute("DELETE FROM sources WHERE id = $1", source_id)
+
+                    return False, {
+                        "error": f"Failed to create Qdrant collections: {str(e)}",
+                        "detail": "Source creation rolled back"
+                    }
+
+            # Step 3: Update source with collection_names mapping
+            if collection_names:
+                collection_names_json = json.dumps(collection_names)
+
+                async with self.db_pool.acquire() as conn:
+                    updated_row = await conn.fetchrow(
+                        """
+                        UPDATE sources
+                        SET collection_names = $1::jsonb
+                        WHERE id = $2
+                        RETURNING id, source_type, enabled_collections, url, status, metadata, error_message,
+                                  collection_names, created_at, updated_at
+                        """,
+                        collection_names_json,
+                        source_id
+                    )
+                    source = dict(updated_row)
+
+            logger.info(
+                f"Created source: {source_id} with collections: {collection_names or 'none'}"
+            )
 
             return True, {"source": source}
 
@@ -146,6 +227,7 @@ class SourceService:
 
         Returns:
             Tuple of (success, result_dict with source or error)
+            Source dict includes collection_names field (Task 3 - per_domain_collections)
 
         Critical Gotcha #3: Use $1, $2 placeholders
         Critical Gotcha #8: Always use async with
@@ -153,7 +235,7 @@ class SourceService:
         try:
             query = """
                 SELECT id, source_type, enabled_collections, url, status, metadata, error_message,
-                       created_at, updated_at
+                       collection_names, created_at, updated_at
                 FROM sources
                 WHERE id = $1
             """
@@ -229,12 +311,12 @@ class SourceService:
                         THEN LEFT(error_message, 1000) || '...'
                         ELSE error_message
                     END as error_message,
-                    created_at, updated_at
+                    collection_names, created_at, updated_at
                 """
             else:
                 select_fields = """
                     id, source_type, enabled_collections, url, status, metadata, error_message,
-                    created_at, updated_at
+                    collection_names, created_at, updated_at
                 """
 
             # Build WHERE clause dynamically
@@ -343,7 +425,7 @@ class SourceService:
                 SET {', '.join(set_clauses)}
                 WHERE id = ${param_idx}
                 RETURNING id, source_type, enabled_collections, url, status, metadata, error_message,
-                          created_at, updated_at
+                          collection_names, created_at, updated_at
             """
 
             async with self.db_pool.acquire() as conn:
@@ -365,7 +447,7 @@ class SourceService:
             return False, {"error": f"Error updating source: {str(e)}"}
 
     async def delete_source(self, source_id: UUID) -> tuple[bool, dict[str, Any]]:
-        """Delete a source and all associated documents (CASCADE).
+        """Delete a source and all associated documents and Qdrant collections.
 
         Args:
             source_id: UUID of the source to delete
@@ -376,17 +458,75 @@ class SourceService:
         Critical Gotcha #3: Use $1, $2 placeholders
         Critical Gotcha #8: Always use async with
 
+        Per-Domain Collections (Task 3):
+        - Deletes Qdrant collections for this source
+        - Logs errors but doesn't fail if Qdrant deletion fails (graceful degradation)
+
         Note: Due to CASCADE foreign keys, this will also delete:
         - All documents associated with this source
         - All chunks from those documents
         - All crawl_jobs for this source
         """
         try:
+            # Step 1: Get source with collection_names before deleting
+            async with self.db_pool.acquire() as conn:
+                source_row = await conn.fetchrow(
+                    """
+                    SELECT id, source_type, enabled_collections, url, status, metadata, error_message,
+                           collection_names, created_at, updated_at
+                    FROM sources
+                    WHERE id = $1
+                    """,
+                    source_id
+                )
+
+            if not source_row:
+                return False, {"error": f"Source not found: {source_id}"}
+
+            source = dict(source_row)
+            collection_names_raw = source.get("collection_names")
+
+            # Step 2: Delete Qdrant collections (if CollectionManager available)
+            if self.collection_manager and collection_names_raw:
+                try:
+                    # Parse collection_names from JSONB (could be string or dict)
+                    if isinstance(collection_names_raw, str):
+                        collection_names = json.loads(collection_names_raw)
+                    elif isinstance(collection_names_raw, dict):
+                        collection_names = collection_names_raw
+                    else:
+                        collection_names = {}
+
+                    if collection_names:
+                        logger.info(
+                            f"Deleting Qdrant collections for source {source_id}: "
+                            f"{list(collection_names.values())}"
+                        )
+
+                        await self.collection_manager.delete_collections_for_source(
+                            collection_names=collection_names
+                        )
+
+                        logger.info(
+                            f"Deleted {len(collection_names)} Qdrant collections for source {source_id}"
+                        )
+                    else:
+                        logger.info(f"No collections to delete for source {source_id}")
+
+                except Exception as e:
+                    # Log error but continue with database deletion
+                    # (Qdrant collections can be manually cleaned up later)
+                    logger.error(
+                        f"Failed to delete Qdrant collections for source {source_id}: {e}. "
+                        f"Continuing with database deletion."
+                    )
+
+            # Step 3: Delete source from database
             query = """
                 DELETE FROM sources
                 WHERE id = $1
                 RETURNING id, source_type, enabled_collections, url, status, metadata, error_message,
-                          created_at, updated_at
+                          collection_names, created_at, updated_at
             """
 
             async with self.db_pool.acquire() as conn:
@@ -395,10 +535,10 @@ class SourceService:
             if not row:
                 return False, {"error": f"Source not found: {source_id}"}
 
-            source = dict(row)
+            deleted_source = dict(row)
             logger.info(f"Deleted source: {source_id}")
 
-            return True, {"source": source}
+            return True, {"source": deleted_source}
 
         except asyncpg.PostgresError as e:
             logger.error(f"Database error deleting source: {e}")

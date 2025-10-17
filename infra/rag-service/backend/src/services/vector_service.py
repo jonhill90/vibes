@@ -8,7 +8,12 @@ Pattern: Follows examples/09_qdrant_vector_service.py
 Critical Gotchas Addressed:
 - Gotcha #5: Validates embedding dimension (configurable per collection)
 - Gotcha #1: Rejects null/zero embeddings (prevents search corruption)
-- Multi-Collection: Supports dynamic collection names and dimensions
+- Multi-Collection: Collection-agnostic - accepts collection_name as parameter
+
+ARCHITECTURE NOTE:
+This service is collection-agnostic as part of the per-domain collection architecture.
+All methods accept collection_name as a parameter instead of using hardcoded global collections.
+See: prps/per_domain_collections.md
 """
 
 from typing import Any, List, Dict
@@ -16,10 +21,9 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter
 import logging
 
-logger = logging.getLogger(__name__)
-
-# Import settings for collection configuration
 from ..config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class VectorService:
@@ -28,34 +32,28 @@ class VectorService:
     Note: Does NOT use tuple[bool, dict] pattern like database services.
     This is a thin wrapper around Qdrant client - raises exceptions on errors.
 
+    Collection-Agnostic Design:
+    All methods accept collection_name as parameter to support per-domain collections.
+    No hardcoded collection names - enables dynamic collection management per source.
+
     Attributes:
         DISTANCE_METRIC: Cosine similarity for vector search
-        expected_dimension: Required embedding dimension (varies by collection type)
     """
 
     DISTANCE_METRIC = Distance.COSINE
 
-    def __init__(self, qdrant_client: AsyncQdrantClient, collection_name: str, expected_dimension: int | None = None):
-        """Initialize VectorService with Qdrant client and collection name.
+    def __init__(self, qdrant_client: AsyncQdrantClient):
+        """Initialize VectorService with Qdrant client.
 
         Args:
             qdrant_client: AsyncQdrantClient for vector operations
-            collection_name: Name of the Qdrant collection to use
-            expected_dimension: Expected embedding dimension (auto-detected if None)
+
+        Note:
+            This service is collection-agnostic. All methods accept collection_name
+            as a parameter to support per-domain collection architecture.
         """
         self.client = qdrant_client
-        self.collection_name = collection_name
-
-        # Auto-detect dimension from collection name if not provided
-        if expected_dimension is None:
-            self.expected_dimension = self._detect_dimension_from_collection_name(collection_name)
-        else:
-            self.expected_dimension = expected_dimension
-
-        logger.info(
-            f"VectorService initialized for collection '{collection_name}' "
-            f"(dimension={self.expected_dimension})"
-        )
+        logger.info("VectorService initialized (collection-agnostic mode)")
 
     @staticmethod
     def get_collection_name(collection_type: str) -> str:
@@ -73,22 +71,34 @@ class VectorService:
         """
         return f"{settings.COLLECTION_NAME_PREFIX}{collection_type.upper()}"
 
-    def _detect_dimension_from_collection_name(self, collection_name: str) -> int:
+    @staticmethod
+    def _detect_dimension_from_collection_name(collection_name: str) -> int:
         """Detect expected dimension from collection name.
 
         Args:
-            collection_name: Qdrant collection name (e.g., "AI_DOCUMENTS", "AI_CODE")
+            collection_name: Qdrant collection name (e.g., "AI_DOCUMENTS", "AI_CODE",
+                           "AI_Knowledge_documents")
 
         Returns:
             Expected dimension for this collection type
 
         Note:
-            Falls back to 1536 (documents) if collection type not recognized
+            Handles both legacy global collections (AI_DOCUMENTS) and new per-domain
+            collections (Source_Name_documents). Falls back to 1536 (documents) if
+            collection type not recognized.
         """
-        # Extract collection type from name (e.g., "AI_DOCUMENTS" → "documents")
+        # Try to extract collection type from name
+        # Pattern 1: Legacy global collections (AI_DOCUMENTS, AI_CODE, AI_MEDIA)
         prefix = settings.COLLECTION_NAME_PREFIX
         if collection_name.startswith(prefix):
             collection_type = collection_name[len(prefix):].lower()
+            if collection_type in settings.COLLECTION_DIMENSIONS:
+                return settings.COLLECTION_DIMENSIONS[collection_type]
+
+        # Pattern 2: Per-domain collections (Source_Name_documents, Source_Name_code)
+        # Extract suffix after last underscore
+        if "_" in collection_name:
+            collection_type = collection_name.split("_")[-1].lower()
             if collection_type in settings.COLLECTION_DIMENSIONS:
                 return settings.COLLECTION_DIMENSIONS[collection_type]
 
@@ -99,15 +109,21 @@ class VectorService:
         )
         return settings.COLLECTION_DIMENSIONS["documents"]
 
-    def validate_embedding(self, embedding: List[float], dimension: int | None = None) -> None:
+    def validate_embedding(
+        self,
+        embedding: List[float],
+        collection_name: str | None = None,
+        dimension: int | None = None
+    ) -> None:
         """Validate embedding dimensions and values.
 
         Args:
             embedding: Embedding vector to validate
-            dimension: Expected dimension (uses self.expected_dimension if None)
+            collection_name: Collection name to auto-detect dimension (if dimension not provided)
+            dimension: Expected dimension (overrides auto-detection)
 
         Raises:
-            ValueError: If embedding is invalid
+            ValueError: If embedding is invalid or dimension cannot be determined
 
         Critical Gotchas:
         - Gotcha #5: Validate len(embedding) matches expected dimension before insert
@@ -116,7 +132,15 @@ class VectorService:
         if not embedding:
             raise ValueError("Embedding cannot be None or empty")
 
-        expected_dim = dimension if dimension is not None else self.expected_dimension
+        # Determine expected dimension
+        if dimension is not None:
+            expected_dim = dimension
+        elif collection_name is not None:
+            expected_dim = self._detect_dimension_from_collection_name(collection_name)
+        else:
+            raise ValueError(
+                "Must provide either 'dimension' or 'collection_name' for validation"
+            )
 
         if len(embedding) != expected_dim:
             raise ValueError(
@@ -130,8 +154,16 @@ class VectorService:
                 "Embedding cannot be all zeros (possible OpenAI quota exhaustion)"
             )
 
-    async def ensure_collection_exists(self) -> bool:
+    async def ensure_collection_exists(
+        self,
+        collection_name: str,
+        dimension: int | None = None
+    ) -> bool:
         """Ensure the collection exists, create if not.
+
+        Args:
+            collection_name: Name of the Qdrant collection
+            dimension: Vector dimension (auto-detected from collection_name if None)
 
         Returns:
             bool: True if collection exists or was created
@@ -140,30 +172,34 @@ class VectorService:
             Exception: If collection cannot be created
 
         Note:
-            Uses self.expected_dimension for vector size (supports multi-collection)
+            Auto-detects dimension from collection name if not provided.
+            Supports both legacy (AI_DOCUMENTS) and per-domain (Source_Name_documents) naming.
         """
         try:
+            # Auto-detect dimension if not provided
+            expected_dimension = dimension if dimension is not None else \
+                self._detect_dimension_from_collection_name(collection_name)
+
             # Check if collection exists
             collections = await self.client.get_collections()
             collection_names = [c.name for c in collections.collections]
 
-            if self.collection_name in collection_names:
-                logger.info(f"Collection '{self.collection_name}' already exists")
+            if collection_name in collection_names:
+                logger.info(f"Collection '{collection_name}' already exists")
                 return True
 
             # Create collection with HNSW indexing for fast approximate search
-            # Use expected_dimension (varies by collection type)
             await self.client.create_collection(
-                collection_name=self.collection_name,
+                collection_name=collection_name,
                 vectors_config=VectorParams(
-                    size=self.expected_dimension,
+                    size=expected_dimension,
                     distance=self.DISTANCE_METRIC,
                 ),
             )
 
             logger.info(
-                f"Created collection '{self.collection_name}' "
-                f"(dimension={self.expected_dimension})"
+                f"Created collection '{collection_name}' "
+                f"(dimension={expected_dimension})"
             )
             return True
 
@@ -173,16 +209,18 @@ class VectorService:
 
     async def upsert_vectors(
         self,
+        collection_name: str,
         points: List[Dict[str, Any]],
         batch_size: int = 100,
     ) -> int:
         """Upsert vectors to Qdrant collection with batching for large datasets.
 
         Args:
+            collection_name: Name of the Qdrant collection to upsert into
             points: List of point dicts with structure:
                 {
                     "id": str,  # Unique chunk ID
-                    "embedding": List[float],  # 1536-dimensional vector
+                    "embedding": List[float],  # Embedding vector (dimension varies by collection)
                     "payload": dict  # Metadata (document_id, chunk_index, text, etc.)
                 }
             batch_size: Number of points to upsert per batch (default 100)
@@ -208,7 +246,7 @@ class VectorService:
                 embedding = point.get("embedding")
                 if embedding is None:
                     raise ValueError(f"Point {i} missing 'embedding' field")
-                self.validate_embedding(embedding)
+                self.validate_embedding(embedding, collection_name=collection_name)
 
             # Convert to PointStruct format for Qdrant
             point_structs = []
@@ -227,14 +265,14 @@ class VectorService:
                 batch = point_structs[i:i + batch_size]
 
                 await self.client.upsert(
-                    collection_name=self.collection_name,
+                    collection_name=collection_name,
                     points=batch,
                 )
 
                 total_upserted += len(batch)
                 logger.info(f"Upserted batch {i // batch_size + 1}/{(len(point_structs) + batch_size - 1) // batch_size}: {len(batch)} vectors")
 
-            logger.info(f"Successfully upserted {total_upserted} vectors to '{self.collection_name}'")
+            logger.info(f"Successfully upserted {total_upserted} vectors to '{collection_name}'")
             return total_upserted
 
         except ValueError as e:
@@ -247,6 +285,7 @@ class VectorService:
 
     async def search_vectors(
         self,
+        collection_name: str,
         query_vector: List[float],
         limit: int = 10,
         score_threshold: float = 0.05,
@@ -255,7 +294,8 @@ class VectorService:
         """Search for similar vectors using cosine similarity.
 
         Args:
-            query_vector: Query embedding vector (1536 dimensions)
+            collection_name: Name of the Qdrant collection to search
+            query_vector: Query embedding vector (dimension varies by collection)
             limit: Maximum number of results to return
             score_threshold: Minimum similarity score (0.0-1.0, default 0.05)
             filter_conditions: Optional metadata filters (e.g., {"document_id": "doc-123"})
@@ -275,7 +315,7 @@ class VectorService:
         """
         try:
             # Validate query embedding dimension
-            self.validate_embedding(query_vector)
+            self.validate_embedding(query_vector, collection_name=collection_name)
 
             # Build Qdrant filter if conditions provided
             search_filter = None
@@ -284,7 +324,7 @@ class VectorService:
 
             # Perform vector similarity search
             results = await self.client.search(
-                collection_name=self.collection_name,
+                collection_name=collection_name,
                 query_vector=query_vector,
                 limit=limit,
                 score_threshold=score_threshold,
@@ -301,7 +341,7 @@ class VectorService:
                 })
 
             logger.info(
-                f"Vector search found {len(formatted_results)} results "
+                f"Vector search in '{collection_name}' found {len(formatted_results)} results "
                 f"(threshold={score_threshold})"
             )
             return formatted_results
@@ -316,11 +356,13 @@ class VectorService:
 
     async def delete_vectors(
         self,
+        collection_name: str,
         chunk_ids: List[str],
     ) -> int:
         """Delete vectors by chunk IDs.
 
         Args:
+            collection_name: Name of the Qdrant collection to delete from
             chunk_ids: List of chunk IDs to delete
 
         Returns:
@@ -335,11 +377,11 @@ class VectorService:
 
         try:
             await self.client.delete(
-                collection_name=self.collection_name,
+                collection_name=collection_name,
                 points_selector=chunk_ids,
             )
 
-            logger.info(f"Deleted {len(chunk_ids)} vectors from '{self.collection_name}'")
+            logger.info(f"Deleted {len(chunk_ids)} vectors from '{collection_name}'")
             return len(chunk_ids)
 
         except Exception as e:
@@ -348,11 +390,13 @@ class VectorService:
 
     async def delete_by_filter(
         self,
+        collection_name: str,
         filter_conditions: Dict[str, Any],
     ) -> None:
         """Delete vectors matching filter conditions.
 
         Args:
+            collection_name: Name of the Qdrant collection to delete from
             filter_conditions: Metadata filter for deletion
                 Example: {"document_id": "doc-123"} deletes all chunks for that document
 
@@ -365,12 +409,12 @@ class VectorService:
             search_filter = Filter(**filter_conditions)
 
             await self.client.delete(
-                collection_name=self.collection_name,
+                collection_name=collection_name,
                 points_selector=search_filter,
             )
 
             logger.info(
-                f"Deleted vectors from '{self.collection_name}' "
+                f"Deleted vectors from '{collection_name}' "
                 f"matching filter: {filter_conditions}"
             )
 

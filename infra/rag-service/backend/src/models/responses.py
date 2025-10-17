@@ -93,6 +93,8 @@ class SearchResultItem(BaseModel):
     text: str = Field(..., description="Chunk text content")
     score: float = Field(..., description="Relevance score (0-1, higher is better)", ge=0.0, le=1.0)
     match_type: Optional[str] = Field(None, description="Match type: 'vector', 'text', or 'both'")
+    source_id: Optional[str] = Field(None, description="Source UUID this result came from")
+    collection_type: Optional[str] = Field(None, description="Collection type: 'documents', 'code', or 'media'")
     metadata: dict[str, Any] = Field(..., description="Chunk metadata (document_id, source_id, etc.)")
 
     model_config = {
@@ -102,6 +104,8 @@ class SearchResultItem(BaseModel):
                 "text": "Machine learning is a subset of artificial intelligence...",
                 "score": 0.87,
                 "match_type": "both",
+                "source_id": "123e4567-e89b-12d3-a456-426614174000",
+                "collection_type": "documents",
                 "metadata": {
                     "document_id": "550e8400-e29b-41d4-a716-446655440000",
                     "source_id": "123e4567-e89b-12d3-a456-426614174000",
@@ -161,6 +165,10 @@ class SourceResponse(BaseModel):
         default=["documents"],
         description="Collections enabled for this source: 'documents', 'code', 'media'"
     )
+    collection_names: Optional[dict[str, str]] = Field(
+        None,
+        description="Mapping of collection_type to Qdrant collection name (e.g., {'documents': 'AI_Knowledge_documents'})"
+    )
     url: Optional[str] = Field(None, description="Source URL")
     title: Optional[str] = Field(None, description="Human-readable title (from metadata)")
     status: str = Field(..., description="Status: 'pending', 'processing', 'completed', or 'failed'")
@@ -175,6 +183,10 @@ class SourceResponse(BaseModel):
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "source_type": "upload",
                 "enabled_collections": ["documents", "code"],
+                "collection_names": {
+                    "documents": "AI_Knowledge_documents",
+                    "code": "AI_Knowledge_code"
+                },
                 "url": None,
                 "status": "completed",
                 "metadata": {"uploaded_by": "user-123"},
