@@ -2,7 +2,10 @@
 
 ## 📋 Active Issues
 
-**None** - All critical production issues resolved! 🎉
+### UI/UX Issues
+1. **Crawl page count incorrect** - Frontend showing wrong number of pages crawled
+2. **Chunk count missing** - Documents don't display chunk count (shows "TODO" in API)
+3. **Document viewer missing** - No way to view original imported document or rendered markdown/HTML version of crawled websites
 
 ---
 
@@ -36,7 +39,23 @@
 - Core functionality: ✅ Excellent (search, document CRUD working)
 - Test infrastructure: ⚠️ Fixture issues blocking 28 tests
 
-### 3. Production Readiness (Priority: LOW)
+### 3. Fix UI/UX Issues (Priority: MEDIUM)
+- [ ] Fix crawl page count display (10 min)
+  - Investigate frontend/backend mismatch
+  - Verify correct count is stored in database
+
+- [ ] Add chunk count to documents (30 min)
+  - Backend: Query chunk count in `document_service.py`
+  - Update DocumentResponse to include chunk_count
+  - Frontend: Display chunk count in document list/details
+
+- [ ] Implement document viewer (2-3 hours)
+  - Backend: Add endpoint to retrieve document content/markdown
+  - Frontend: Create modal viewer component
+  - Support: Original files (PDF, DOCX) + rendered markdown for crawled pages
+  - Consider: Syntax highlighting for code blocks
+
+### 4. Production Readiness (Priority: LOW)
 - [ ] Add volume mounts for temp file storage (document uploads)
 - [ ] Configure log rotation for backend logs
 - [ ] Add monitoring/metrics endpoints
@@ -148,4 +167,33 @@ docker system prune -a --volumes
 
 ---
 
-**Last Updated**: 2025-10-16 22:10 PST
+---
+
+## 📌 Quick Fix Notes
+
+### Crawl Page Count Issue
+- **Location**: Frontend crawl job display
+- **Symptom**: Wrong number of pages shown
+- **Check**: Compare frontend state with database `crawl_jobs.pages_crawled`
+
+### Chunk Count Implementation
+- **Backend**: `document_service.py` - Add `COUNT(*)` query from chunks table
+- **API**: Update `DocumentResponse` model (currently has `chunk_count=None` placeholder)
+- **Files to modify**:
+  - `backend/src/services/document_service.py`
+  - `backend/src/models/responses.py` (if needed)
+  - `backend/src/api/routes/documents.py` (remove TODO comments)
+
+### Document Viewer Feature
+- **Backend**: New endpoint `/api/documents/{id}/content`
+  - Return original file for uploads (from temp storage or re-parse)
+  - Return markdown for crawled pages (stored in chunks or regenerate)
+- **Frontend**: Modal component with:
+  - Markdown renderer (react-markdown)
+  - PDF viewer (react-pdf)
+  - Syntax highlighting (prism.js or highlight.js)
+- **Storage consideration**: May need to persist original content/markdown
+
+---
+
+**Last Updated**: 2025-10-16 22:12 PST
