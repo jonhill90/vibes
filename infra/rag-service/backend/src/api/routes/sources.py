@@ -97,7 +97,7 @@ async def create_source(
                 "source_type": request.source_type,
                 "enabled_collections": request.enabled_collections,
                 "url": request.url,
-                "status": "pending",
+                "status": "active",  # Changed from "pending" to "active" (multi-collection migration)
                 "metadata": metadata,
             }
         )
