@@ -42,6 +42,9 @@ export default function CrawlManagement() {
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+  const [recrawlingJobId, setRecrawlingJobId] = useState<string | null>(null);
+  const [recrawlMaxPages, setRecrawlMaxPages] = useState(100);
+  const [recrawlMaxDepth, setRecrawlMaxDepth] = useState(3);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<CrawlFormData>({
     defaultValues: {
@@ -143,6 +146,32 @@ export default function CrawlManagement() {
     } catch (err) {
       console.error('Failed to delete job:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete job');
+    }
+  };
+
+  // Recrawl job
+  const handleRecrawl = async (job: CrawlJobResponse, maxPages: number, maxDepth: number) => {
+    setError(null);
+    try {
+      const url = job.metadata.url as string;
+      if (!url) {
+        setError('Cannot recrawl: job has no URL in metadata');
+        return;
+      }
+
+      await startCrawl({
+        source_id: job.source_id,
+        url: url,
+        max_pages: maxPages,
+        max_depth: maxDepth,
+      });
+
+      setRecrawlingJobId(null);
+      await loadCrawlJobs();
+    } catch (err) {
+      console.error('Failed to start recrawl:', err);
+      setError(err instanceof Error ? err.message : 'Failed to start recrawl');
+      setRecrawlingJobId(null);
     }
   };
 
@@ -347,15 +376,27 @@ export default function CrawlManagement() {
                       </button>
                     )}
                     {(job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingJobId(job.id);
-                        }}
-                        style={styles.deleteButton}
-                      >
-                        Delete
-                      </button>
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRecrawlingJobId(job.id);
+                          }}
+                          style={styles.recrawlButton}
+                          title="Recrawl with same or different settings"
+                        >
+                          🔄 Recrawl
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingJobId(job.id);
+                          }}
+                          style={styles.deleteButton}
+                        >
+                          Delete
+                        </button>
+                      </>
                     )}
                     <button style={styles.expandButton}>
                       {expandedJobId === job.id ? '▲' : '▼'}
@@ -452,6 +493,83 @@ export default function CrawlManagement() {
           </div>
         </div>
       )}
+
+      {/* Recrawl Configuration Dialog */}
+      {recrawlingJobId && (() => {
+        const job = crawlJobs.find(j => j.id === recrawlingJobId);
+        const url = job?.metadata.url as string;
+
+        return (
+          <div style={styles.modalOverlay}>
+            <div style={styles.modal}>
+              <h3 style={styles.modalTitle}>Recrawl Website</h3>
+              <p style={styles.modalText}>
+                Configure crawl settings for: <strong>{url || 'Unknown URL'}</strong>
+              </p>
+
+              <div style={styles.recrawlForm}>
+                <div style={styles.formGroup}>
+                  <label htmlFor="recrawl_max_pages" style={styles.label}>
+                    Max Pages (1-1000)
+                  </label>
+                  <input
+                    id="recrawl_max_pages"
+                    type="number"
+                    value={recrawlMaxPages}
+                    onChange={(e) => setRecrawlMaxPages(Math.min(1000, Math.max(1, parseInt(e.target.value) || 1)))}
+                    min={1}
+                    max={1000}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label htmlFor="recrawl_max_depth" style={styles.label}>
+                    Max Depth (0-10)
+                    <span style={styles.helpText}> - 0 = single page, 3 = recommended</span>
+                  </label>
+                  <input
+                    id="recrawl_max_depth"
+                    type="number"
+                    value={recrawlMaxDepth}
+                    onChange={(e) => setRecrawlMaxDepth(Math.min(10, Math.max(0, parseInt(e.target.value) || 0)))}
+                    min={0}
+                    max={10}
+                    style={styles.input}
+                  />
+                </div>
+              </div>
+
+              <div style={styles.modalActions}>
+                <button
+                  onClick={() => {
+                    if (job) {
+                      handleRecrawl(job, recrawlMaxPages, recrawlMaxDepth);
+                      // Reset to defaults for next time
+                      setRecrawlMaxPages(100);
+                      setRecrawlMaxDepth(3);
+                    }
+                  }}
+                  style={styles.confirmRecrawlButton}
+                >
+                  Start Recrawl
+                </button>
+                <button
+                  onClick={() => {
+                    setRecrawlingJobId(null);
+                    // Reset to defaults
+                    setRecrawlMaxPages(100);
+                    setRecrawlMaxDepth(3);
+                  }}
+                  style={styles.cancelModalButton}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -830,5 +948,36 @@ const styles = {
     fontSize: '12px',
     overflow: 'auto',
     marginTop: '8px',
+  },
+  recrawlButton: {
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#fff',
+    backgroundColor: '#17a2b8',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  recrawlForm: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '16px',
+    marginBottom: '20px',
+  },
+  confirmRecrawlButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#fff',
+    backgroundColor: '#17a2b8',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  helpText: {
+    fontSize: '12px',
+    fontWeight: '400',
+    color: '#888',
   },
 };

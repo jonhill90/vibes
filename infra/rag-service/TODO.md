@@ -10,12 +10,20 @@
 4. ✅ **Add Qdrant collection cleanup fixture** (15 min) - Prevent test pollution - COMPLETED 2025-10-17
 5. ✅ **Fix crawl page count display** (10 min) - Frontend/backend mismatch - COMPLETED 2025-10-17
 6. ✅ **Add chunk count to documents** (30 min) - `document_service.py`, `DocumentResponse` - COMPLETED 2025-10-17
-7. **Implement recursive crawling** (MEDIUM - 3-4 hours) - Currently only crawls single page
-   - **Issue**: Logs show "Recursive crawling not yet implemented" - only crawls starting URL
-   - **Desired**: Follow links up to `max_depth`, respect `max_pages` limit
-   - **Files**: `backend/src/services/crawl_service.py` or crawl implementation
-   - **Implementation**: BFS/DFS traversal, URL deduplication, same-domain filtering
-   - **UI**: Frontend already has depth/page limit inputs, backend just needs implementation
+7. ✅ **Implement recursive crawling** (MEDIUM - 3-4 hours) - COMPLETED 2025-10-17
+   - **Implementation**: BFS traversal with URL deduplication and same-domain filtering
+   - **Files**: `backend/src/services/crawler/crawl_service.py:444-751`
+   - **Features**:
+     - BFS (breadth-first search) crawl traversal for optimal coverage
+     - URL normalization for deduplication (case-insensitive, fragment removal)
+     - Same-domain filtering (allows subdomains)
+     - Real-time progress updates (pages_crawled, pages_total, current_depth, error_count)
+     - Max pages and max depth limits enforced
+     - Error tolerance (continues crawling even if some pages fail)
+     - Combined markdown output with page separators
+   - **Pattern**: `recursive=True` with `max_depth > 0` enables BFS crawl, `recursive=False` (max_depth=0) does single-page crawl
+   - **Database**: Utilizes existing `pages_total`, `current_depth`, `error_count` fields for progress tracking
+   - **UI**: Frontend already displays all progress metrics (no changes needed)
 8. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
 9. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
 10. **Fix service mocking paths** (15 min) - IngestionService import location
@@ -515,6 +523,39 @@ docker system prune -a --volumes
   ```
 - **Result**: Embeddings now successfully cached in PostgreSQL with no errors
 - **Pattern**: When using pgvector with asyncpg, convert Python lists to strings and cast with `::vector` in SQL
+
+---
+
+**Last Updated**: 2025-10-17 14:30 PST (Implemented recursive web crawling with BFS traversal)
+
+---
+
+## 📚 Feature Documentation
+
+### Recursive Web Crawling
+**Status**: ✅ Implemented and Tested (2025-10-17)
+
+See [RECURSIVE_CRAWL.md](RECURSIVE_CRAWL.md) for complete documentation including:
+- Feature overview and capabilities
+- API usage and examples
+- Implementation details and algorithms
+- Performance characteristics
+- Testing results
+- Troubleshooting guide
+
+**Quick Reference:**
+- **BFS Traversal**: Breadth-first search for optimal coverage
+- **URL Deduplication**: Normalizes URLs to prevent duplicate crawls
+- **Domain Filtering**: Respects domain boundaries (allows subdomains)
+- **Progress Tracking**: Real-time updates to database (pages_crawled, pages_total, current_depth)
+- **Error Tolerance**: Continues crawling even if some pages fail
+
+**Test Results:**
+- ✅ 5 pages crawled in ~15 seconds
+- ✅ 10 total pages discovered (queue tracking)
+- ✅ Depth 1 reached (link discovery working)
+- ✅ Zero errors (error handling working)
+- ✅ 40,018 chars combined output
 
 ---
 

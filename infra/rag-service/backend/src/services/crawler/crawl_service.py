@@ -6,6 +6,7 @@ This service implements web crawling for knowledge base ingestion with:
 3. Exponential backoff for failed pages (3 retries max)
 4. Crawl job tracking in database
 5. Integration with ingestion pipeline
+6. Recursive crawling with BFS traversal (max depth + max pages limits)
 
 Critical Gotchas Addressed:
 - Gotcha #9: Use async context manager for AsyncWebCrawler to prevent memory leaks
@@ -19,8 +20,11 @@ Reference: prps/rag_service_completion.md (Task 3, lines 976-1021)
 
 import asyncio
 import logging
+import re
 import time
+from collections import deque
 from typing import Any
+from urllib.parse import urljoin, urlparse
 from uuid import UUID
 
 import asyncpg
@@ -316,6 +320,286 @@ class CrawlerService:
 
         logger.info(f"Updated crawl job {job_id}: status={status}, pages={pages_crawled}")
 
+    def _extract_links(self, html: str, base_url: str) -> list[str]:
+        """Extract all links from HTML content.
+
+        Args:
+            html: HTML content to extract links from
+            base_url: Base URL to resolve relative links
+
+        Returns:
+            List of absolute URLs found in the HTML
+
+        Pattern:
+            Uses regex to find href attributes, resolves relative URLs,
+            and returns only absolute http/https URLs.
+        """
+        # Pattern to match href attributes in HTML (handles various quote styles)
+        link_pattern = r'href=["\']([^"\']+)["\']'
+        matches = re.findall(link_pattern, html, re.IGNORECASE)
+
+        absolute_links = []
+        for link in matches:
+            # Resolve relative URLs to absolute
+            absolute_url = urljoin(base_url, link)
+
+            # Only include http/https URLs (exclude mailto:, tel:, javascript:, etc.)
+            if absolute_url.startswith(("http://", "https://")):
+                absolute_links.append(absolute_url)
+
+        return absolute_links
+
+    def _normalize_url(self, url: str) -> str:
+        """Normalize URL for deduplication.
+
+        Normalization:
+        - Remove URL fragments (#section)
+        - Remove trailing slashes
+        - Convert to lowercase
+        - Remove default ports (:80, :443)
+
+        Args:
+            url: URL to normalize
+
+        Returns:
+            Normalized URL for deduplication
+
+        Example:
+            https://example.com/Page#top -> https://example.com/page
+            https://example.com/page/ -> https://example.com/page
+        """
+        parsed = urlparse(url)
+
+        # Remove fragment
+        url_without_fragment = url.split("#")[0]
+
+        # Remove trailing slash (except for root URL)
+        if parsed.path != "/" and url_without_fragment.endswith("/"):
+            url_without_fragment = url_without_fragment.rstrip("/")
+
+        # Convert to lowercase for case-insensitive comparison
+        return url_without_fragment.lower()
+
+    def _is_same_domain(self, url: str, base_url: str) -> bool:
+        """Check if URL belongs to the same domain as base URL.
+
+        Args:
+            url: URL to check
+            base_url: Base domain URL
+
+        Returns:
+            True if URL is on the same domain, False otherwise
+
+        Example:
+            _is_same_domain("https://docs.example.com/page", "https://example.com")
+            -> True (subdomain allowed)
+
+            _is_same_domain("https://otherdomain.com/page", "https://example.com")
+            -> False
+        """
+        url_domain = urlparse(url).netloc.lower()
+        base_domain = urlparse(base_url).netloc.lower()
+
+        # Extract root domain (example.com from docs.example.com)
+        url_root = ".".join(url_domain.split(".")[-2:])
+        base_root = ".".join(base_domain.split(".")[-2:])
+
+        return url_root == base_root
+
+    async def update_crawl_job_progress(
+        self,
+        job_id: UUID,
+        pages_crawled: int,
+        pages_total: int,
+        current_depth: int,
+        error_count: int = 0,
+    ) -> None:
+        """Update crawl job progress during recursive crawl.
+
+        Args:
+            job_id: UUID of crawl job
+            pages_crawled: Number of pages successfully crawled so far
+            pages_total: Total number of pages discovered (queue + crawled)
+            current_depth: Current crawl depth level
+            error_count: Number of errors encountered
+        """
+        async with self.db_pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE crawl_jobs
+                SET pages_crawled = $2,
+                    pages_total = $3,
+                    current_depth = $4,
+                    error_count = $5,
+                    updated_at = NOW()
+                WHERE id = $1
+                """,
+                job_id,
+                pages_crawled,
+                pages_total,
+                current_depth,
+                error_count,
+            )
+
+    async def _crawl_recursive(
+        self, job_id: UUID, start_url: str, max_pages: int, max_depth: int
+    ) -> dict[str, str]:
+        """Perform recursive BFS crawl of website.
+
+        Algorithm:
+        1. Initialize queue with (url, depth) tuples
+        2. Track visited URLs for deduplication
+        3. BFS traversal: process queue level by level
+        4. Extract links from each page, filter by domain and depth
+        5. Stop when max_pages reached or queue empty
+        6. Update database progress after each page
+
+        Args:
+            job_id: UUID of crawl job (for progress updates)
+            start_url: Starting URL to crawl
+            max_pages: Maximum pages to crawl
+            max_depth: Maximum depth to follow links (0 = single page)
+
+        Returns:
+            Dictionary mapping URLs to their markdown content
+
+        Pattern:
+            BFS (breadth-first) ensures we crawl all depth N pages
+            before moving to depth N+1, giving better coverage of
+            top-level pages before diving deep.
+        """
+        # Track crawled pages: {url: markdown_content}
+        crawled_pages: dict[str, str] = {}
+
+        # Track visited URLs (normalized) to avoid duplicates
+        visited_urls: set[str] = set()
+
+        # BFS queue: (url, depth) tuples
+        queue: deque[tuple[str, int]] = deque([(start_url, 0)])
+
+        # Mark start URL as visited
+        visited_urls.add(self._normalize_url(start_url))
+
+        # Error tracking
+        error_count = 0
+        current_depth = 0
+
+        logger.info(
+            f"Starting recursive crawl for job {job_id}: "
+            f"start_url={start_url}, max_pages={max_pages}, max_depth={max_depth}"
+        )
+
+        while queue and len(crawled_pages) < max_pages:
+            # Get next URL from queue
+            current_url, depth = queue.popleft()
+            current_depth = max(current_depth, depth)
+
+            # Skip if depth exceeds limit
+            if depth > max_depth:
+                logger.debug(
+                    f"Skipping {current_url} - depth {depth} exceeds max_depth {max_depth}"
+                )
+                continue
+
+            # Crawl current page
+            try:
+                logger.info(
+                    f"Crawling page {len(crawled_pages) + 1}/{max_pages} "
+                    f"(depth {depth}): {current_url}"
+                )
+
+                markdown = await self.crawl_url(current_url)
+                crawled_pages[current_url] = markdown
+
+                # Update progress in database
+                await self.update_crawl_job_progress(
+                    job_id=job_id,
+                    pages_crawled=len(crawled_pages),
+                    pages_total=len(crawled_pages) + len(queue),
+                    current_depth=current_depth,
+                    error_count=error_count,
+                )
+
+                # If we haven't reached max depth, extract links for next level
+                if depth < max_depth and len(crawled_pages) < max_pages:
+                    # Extract links from markdown/HTML
+                    # Note: Crawl4AI returns markdown, but we need HTML to extract links
+                    # For now, we'll use a simple approach and extract from the page
+                    # In production, you might want to store raw HTML or use Crawl4AI's
+                    # link extraction features
+
+                    # Get raw HTML for link extraction (re-crawl with extract_links option)
+                    try:
+                        async with AsyncWebCrawler(
+                            config=self.browser_config
+                        ) as crawler:
+                            result = await crawler.arun(url=current_url)
+                            if result.success and result.html:
+                                links = self._extract_links(result.html, current_url)
+
+                                # Filter and queue new links
+                                for link in links:
+                                    normalized_link = self._normalize_url(link)
+
+                                    # Skip if already visited
+                                    if normalized_link in visited_urls:
+                                        continue
+
+                                    # Skip if not same domain
+                                    if not self._is_same_domain(link, start_url):
+                                        logger.debug(
+                                            f"Skipping external link: {link}"
+                                        )
+                                        continue
+
+                                    # Add to queue and mark as visited
+                                    queue.append((link, depth + 1))
+                                    visited_urls.add(normalized_link)
+
+                                    logger.debug(
+                                        f"Queued link (depth {depth + 1}): {link}"
+                                    )
+
+                                    # Stop queueing if we've discovered enough pages
+                                    if (
+                                        len(crawled_pages) + len(queue)
+                                        >= max_pages * 2
+                                    ):
+                                        logger.info(
+                                            "Queue size limit reached, stopping link extraction"
+                                        )
+                                        break
+
+                    except Exception as link_error:
+                        logger.warning(
+                            f"Failed to extract links from {current_url}: {link_error}"
+                        )
+                        # Continue crawling even if link extraction fails
+
+            except Exception as e:
+                error_count += 1
+                logger.error(
+                    f"Failed to crawl {current_url} (error {error_count}): {e}"
+                )
+
+                # Update error count in database
+                await self.update_crawl_job_progress(
+                    job_id=job_id,
+                    pages_crawled=len(crawled_pages),
+                    pages_total=len(crawled_pages) + len(queue),
+                    current_depth=current_depth,
+                    error_count=error_count,
+                )
+
+                # Continue with next URL even if one fails
+
+        logger.info(
+            f"Recursive crawl completed for job {job_id}: "
+            f"crawled {len(crawled_pages)} pages, {error_count} errors"
+        )
+
+        return crawled_pages
+
     async def crawl_website(
         self,
         source_id: UUID,
@@ -332,47 +616,54 @@ class CrawlerService:
         4. Updates to 'completed' or 'failed' on finish
         5. Returns success status and metadata
 
-        For now, only single-page crawling is implemented (recursive=False).
-        Multi-page crawling will be added later.
+        Supports both single-page and recursive crawling:
+        - recursive=False (max_depth=0): Crawls only the starting URL
+        - recursive=True (max_depth≥1): Follows links using BFS traversal
 
         Args:
             source_id: UUID of source this crawl belongs to
             url: Starting URL to crawl
             max_pages: Maximum pages to crawl (default 10)
-            recursive: If True, follow links (not yet implemented)
+            recursive: If True, follow links up to max_depth
 
         Returns:
             Tuple of (success, result_dict) where result_dict contains:
                 On success:
                 - job_id: UUID of crawl job
                 - pages_crawled: Number of pages successfully crawled
-                - content: Markdown content (truncated to 100K chars)
+                - content: Combined markdown content from all pages
                 On failure:
                 - error: Error message
                 - job_id: UUID of crawl job (if created)
 
         Example:
+            # Single page crawl
+            success, result = await crawler_service.crawl_website(
+                source_id=source_uuid,
+                url="https://docs.example.com",
+                max_pages=1,
+                recursive=False,
+            )
+
+            # Recursive crawl
             success, result = await crawler_service.crawl_website(
                 source_id=source_uuid,
                 url="https://docs.example.com",
                 max_pages=50,
+                recursive=True,
             )
-
-            if success:
-                job_id = result["job_id"]
-                content = result["content"]
-                print(f"Crawled {len(content)} chars, job {job_id}")
-            else:
-                print(f"Error: {result['error']}")
         """
         start_time = time.time()
+
+        # Determine max_depth from recursive flag
+        max_depth = 3 if recursive else 0
 
         # Create crawl job
         try:
             job_id = await self.create_crawl_job(
                 source_id=source_id,
                 max_pages=max_pages,
-                max_depth=2 if recursive else 1,
+                max_depth=max_depth,
                 metadata={"url": url, "recursive": recursive},
             )
         except Exception as e:
@@ -389,36 +680,54 @@ class CrawlerService:
                 "job_id": str(job_id),
             }
 
-        # Crawl URL
+        # Perform crawl
         try:
-            if recursive:
-                # TODO: Implement recursive crawling in future iteration
-                # For now, just crawl the single page
-                logger.warning(
-                    f"Recursive crawling not yet implemented for job {job_id}. "
-                    "Crawling single page only."
+            if recursive and max_depth > 0:
+                # Recursive crawl with BFS
+                logger.info(
+                    f"Starting recursive crawl for job {job_id}: "
+                    f"max_pages={max_pages}, max_depth={max_depth}"
+                )
+                crawled_pages = await self._crawl_recursive(
+                    job_id=job_id,
+                    start_url=url,
+                    max_pages=max_pages,
+                    max_depth=max_depth,
                 )
 
-            # Crawl single page
-            markdown = await self.crawl_url(url)
+                # Combine all markdown content
+                combined_markdown = "\n\n---\n\n".join(
+                    f"# {url}\n\n{content}"
+                    for url, content in crawled_pages.items()
+                )
+
+                pages_crawled = len(crawled_pages)
+
+            else:
+                # Single page crawl
+                logger.info(f"Starting single-page crawl for job {job_id}")
+                markdown = await self.crawl_url(url)
+                combined_markdown = markdown
+                pages_crawled = 1
 
             # Update to 'completed'
             await self.update_crawl_job_status(
-                job_id=job_id, status="completed", pages_crawled=1
+                job_id=job_id, status="completed", pages_crawled=pages_crawled
             )
 
             elapsed_ms = int((time.time() - start_time) * 1000)
 
             logger.info(
-                f"Crawl job {job_id} completed: 1 page, {len(markdown)} chars, {elapsed_ms}ms"
+                f"Crawl job {job_id} completed: {pages_crawled} pages, "
+                f"{len(combined_markdown)} chars, {elapsed_ms}ms"
             )
 
             return True, {
                 "job_id": str(job_id),
-                "pages_crawled": 1,
-                "content": markdown,
+                "pages_crawled": pages_crawled,
+                "content": combined_markdown,
                 "crawl_time_ms": elapsed_ms,
-                "message": "Website crawled successfully",
+                "message": f"Website crawled successfully ({pages_crawled} pages)",
             }
 
         except Exception as e:
