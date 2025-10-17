@@ -11,20 +11,30 @@
 
 ## 🎯 Next Steps
 
-### 1. Architecture Decision: Single vs Multi-Collection (Priority: HIGH)
-**Current**: Single Qdrant collection for all sources (metadata filtering)
-**Context**: Greenfield project, planning to ingest large amounts of data
+### 1. Architecture Decision: Multi-Collection Approach (IMPLEMENTED)
+**Decision**: Multi-collection architecture with per-source collection selection
+**Implementation Date**: 2025-10-16
+**PRP Reference**: prps/multi_collection_architecture.md
 
-**Evaluate**:
-- Keep single collection (simpler, cross-domain search)
-- Switch to collection-per-source (isolation, per-domain optimization)
-- Hybrid approach (general + sensitive collections)
+**Approach Chosen**: Three specialized collections (AI_DOCUMENTS, AI_CODE, AI_MEDIA)
+- Users select which collections to enable per source (default: ["documents"])
+- Each collection uses optimized embedding models for content type
+- Content classification automatically routes chunks to appropriate collections
+- Search aggregates results across enabled collections
 
-**Decision criteria**:
-- Expected total vector count across all sources
-- Need for multi-tenancy or domain isolation
-- Different embedding models per domain?
-- Compliance/security requirements?
+**Rationale**:
+- **Better Embeddings**: Code content gets code-optimized embeddings (text-embedding-3-large, 3072 dimensions), documents get fast general embeddings (text-embedding-3-small, 1536 dimensions)
+- **User Control**: Explicit opt-in prevents unexpected behavior and controls embedding costs
+- **Scalability**: Per-collection HNSW indices perform better than single massive index
+- **Domain Isolation**: Different content types are physically separated in vector space
+- **Flexibility**: Cross-collection search enabled by default, per-source filtering available
+
+**Implementation Details**:
+- Database: `enabled_collections TEXT[]` field on sources table (Migration 003)
+- Collections: AI_DOCUMENTS (1536d), AI_CODE (3072d), AI_MEDIA (512d, future)
+- Classification: 40% code indicator threshold (lenient to avoid false positives)
+- Models: text-embedding-3-small (documents), text-embedding-3-large (code)
+- Status Change: Removed "pending" status, sources now default to "active" on creation
 
 ### 2. Fix Test Infrastructure (Priority: MEDIUM)
 **Blocks 28 integration tests** - See INTEGRATION_TEST_REPORT.md for details
@@ -67,48 +77,105 @@
 
 **Working Features**:
 - ✅ Source management (create, list, update, delete)
+- ✅ Multi-collection architecture with per-source collection selection
+- ✅ Content type classification (code vs documents vs media)
 - ✅ Web crawling with Crawl4AI + Playwright
 - ✅ Document upload (HTML, PDF, DOCX) with full ingestion pipeline
-- ✅ OpenAI embeddings (text-embedding-3-small, 1536 dimensions)
-- ✅ Vector search with source filtering
+- ✅ OpenAI embeddings with multiple models (text-embedding-3-small, text-embedding-3-large)
+- ✅ Multi-collection vector search with result aggregation
 - ✅ Document deletion with Qdrant cleanup
-- ✅ Frontend UI for all core operations
+- ✅ Frontend UI for all core operations (including collection selection)
 - ✅ Cache persistence across container restarts
 
 **Known Limitations**:
 - ⚠️ Document parser only supports: `.docx`, `.html`, `.htm`, `.pdf` (not `.txt` or `.md`)
 - ⚠️ Container disk at 98% usage (persisted cache prevents exhaustion)
+- ⚠️ Media collection (AI_MEDIA) currently disabled - future feature pending CLIP embeddings
+
+**Active Qdrant Collections**:
+- **AI_DOCUMENTS**: 1536 dimensions (text-embedding-3-small) - General text, articles, documentation
+- **AI_CODE**: 3072 dimensions (text-embedding-3-large) - Source code, technical examples
+- **AI_MEDIA**: 512 dimensions (clip-vit) - DISABLED (future: images, diagrams, visual content)
 
 **Current Data**:
-- Sources: 2 (Pydantic AI Documentation + Xerox test source)
-- Documents: ~1,227 chunks from crawl + test uploads
-- Vectors: 1,227+ in "documents" collection
+- Sources: 2+ (with enabled_collections field - Migration 003 applied)
+- Documents: ~1,227+ chunks from crawl + test uploads
+- Vectors: Distributed across AI_DOCUMENTS and AI_CODE collections based on content type
+- Default: New sources use enabled_collections=["documents"] unless specified
 
 ---
 
 ## 📝 Technical Reference
 
 ### Architecture Decisions
-- **Single Qdrant Collection**: All sources use one "documents" collection
-  - Filtering via metadata (source_id field)
-  - Enables cross-domain search by default
-  - Simple management, efficient for current scale
-  - Reconsider if: multi-tenancy, different embedding models, or >500K vectors
+
+#### Multi-Collection Architecture (CURRENT)
+- **Three Qdrant Collections**: AI_DOCUMENTS, AI_CODE, AI_MEDIA
+  - Per-source collection selection via `enabled_collections` array
+  - Content classification routes chunks to appropriate collections
+  - Different embedding models per collection (optimized for content type)
+  - Search aggregates results across enabled collections
+  - Migration 003 adds `enabled_collections` field with default ["documents"]
+
+**Collection Details**:
+- **AI_DOCUMENTS**: General text, articles, documentation (text-embedding-3-small, 1536d)
+- **AI_CODE**: Source code, technical examples (text-embedding-3-large, 3072d)
+- **AI_MEDIA**: Images, diagrams, visual content (clip-vit, 512d, FUTURE - currently disabled)
+
+**Trade-offs**:
+- ✅ Better embeddings per content type
+- ✅ User control over embedding costs
+- ✅ Scalability: separate HNSW indices per collection
+- ⚠️ Increased complexity vs single collection
+- ⚠️ Search must aggregate across multiple collections (handled transparently)
 
 ### Critical Gotchas to Remember
+
+#### Database & Connection Gotchas
 - **Gotcha #2**: Store db_pool, not connections (all services)
 - **Gotcha #3**: Use $1, $2 placeholders, not %s (asyncpg)
-- **Gotcha #9**: HNSW disabled (m=0) for bulk upload (60-90x faster)
 - **Gotcha #12**: async with pool.acquire() for connections
 - **Gotcha #13**: SecretStr must be unwrapped with `.get_secret_value()`
 - **Gotcha #14**: PostgreSQL timestamps via asyncpg are ISO strings, check type before `.isoformat()`
 
+#### Vector & Embedding Gotchas
+- **Gotcha #9**: HNSW disabled (m=0) for bulk upload (60-90x faster)
+- **Gotcha #15**: Qdrant collection names are case-sensitive: "AI_DOCUMENTS" != "ai_documents"
+- **Gotcha #16**: Each collection needs correct dimension in VectorParams (1536 for documents, 3072 for code)
+- **Gotcha #17**: Qdrant collections must be created before first upsert (use qdrant_init.py on startup)
+
+#### Content Classification Gotchas
+- **Gotcha #18**: CODE_DETECTION_THRESHOLD (40%) may need tuning per domain
+  - Too low: General text with code examples classified as "code"
+  - Too high: Technical documentation with sparse code missed
+  - Current: 40% (lenient, optimized for mixed-content docs)
+- **Gotcha #19**: Media collection currently disabled (future feature)
+  - Media indicators detected but not stored until CLIP embeddings implemented
+  - Media chunks currently routed to "documents" collection
+- **Gotcha #20**: Content classifier uses multiple indicators (not just syntax highlighting)
+  - Code fences, function definitions, imports, class declarations
+  - Requires 3+ code indicators OR 40%+ density for "code" classification
+  - Defaults to "documents" when ambiguous (safer for search quality)
+- **Gotcha #21**: enabled_collections filters chunks during ingestion
+  - If source has enabled_collections=["documents"], code chunks are SKIPPED (not stored)
+  - This is intentional: gives users control over what gets embedded (cost management)
+  - Warn users if content type mismatch expected (e.g., code-heavy source with only "documents" enabled)
+
 ### Database Schema
 ```
-sources (id, source_type, url, status, metadata)
+sources (id, source_type, url, status, enabled_collections[], metadata)
+  ├── status: 'active' | 'processing' | 'failed' | 'archived' (no more "pending"/"completed")
+  ├── enabled_collections: TEXT[] - collections to use for this source (default: ["documents"])
+  │   └── Valid values: 'documents', 'code', 'media'
+  │   └── Constraint: array_length > 0 (at least one collection required)
+  │   └── GIN index for efficient array queries
   └── documents (id, source_id, title, document_type, url)
        └── chunks (id, document_id, chunk_index, text)
-            └── vectors in Qdrant (point_id = chunk.id, payload includes source_id)
+            └── vectors in Qdrant collections (distributed by content type)
+                ├── AI_DOCUMENTS collection (1536d) - general text chunks
+                ├── AI_CODE collection (3072d) - code chunks
+                └── AI_MEDIA collection (512d) - media chunks (future)
+                    └── payload includes: source_id, document_id, collection_type
 ```
 
 ### Cascade Deletion Pattern
@@ -196,4 +263,4 @@ docker system prune -a --volumes
 
 ---
 
-**Last Updated**: 2025-10-16 22:12 PST
+**Last Updated**: 2025-10-16 23:45 PST (Multi-Collection Architecture Documented)

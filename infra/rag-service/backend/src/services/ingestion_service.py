@@ -114,18 +114,21 @@ class IngestionService:
         file_path: str,
         document_metadata: dict[str, Any] | None = None,
     ) -> tuple[bool, dict[str, Any]]:
-        """Ingest a document: parse → chunk → embed → store atomically.
+        """Ingest a document: parse → chunk → classify → embed → store (multi-collection).
 
         This is the main entry point for document ingestion. It coordinates
         the complete pipeline and ensures atomic storage using database
         transactions.
 
-        Process:
-        1. Parse document using DocumentParser
-        2. Chunk text using TextChunker (~500 tokens per chunk)
-        3. Batch embed chunks using EmbeddingService (100 texts per batch)
-        4. Store in PostgreSQL + Qdrant atomically
-        5. Handle partial failures (EmbeddingBatchResult)
+        Process (Multi-Collection Architecture):
+        1. Get source configuration (enabled_collections from DB)
+        2. Parse document using DocumentParser
+        3. Chunk text using TextChunker (~500 tokens per chunk)
+        4. Classify chunks by content type (code/documents/media)
+        5. Filter chunks based on enabled_collections
+        6. Group chunks by collection type
+        7. For each collection: embed with appropriate model → store in collection
+        8. Handle partial failures (EmbeddingBatchResult)
 
         CRITICAL (Gotcha #1):
         On quota exhaustion, embedding_service returns failed_items.
@@ -140,10 +143,11 @@ class IngestionService:
         Returns:
             Tuple of (success, result_dict) where result_dict contains:
                 On success:
-                - document_id: UUID of created document
+                - document_ids: List of UUIDs of created documents (one per collection)
                 - chunks_stored: Number of chunks successfully stored
                 - chunks_failed: Number of chunks that failed to embed
                 - total_chunks: Total chunks created
+                - collections_used: List of collections used
                 - ingestion_time_ms: Total time in milliseconds
                 On failure:
                 - error: Error message
@@ -156,17 +160,32 @@ class IngestionService:
             )
 
             if success:
-                doc_id = result["document_id"]
+                doc_ids = result["document_ids"]
                 chunks = result["chunks_stored"]
-                print(f"Ingested document {doc_id} with {chunks} chunks")
+                collections = result["collections_used"]
+                print(f"Ingested {chunks} chunks across {len(collections)} collections")
             else:
                 print(f"Error: {result['error']}")
         """
         start_time = time.time()
 
         try:
-            # Step 1: Parse document using DocumentParser
-            logger.info(f"Step 1/4: Parsing document: {file_path}")
+            # Step 1: Get source configuration (enabled_collections)
+            logger.info(f"Step 1/7: Getting source configuration for {source_id}")
+            async with self.db_pool.acquire() as conn:
+                source_row = await conn.fetchrow(
+                    "SELECT enabled_collections FROM sources WHERE id = $1",
+                    source_id
+                )
+
+            if not source_row:
+                return False, {"error": f"Source {source_id} not found"}
+
+            enabled_collections = source_row["enabled_collections"]
+            logger.info(f"Source {source_id} enabled collections: {enabled_collections}")
+
+            # Step 2: Parse document using DocumentParser
+            logger.info(f"Step 2/7: Parsing document: {file_path}")
             try:
                 markdown_text = await self.document_parser.parse_document(file_path)
             except FileNotFoundError as e:
@@ -184,8 +203,8 @@ class IngestionService:
                 f"Successfully parsed document: {len(markdown_text)} characters extracted"
             )
 
-            # Step 2: Chunk text using TextChunker
-            logger.info("Step 2/4: Chunking text into semantic chunks")
+            # Step 3: Chunk text using TextChunker
+            logger.info("Step 3/7: Chunking text into semantic chunks")
             try:
                 chunks: list[Chunk] = await self.text_chunker.chunk_text(markdown_text)
             except Exception as e:
@@ -200,83 +219,178 @@ class IngestionService:
                 f"(avg {sum(c.token_count for c in chunks) / len(chunks):.1f} tokens/chunk)"
             )
 
-            # Step 3: Batch embed chunks using EmbeddingService
-            logger.info(f"Step 3/4: Batch embedding {len(chunks)} chunks")
-            chunk_texts = [chunk.text for chunk in chunks]
+            # Step 4: Classify chunks by content type
+            logger.info("Step 4/7: Classifying chunks by content type")
+            from .content_classifier import ContentClassifier
+            classifier = ContentClassifier()
 
-            try:
-                embed_result = await self.embedding_service.batch_embed(chunk_texts)
-            except Exception as e:
-                logger.error(f"Batch embedding failed: {e}", exc_info=True)
-                return False, {"error": f"Batch embedding failed: {str(e)}"}
+            classified_chunks: dict[str, list[tuple[Chunk, int]]] = {
+                "documents": [],
+                "code": [],
+                "media": [],
+            }
 
-            # CRITICAL (Gotcha #1): Check for failed embeddings
-            if embed_result.failure_count > 0:
-                logger.warning(
-                    f"Embedding quota exhaustion detected: "
-                    f"{embed_result.success_count} success, "
-                    f"{embed_result.failure_count} failed"
-                )
+            for i, chunk in enumerate(chunks):
+                content_type = classifier.detect_content_type(chunk.text)
 
-                # If ALL embeddings failed, abort ingestion
-                if embed_result.success_count == 0:
-                    return False, {
-                        "error": "All embeddings failed - quota exhausted or API error",
-                        "failed_items": embed_result.failed_items,
-                    }
+                # Only process if collection is enabled for this source
+                if content_type in enabled_collections:
+                    classified_chunks[content_type].append((chunk, i))
+                else:
+                    logger.debug(
+                        f"Skipping chunk {i} (type={content_type}, not in enabled_collections)"
+                    )
 
-                # Partial success - log warning and continue with successful embeddings
-                logger.warning(
-                    f"Partial embedding success: storing {embed_result.success_count} chunks, "
-                    f"skipping {embed_result.failure_count} failed chunks"
-                )
+            # Log classification results
+            for collection_type, chunk_tuples in classified_chunks.items():
+                if chunk_tuples:
+                    logger.info(
+                        f"Classified {len(chunk_tuples)} chunks as '{collection_type}' "
+                        f"(enabled={collection_type in enabled_collections})"
+                    )
 
-            logger.info(
-                f"Successfully embedded {embed_result.success_count}/{len(chunks)} chunks"
-            )
+            # Step 5: Embed and store per collection
+            logger.info("Step 5/7: Embedding and storing chunks per collection")
 
-            # Step 4: Atomic storage (PostgreSQL + Qdrant)
-            logger.info("Step 4/4: Storing document and chunks atomically")
+            # Import settings for collection configuration
+            from ..config.settings import settings
 
-            # Extract document title from file path or metadata
+            total_chunks_stored = 0
+            total_chunks_failed = 0
+            document_ids = []
+
+            # Extract document metadata once (used for all collections)
             import os
             document_title = document_metadata.get("title") if document_metadata else None
             if not document_title:
                 document_title = os.path.basename(file_path)
 
-            # Determine document type from file extension
             file_ext = os.path.splitext(file_path)[1].lower().lstrip(".")
             document_type = file_ext if file_ext in ["pdf", "html", "docx"] else "text"
+            url = document_metadata.get("url") if document_metadata else None
 
-            try:
-                document_id, chunks_stored = await self._store_document_atomic(
-                    source_id=source_id,
-                    title=document_title,
-                    document_type=document_type,
-                    url=document_metadata.get("url") if document_metadata else None,
-                    metadata=document_metadata or {},
-                    chunks=chunks,
-                    embeddings=embed_result.embeddings,
+            # Process each collection type
+            for collection_type, chunk_tuples in classified_chunks.items():
+                if not chunk_tuples:
+                    continue  # Skip empty collections
+
+                chunks_only = [chunk for chunk, _ in chunk_tuples]
+                chunk_texts = [chunk.text for chunk in chunks_only]
+
+                # Get appropriate embedding model for this collection
+                model_name = settings.COLLECTION_EMBEDDING_MODELS[collection_type]
+
+                # Embed with collection-specific model
+                logger.info(
+                    f"Step 6/7 ({collection_type}): Embedding {len(chunk_texts)} chunks "
+                    f"using {model_name}"
                 )
-            except Exception as e:
-                logger.error(f"Atomic storage failed: {e}", exc_info=True)
-                return False, {"error": f"Atomic storage failed: {str(e)}"}
+
+                try:
+                    embed_result = await self.embedding_service.batch_embed(
+                        chunk_texts,
+                        model_name=model_name
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Batch embedding failed for {collection_type} collection: {e}",
+                        exc_info=True
+                    )
+                    total_chunks_failed += len(chunk_texts)
+                    continue  # Skip this collection, continue with others
+
+                # CRITICAL (Gotcha #1): Check for failed embeddings
+                if embed_result.failure_count > 0:
+                    logger.warning(
+                        f"Embedding quota exhaustion detected for {collection_type}: "
+                        f"{embed_result.success_count} success, "
+                        f"{embed_result.failure_count} failed"
+                    )
+
+                if embed_result.success_count == 0:
+                    logger.error(
+                        f"All embeddings failed for {collection_type} collection - skipping"
+                    )
+                    total_chunks_failed += embed_result.failure_count
+                    continue  # Skip this collection
+
+                logger.info(
+                    f"Successfully embedded {embed_result.success_count}/{len(chunk_texts)} "
+                    f"chunks for {collection_type} collection"
+                )
+
+                # Store in collection-specific Qdrant collection
+                collection_name = f"{settings.COLLECTION_NAME_PREFIX}{collection_type.upper()}"
+
+                logger.info(
+                    f"Step 7/7 ({collection_type}): Storing {embed_result.success_count} chunks "
+                    f"in '{collection_name}' collection"
+                )
+
+                try:
+                    document_id, chunks_stored = await self._store_document_atomic(
+                        source_id=source_id,
+                        title=document_title,
+                        document_type=document_type,
+                        url=url,
+                        metadata={
+                            **(document_metadata or {}),
+                            "collection_type": collection_type
+                        },
+                        chunks=chunks_only[:len(embed_result.embeddings)],  # Only successful chunks
+                        embeddings=embed_result.embeddings,
+                        collection_name=collection_name,
+                    )
+
+                    total_chunks_stored += chunks_stored
+                    total_chunks_failed += embed_result.failure_count
+                    document_ids.append(str(document_id))
+
+                    logger.info(
+                        f"Stored {chunks_stored} chunks for {collection_type} "
+                        f"(document_id={document_id})"
+                    )
+
+                except Exception as e:
+                    logger.error(
+                        f"Atomic storage failed for {collection_type} collection: {e}",
+                        exc_info=True
+                    )
+                    total_chunks_failed += embed_result.success_count
+                    continue  # Skip this collection
 
             # Calculate ingestion time
             elapsed_ms = int((time.time() - start_time) * 1000)
 
+            # Determine collections actually used (had chunks stored)
+            collections_used = [
+                ctype for ctype, chunk_tuples in classified_chunks.items()
+                if chunk_tuples
+            ]
+
+            if total_chunks_stored == 0:
+                return False, {
+                    "error": "No chunks were successfully stored across any collection",
+                    "chunks_failed": total_chunks_failed,
+                    "collections_attempted": collections_used,
+                }
+
             logger.info(
-                f"Document ingestion complete: document_id={document_id}, "
-                f"chunks_stored={chunks_stored}, time={elapsed_ms}ms"
+                f"Multi-collection ingestion complete: "
+                f"document_ids={document_ids}, "
+                f"chunks_stored={total_chunks_stored}, "
+                f"collections={collections_used}, "
+                f"time={elapsed_ms}ms"
             )
 
             return True, {
-                "document_id": str(document_id),
-                "chunks_stored": chunks_stored,
-                "chunks_failed": embed_result.failure_count,
+                "document_ids": document_ids,
+                "chunks_stored": total_chunks_stored,
+                "chunks_failed": total_chunks_failed,
                 "total_chunks": len(chunks),
+                "collections_used": collections_used,
                 "ingestion_time_ms": elapsed_ms,
-                "message": "Document ingested successfully",
+                "message": f"Document ingested across {len(document_ids)} collections",
             }
 
         except Exception as e:
@@ -292,20 +406,25 @@ class IngestionService:
         metadata: dict[str, Any],
         chunks: list[Chunk],
         embeddings: list[list[float]],
+        collection_name: str | None = None,
     ) -> tuple[UUID, int]:
-        """Store document and chunks atomically in PostgreSQL + Qdrant.
+        """Store document and chunks atomically in PostgreSQL + Qdrant (multi-collection).
 
         CRITICAL PATTERN (Transaction + Row Locking):
         1. Start transaction with async with conn.transaction()
         2. Lock affected rows ORDER BY id (Gotcha #4: prevents deadlocks)
         3. Create document record
         4. Insert chunks in PostgreSQL
-        5. Upsert vectors to Qdrant (idempotent, can retry safely)
+        5. Upsert vectors to Qdrant in specified collection (idempotent, can retry safely)
         6. Commit transaction (automatic on exit)
 
         CRITICAL (Gotcha #1):
         Only store chunks that have successful embeddings. Never store chunks
         with null/zero embeddings - they corrupt search results.
+
+        Multi-Collection Support:
+        - If collection_name provided, stores in that specific collection
+        - If None, uses default collection from VectorService
 
         Args:
             source_id: UUID of source
@@ -315,6 +434,7 @@ class IngestionService:
             metadata: Document metadata
             chunks: List of Chunk objects (from TextChunker)
             embeddings: List of successful embeddings (from EmbeddingBatchResult)
+            collection_name: Optional Qdrant collection name (e.g., "AI_CODE", "AI_DOCUMENTS")
 
         Returns:
             Tuple of (document_id, chunks_stored)
@@ -433,8 +553,38 @@ class IngestionService:
                         },
                     })
 
-                await self.vector_service.upsert_vectors(points)
-                logger.info(f"Upserted {len(points)} vectors to Qdrant")
+                # Multi-collection support: use specified collection or default
+                if collection_name:
+                    # Create collection-specific VectorService instance
+                    from ..config.settings import settings
+
+                    # Determine dimension from collection name
+                    collection_type = collection_name.replace(settings.COLLECTION_NAME_PREFIX, "").lower()
+                    expected_dimension = settings.COLLECTION_DIMENSIONS.get(
+                        collection_type,
+                        settings.OPENAI_EMBEDDING_DIMENSION  # Fallback to default
+                    )
+
+                    # Create VectorService for this specific collection
+                    collection_vector_service = VectorService(
+                        self.vector_service.client,
+                        collection_name,
+                        expected_dimension=expected_dimension
+                    )
+
+                    # Ensure collection exists before upserting
+                    await collection_vector_service.ensure_collection_exists()
+
+                    # Upsert to specific collection
+                    await collection_vector_service.upsert_vectors(points)
+                    logger.info(
+                        f"Upserted {len(points)} vectors to collection '{collection_name}' "
+                        f"(dimension={expected_dimension})"
+                    )
+                else:
+                    # Use default VectorService (backward compatibility)
+                    await self.vector_service.upsert_vectors(points)
+                    logger.info(f"Upserted {len(points)} vectors to default collection")
 
             except Exception:
                 # If Qdrant upsert fails, we have inconsistent state

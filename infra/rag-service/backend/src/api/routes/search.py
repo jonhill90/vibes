@@ -78,9 +78,12 @@ async def get_rag_service(
         )
 
         # Initialize base search strategy (required)
+        # Pass db_pool and qdrant_client for multi-collection support (Task 8)
         base_strategy = BaseSearchStrategy(
             embedding_service=embedding_service,
             vector_service=vector_service,
+            db_pool=db_pool,
+            qdrant_client=qdrant_client,
         )
 
         # Initialize hybrid search strategy if enabled

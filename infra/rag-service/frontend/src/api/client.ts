@@ -52,6 +52,7 @@ export interface SourceRequest {
   source_type: string;
   url?: string;
   metadata?: Record<string, unknown>;
+  enabled_collections?: ('documents' | 'code' | 'media')[];
 }
 
 export interface SourceResponse {
@@ -64,6 +65,7 @@ export interface SourceResponse {
   error_message?: string;
   created_at: string;
   updated_at: string;
+  enabled_collections?: ('documents' | 'code' | 'media')[];
 }
 
 export interface ErrorResponse {

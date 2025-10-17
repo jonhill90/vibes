@@ -103,8 +103,17 @@ async def lifespan(app: FastAPI):
         raise
 
     try:
-        # CRITICAL: Initialize Qdrant collection with HNSW disabled for bulk upload (Gotcha #9)
-        # HNSW enabled during bulk upload is 60-90x slower - disable with m=0, re-enable after bulk
+        # Initialize multi-collection architecture (AI_DOCUMENTS, AI_CODE, AI_MEDIA)
+        from src.services.qdrant_init import initialize_collections
+
+        collection_status = await initialize_collections(app.state.qdrant_client)
+
+        logger.info(
+            f"✅ Multi-collection initialization complete: {collection_status}"
+        )
+
+        # LEGACY: Also ensure legacy collection exists for backward compatibility
+        # This can be removed once all data is migrated to multi-collection architecture
         collections = await app.state.qdrant_client.get_collections()
         collection_names = [c.name for c in collections.collections]
 
@@ -118,13 +127,13 @@ async def lifespan(app: FastAPI):
                 ),
             )
             logger.info(
-                f"✅ Qdrant collection created: {settings.QDRANT_COLLECTION_NAME} "
+                f"✅ Legacy Qdrant collection created: {settings.QDRANT_COLLECTION_NAME} "
                 f"(dims={settings.OPENAI_EMBEDDING_DIMENSION}, distance=COSINE, HNSW disabled for bulk)"
             )
         else:
-            logger.info(f"✅ Qdrant collection already exists: {settings.QDRANT_COLLECTION_NAME}")
+            logger.info(f"✅ Legacy Qdrant collection already exists: {settings.QDRANT_COLLECTION_NAME}")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize Qdrant collection: {e}")
+        logger.error(f"❌ Failed to initialize Qdrant collections: {e}")
         # Clean up resources if collection initialization fails
         await app.state.qdrant_client.close()
         await app.state.db_pool.close()

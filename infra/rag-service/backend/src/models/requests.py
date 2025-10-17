@@ -100,6 +100,11 @@ class SourceCreateRequest(BaseModel):
         description="Source type: 'upload', 'crawl', or 'api'"
     )
 
+    enabled_collections: Optional[list[str]] = Field(
+        default=["documents"],
+        description="Collections to enable for this source: 'documents', 'code', 'media'"
+    )
+
     url: Optional[str] = Field(
         default=None,
         description="Source URL (required for 'crawl' and 'api' types)",
@@ -127,6 +132,30 @@ class SourceCreateRequest(BaseModel):
                 f"source_type must be one of: {', '.join(allowed_types)}. Got: {v}"
             )
         return v
+
+    @field_validator("enabled_collections")
+    @classmethod
+    def validate_collections(cls, v):
+        """Ensure at least one collection enabled and no duplicates."""
+        if not v or len(v) == 0:
+            return ["documents"]  # Default to documents
+
+        # Validate each collection type
+        allowed_collections = ["documents", "code", "media"]
+        for collection in v:
+            if collection not in allowed_collections:
+                raise ValueError(
+                    f"Invalid collection type '{collection}'. Must be one of: {', '.join(allowed_collections)}"
+                )
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique = []
+        for item in v:
+            if item not in seen:
+                seen.add(item)
+                unique.append(item)
+        return unique
 
     @field_validator("url")
     @classmethod

@@ -6,8 +6,9 @@ it's a thin wrapper around Qdrant client operations - raises exceptions on error
 
 Pattern: Follows examples/09_qdrant_vector_service.py
 Critical Gotchas Addressed:
-- Gotcha #5: Validates embedding dimension (1536 for text-embedding-3-small)
+- Gotcha #5: Validates embedding dimension (configurable per collection)
 - Gotcha #1: Rejects null/zero embeddings (prevents search corruption)
+- Multi-Collection: Supports dynamic collection names and dimensions
 """
 
 from typing import Any, List, Dict
@@ -17,6 +18,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Import settings for collection configuration
+from ..config.settings import settings
+
 
 class VectorService:
     """Service for Qdrant vector database operations.
@@ -25,44 +29,99 @@ class VectorService:
     This is a thin wrapper around Qdrant client - raises exceptions on errors.
 
     Attributes:
-        EXPECTED_DIMENSION: Required embedding dimension (1536 for text-embedding-3-small)
         DISTANCE_METRIC: Cosine similarity for vector search
+        expected_dimension: Required embedding dimension (varies by collection type)
     """
 
-    EXPECTED_DIMENSION = 1536  # text-embedding-3-small dimension
     DISTANCE_METRIC = Distance.COSINE
 
-    def __init__(self, qdrant_client: AsyncQdrantClient, collection_name: str):
+    def __init__(self, qdrant_client: AsyncQdrantClient, collection_name: str, expected_dimension: int | None = None):
         """Initialize VectorService with Qdrant client and collection name.
 
         Args:
             qdrant_client: AsyncQdrantClient for vector operations
             collection_name: Name of the Qdrant collection to use
+            expected_dimension: Expected embedding dimension (auto-detected if None)
         """
         self.client = qdrant_client
         self.collection_name = collection_name
-        logger.info(f"VectorService initialized for collection '{collection_name}'")
 
-    def validate_embedding(self, embedding: List[float]) -> None:
+        # Auto-detect dimension from collection name if not provided
+        if expected_dimension is None:
+            self.expected_dimension = self._detect_dimension_from_collection_name(collection_name)
+        else:
+            self.expected_dimension = expected_dimension
+
+        logger.info(
+            f"VectorService initialized for collection '{collection_name}' "
+            f"(dimension={self.expected_dimension})"
+        )
+
+    @staticmethod
+    def get_collection_name(collection_type: str) -> str:
+        """Get Qdrant collection name for a given collection type.
+
+        Args:
+            collection_type: Collection type (e.g., "documents", "code", "media")
+
+        Returns:
+            Full collection name (e.g., "AI_DOCUMENTS", "AI_CODE")
+
+        Example:
+            >>> VectorService.get_collection_name("documents")
+            "AI_DOCUMENTS"
+        """
+        return f"{settings.COLLECTION_NAME_PREFIX}{collection_type.upper()}"
+
+    def _detect_dimension_from_collection_name(self, collection_name: str) -> int:
+        """Detect expected dimension from collection name.
+
+        Args:
+            collection_name: Qdrant collection name (e.g., "AI_DOCUMENTS", "AI_CODE")
+
+        Returns:
+            Expected dimension for this collection type
+
+        Note:
+            Falls back to 1536 (documents) if collection type not recognized
+        """
+        # Extract collection type from name (e.g., "AI_DOCUMENTS" → "documents")
+        prefix = settings.COLLECTION_NAME_PREFIX
+        if collection_name.startswith(prefix):
+            collection_type = collection_name[len(prefix):].lower()
+            if collection_type in settings.COLLECTION_DIMENSIONS:
+                return settings.COLLECTION_DIMENSIONS[collection_type]
+
+        # Fallback to documents dimension for backward compatibility
+        logger.warning(
+            f"Could not detect dimension for collection '{collection_name}', "
+            f"using default: {settings.COLLECTION_DIMENSIONS['documents']}"
+        )
+        return settings.COLLECTION_DIMENSIONS["documents"]
+
+    def validate_embedding(self, embedding: List[float], dimension: int | None = None) -> None:
         """Validate embedding dimensions and values.
 
         Args:
             embedding: Embedding vector to validate
+            dimension: Expected dimension (uses self.expected_dimension if None)
 
         Raises:
             ValueError: If embedding is invalid
 
         Critical Gotchas:
-        - Gotcha #5: Validate len(embedding) == 1536 before insert
+        - Gotcha #5: Validate len(embedding) matches expected dimension before insert
         - Gotcha #1: Reject null/zero embeddings (prevents search corruption)
         """
         if not embedding:
             raise ValueError("Embedding cannot be None or empty")
 
-        if len(embedding) != self.EXPECTED_DIMENSION:
+        expected_dim = dimension if dimension is not None else self.expected_dimension
+
+        if len(embedding) != expected_dim:
             raise ValueError(
                 f"Invalid embedding dimension: {len(embedding)}, "
-                f"expected {self.EXPECTED_DIMENSION}"
+                f"expected {expected_dim}"
             )
 
         # Check for null/zero embeddings (Gotcha #1: prevents quota exhaustion corruption)
@@ -79,6 +138,9 @@ class VectorService:
 
         Raises:
             Exception: If collection cannot be created
+
+        Note:
+            Uses self.expected_dimension for vector size (supports multi-collection)
         """
         try:
             # Check if collection exists
@@ -90,15 +152,19 @@ class VectorService:
                 return True
 
             # Create collection with HNSW indexing for fast approximate search
+            # Use expected_dimension (varies by collection type)
             await self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(
-                    size=self.EXPECTED_DIMENSION,
+                    size=self.expected_dimension,
                     distance=self.DISTANCE_METRIC,
                 ),
             )
 
-            logger.info(f"Created collection '{self.collection_name}'")
+            logger.info(
+                f"Created collection '{self.collection_name}' "
+                f"(dimension={self.expected_dimension})"
+            )
             return True
 
         except Exception as e:

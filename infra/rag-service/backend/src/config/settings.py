@@ -133,6 +133,38 @@ class Settings(BaseSettings):
         le=1.0
     )
 
+    # Multi-Collection Configuration
+    COLLECTION_NAME_PREFIX: str = Field(
+        default="AI_",
+        description="Prefix for Qdrant collection names (e.g., AI_DOCUMENTS, AI_CODE)"
+    )
+
+    COLLECTION_EMBEDDING_MODELS: dict[str, str] = Field(
+        default={
+            "documents": "text-embedding-3-small",  # Fast, cheap for general text
+            "code": "text-embedding-3-large",       # Better for technical content
+            "media": "clip-vit-base-patch32",       # Multimodal (future)
+        },
+        description="Embedding model per collection type"
+    )
+
+    COLLECTION_DIMENSIONS: dict[str, int] = Field(
+        default={
+            "documents": 1536,   # text-embedding-3-small
+            "code": 3072,        # text-embedding-3-large
+            "media": 512,        # clip-vit (future)
+        },
+        description="Vector dimensions per collection type"
+    )
+
+    # Content Classification Configuration
+    CODE_DETECTION_THRESHOLD: float = Field(
+        default=0.4,
+        description="Threshold for code content detection (40% code indicators = code collection)",
+        ge=0.0,
+        le=1.0
+    )
+
     # Embedding Batch Configuration
     EMBEDDING_BATCH_SIZE: int = Field(
         default=100,

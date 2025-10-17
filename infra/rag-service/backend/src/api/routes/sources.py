@@ -95,6 +95,7 @@ async def create_source(
         success, result = await source_service.create_source(
             {
                 "source_type": request.source_type,
+                "enabled_collections": request.enabled_collections,
                 "url": request.url,
                 "status": "pending",
                 "metadata": metadata,
@@ -122,6 +123,7 @@ async def create_source(
         return SourceResponse(
             id=str(source["id"]),
             source_type=source["source_type"],
+            enabled_collections=source.get("enabled_collections", ["documents"]),
             url=source.get("url"),
             title=metadata.get("title"),
             status=source["status"],
@@ -208,6 +210,7 @@ async def list_sources(
                 SourceResponse(
                     id=str(source["id"]),
                     source_type=source["source_type"],
+                    enabled_collections=source.get("enabled_collections", ["documents"]),
                     url=source.get("url"),
                     title=metadata.get("title"),
                     status=source["status"],
@@ -299,6 +302,7 @@ async def get_source(
         return SourceResponse(
             id=str(source["id"]),
             source_type=source["source_type"],
+            enabled_collections=source.get("enabled_collections", ["documents"]),
             url=source.get("url"),
             title=metadata.get("title"),
             status=source["status"],
@@ -432,6 +436,7 @@ async def update_source(
         return SourceResponse(
             id=str(source["id"]),
             source_type=source["source_type"],
+            enabled_collections=source.get("enabled_collections", ["documents"]),
             url=source.get("url"),
             title=metadata.get("title"),
             status=source["status"],

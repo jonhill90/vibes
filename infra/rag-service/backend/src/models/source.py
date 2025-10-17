@@ -9,15 +9,32 @@ from pydantic import BaseModel, Field, field_validator
 
 # Type aliases for source enums
 SourceType = Literal["upload", "crawl", "api"]
-SourceStatus = Literal["pending", "processing", "completed", "failed"]
+CollectionType = Literal["documents", "code", "media"]
+SourceStatus = Literal["active", "processing", "failed", "archived"]
 
 
 class SourceCreate(BaseModel):
     """Request model for creating a source."""
 
     source_type: SourceType
+    enabled_collections: list[CollectionType] = Field(default=["documents"])
     url: str | None = None
     metadata: dict = Field(default_factory=dict)
+
+    @field_validator("enabled_collections")
+    @classmethod
+    def validate_collections(cls, v: list[CollectionType]) -> list[CollectionType]:
+        """Ensure at least one collection enabled and no duplicates."""
+        if not v or len(v) == 0:
+            return ["documents"]  # Default to documents
+        # Remove duplicates while preserving order
+        seen = set()
+        unique = []
+        for item in v:
+            if item not in seen:
+                seen.add(item)
+                unique.append(item)
+        return unique
 
     @field_validator("url")
     @classmethod
@@ -42,6 +59,7 @@ class SourceResponse(BaseModel):
 
     id: UUID
     source_type: SourceType
+    enabled_collections: list[CollectionType]
     url: str | None
     status: SourceStatus
     metadata: dict

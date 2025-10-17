@@ -84,20 +84,25 @@ class EmbeddingService:
             f"dimension={self.expected_dimension}, batch_size={self.batch_size}"
         )
 
-    async def embed_text(self, text: str) -> Optional[list[float]]:
+    async def embed_text(
+        self,
+        text: str,
+        model_name: Optional[str] = None
+    ) -> Optional[list[float]]:
         """Generate embedding for a single text with cache lookup.
 
         Process:
-        1. Check cache first (MD5 hash lookup)
+        1. Check cache first (MD5 hash lookup with model_name)
         2. Generate embedding if not cached
         3. Store in cache on success
         4. Return None on failure (NEVER null/zero embeddings)
 
         Args:
             text: Text to embed
+            model_name: Optional model name (defaults to self.model_name)
 
         Returns:
-            list[float]: Embedding vector (1536 dimensions)
+            list[float]: Embedding vector (dimension depends on model)
             None: If embedding generation fails
 
         Example:
@@ -111,14 +116,17 @@ class EmbeddingService:
             logger.warning("Empty text provided, skipping embedding")
             return None
 
-        # Step 1: Check cache
-        cached_embedding = await self._get_cached_embedding(text)
+        # Use default model if not specified (backward compatibility)
+        model_name = model_name or self.model_name
+
+        # Step 1: Check cache (includes model_name in lookup)
+        cached_embedding = await self._get_cached_embedding(text, model_name)
         if cached_embedding:
             # Track cache hit (Task 7)
             self.cache_hits += 1
             self.total_requests += 1
             self._log_cache_hit_rate_if_needed()
-            logger.debug(f"Cache hit for text: {text[:50]}...")
+            logger.debug(f"Cache hit for text: {text[:50]}... (model: {model_name})")
             return cached_embedding
 
         # Track cache miss (Task 7)
@@ -127,21 +135,52 @@ class EmbeddingService:
 
         # Step 2: Generate embedding with retry logic
         try:
-            embedding = await self._generate_embedding_with_retry(text)
+            embedding = await self._generate_embedding_with_retry(text, model_name)
             if embedding:
-                # Step 3: Store in cache
-                await self._cache_embedding(text, embedding)
+                # Step 3: Store in cache (includes model_name)
+                await self._cache_embedding(text, embedding, model_name)
                 self._log_cache_hit_rate_if_needed()
                 return embedding
             else:
-                logger.error(f"Failed to generate embedding for text: {text[:50]}...")
+                logger.error(f"Failed to generate embedding for text: {text[:50]}... (model: {model_name})")
                 return None
 
         except Exception as e:
             logger.error(f"Embedding generation error: {e}", exc_info=True)
             return None
 
-    async def batch_embed(self, texts: list[str]) -> EmbeddingBatchResult:
+    async def embed_with_model(
+        self,
+        text: str,
+        model_name: str
+    ) -> Optional[list[float]]:
+        """Generate embedding using a specific model (multi-collection support).
+
+        This is an explicit alias for embed_text() with model_name specified,
+        added for clarity when using multi-collection architecture.
+
+        Args:
+            text: Text to embed
+            model_name: Embedding model to use (e.g., "text-embedding-3-large")
+
+        Returns:
+            list[float]: Embedding vector (dimension depends on model)
+            None: If embedding generation fails
+
+        Example:
+            # For code collection using large model
+            embedding = await service.embed_with_model(
+                "def hello(): pass",
+                "text-embedding-3-large"
+            )
+        """
+        return await self.embed_text(text, model_name=model_name)
+
+    async def batch_embed(
+        self,
+        texts: list[str],
+        model_name: Optional[str] = None
+    ) -> EmbeddingBatchResult:
         """Batch embed texts with quota handling and EmbeddingBatchResult pattern.
 
         CRITICAL: This method implements Gotcha #1 protection.
@@ -149,14 +188,15 @@ class EmbeddingService:
         It NEVER adds null or zero embeddings to the result.
 
         Process:
-        1. Check cache for all texts
+        1. Check cache for all texts (with model_name in lookup)
         2. Batch generate embeddings for uncached texts (100 per API call)
         3. Use exponential backoff on RateLimitError (Gotcha #10)
         4. Track successful embeddings separately from failed items
-        5. Cache successful embeddings
+        5. Cache successful embeddings (with model_name)
 
         Args:
             texts: List of texts to embed (any length)
+            model_name: Optional model name (defaults to self.model_name)
 
         Returns:
             EmbeddingBatchResult: Contains successful embeddings and failed items
@@ -182,11 +222,14 @@ class EmbeddingService:
                 failure_count=0,
             )
 
+        # Use default model if not specified (backward compatibility)
+        model_name = model_name or self.model_name
+
         embeddings: list[list[float]] = []
         failed_items: list[dict] = []
         cache_misses: list[tuple[int, str]] = []  # (original_index, text)
 
-        # Step 1: Check cache for all texts
+        # Step 1: Check cache for all texts (with model_name)
         for i, text in enumerate(texts):
             if not text or not text.strip():
                 failed_items.append({
@@ -197,7 +240,7 @@ class EmbeddingService:
                 })
                 continue
 
-            cached_embedding = await self._get_cached_embedding(text)
+            cached_embedding = await self._get_cached_embedding(text, model_name)
             if cached_embedding:
                 embeddings.append(cached_embedding)
             else:
@@ -231,17 +274,18 @@ class EmbeddingService:
                     f"{len(batch_texts)} texts"
                 )
 
-                # Generate embeddings with retry logic
+                # Generate embeddings with retry logic (using specified model)
                 try:
                     batch_embeddings = await self._generate_batch_embeddings_with_retry(
-                        batch_texts
+                        batch_texts,
+                        model_name=model_name
                     )
 
-                    # Add successful embeddings and cache them
+                    # Add successful embeddings and cache them (with model_name)
                     for (original_idx, text), embedding in zip(batch_items, batch_embeddings):
                         embeddings.append(embedding)
                         # Cache in background (don't await to improve throughput)
-                        asyncio.create_task(self._cache_embedding(text, embedding))
+                        asyncio.create_task(self._cache_embedding(text, embedding, model_name))
 
                 except openai.RateLimitError as e:
                     # CRITICAL: Quota exhausted - STOP immediately (Gotcha #1)
@@ -299,11 +343,19 @@ class EmbeddingService:
 
         return result
 
-    async def _get_cached_embedding(self, text: str) -> Optional[list[float]]:
-        """Get embedding from cache using content hash.
+    async def _get_cached_embedding(
+        self,
+        text: str,
+        model_name: str
+    ) -> Optional[list[float]]:
+        """Get embedding from cache using content hash and model name.
+
+        CRITICAL: Cache lookup includes both content_hash AND model_name.
+        This ensures different models have separate cache entries for the same text.
 
         Args:
             text: Text to lookup
+            model_name: Model name to lookup (part of cache key)
 
         Returns:
             list[float]: Cached embedding if found
@@ -320,7 +372,7 @@ class EmbeddingService:
                     WHERE content_hash = $1 AND model_name = $2
                     """,
                     content_hash,
-                    self.model_name,
+                    model_name,
                 )
 
                 if row:
@@ -333,7 +385,7 @@ class EmbeddingService:
                         WHERE content_hash = $1 AND model_name = $2
                         """,
                         content_hash,
-                        self.model_name,
+                        model_name,
                     )
                     return row["embedding"]
 
@@ -342,12 +394,21 @@ class EmbeddingService:
 
         return None
 
-    async def _cache_embedding(self, text: str, embedding: list[float]) -> None:
-        """Store embedding in cache with content hash.
+    async def _cache_embedding(
+        self,
+        text: str,
+        embedding: list[float],
+        model_name: str
+    ) -> None:
+        """Store embedding in cache with content hash and model name.
+
+        CRITICAL: Cache storage includes both content_hash AND model_name.
+        This ensures different models have separate cache entries for the same text.
 
         Args:
             text: Original text
             embedding: Generated embedding vector
+            model_name: Model name used for embedding (part of cache key)
 
         Note:
             Uses INSERT ... ON CONFLICT DO UPDATE to handle race conditions
@@ -369,7 +430,7 @@ class EmbeddingService:
                     content_hash,
                     text[:500],  # Store preview for debugging
                     embedding,
-                    self.model_name,
+                    model_name,
                 )
 
         except Exception as e:
@@ -379,6 +440,7 @@ class EmbeddingService:
     async def _generate_embedding_with_retry(
         self,
         text: str,
+        model_name: str,
         max_retries: int = 3,
     ) -> Optional[list[float]]:
         """Generate embedding with exponential backoff retry (Gotcha #10).
@@ -390,6 +452,7 @@ class EmbeddingService:
 
         Args:
             text: Text to embed
+            model_name: Model name to use for embedding
             max_retries: Maximum number of retries (default: 3)
 
         Returns:
@@ -399,7 +462,7 @@ class EmbeddingService:
         for attempt in range(max_retries):
             try:
                 response = await self.openai_client.embeddings.create(
-                    model=self.model_name,
+                    model=model_name,
                     input=text,
                 )
 
@@ -409,12 +472,11 @@ class EmbeddingService:
 
                 embedding = response.data[0].embedding
 
-                # Validate embedding
-                if len(embedding) != self.expected_dimension:
-                    logger.error(
-                        f"Invalid dimension: expected {self.expected_dimension}, "
-                        f"got {len(embedding)}"
-                    )
+                # Validate embedding (dimension validation removed - varies by model)
+                # text-embedding-3-small: 1536 dimensions
+                # text-embedding-3-large: 3072 dimensions
+                if len(embedding) == 0:
+                    logger.error("Empty embedding returned")
                     return None
 
                 if all(v == 0.0 for v in embedding):
@@ -448,6 +510,7 @@ class EmbeddingService:
     async def _generate_batch_embeddings_with_retry(
         self,
         texts: list[str],
+        model_name: str,
         max_retries: int = 3,
     ) -> list[list[float]]:
         """Generate batch embeddings with exponential backoff retry (Gotcha #10).
@@ -457,6 +520,7 @@ class EmbeddingService:
 
         Args:
             texts: List of texts to embed (up to EMBEDDING_BATCH_SIZE)
+            model_name: Model name to use for embedding
             max_retries: Maximum number of retries (default: 3)
 
         Returns:
@@ -469,7 +533,7 @@ class EmbeddingService:
         for attempt in range(max_retries):
             try:
                 response = await self.openai_client.embeddings.create(
-                    model=self.model_name,
+                    model=model_name,
                     input=texts,
                 )
 
@@ -486,13 +550,10 @@ class EmbeddingService:
                         f"got {len(embeddings)}"
                     )
 
-                # Validate dimensions and no zero vectors
+                # Validate no zero vectors (dimension validation removed - varies by model)
                 for i, embedding in enumerate(embeddings):
-                    if len(embedding) != self.expected_dimension:
-                        raise ValueError(
-                            f"Invalid dimension at index {i}: "
-                            f"expected {self.expected_dimension}, got {len(embedding)}"
-                        )
+                    if len(embedding) == 0:
+                        raise ValueError(f"Empty embedding at index {i}")
 
                     if all(v == 0.0 for v in embedding):
                         raise ValueError(

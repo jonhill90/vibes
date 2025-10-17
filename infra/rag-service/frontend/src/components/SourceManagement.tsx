@@ -33,6 +33,7 @@ export default function SourceManagement() {
   const [error, setError] = useState<string | null>(null);
   const [editingSource, setEditingSource] = useState<EditingSource | null>(null);
   const [deletingSourceId, setDeletingSourceId] = useState<string | null>(null);
+  const [enabledCollections, setEnabledCollections] = useState<('documents' | 'code' | 'media')[]>(['documents']);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<SourceRequest>();
 
@@ -55,12 +56,57 @@ export default function SourceManagement() {
     loadSources();
   }, []);
 
+  // Collection options configuration
+  const collectionOptions = [
+    {
+      value: 'documents' as const,
+      label: 'Documents',
+      description: 'General text, articles, documentation, blog posts',
+      icon: '📄',
+      disabled: false,
+    },
+    {
+      value: 'code' as const,
+      label: 'Code',
+      description: 'Source code, snippets, technical examples, API docs',
+      icon: '💻',
+      disabled: false,
+    },
+    {
+      value: 'media' as const,
+      label: 'Media',
+      description: 'Images, diagrams, visual content (coming soon)',
+      icon: '🖼️',
+      disabled: true,
+    },
+  ];
+
+  // Handle collection toggle
+  const handleCollectionToggle = (collectionType: 'documents' | 'code' | 'media') => {
+    setEnabledCollections((prev) => {
+      if (prev.includes(collectionType)) {
+        // Remove if already selected (but ensure at least one remains)
+        if (prev.length === 1) {
+          return prev; // Don't allow removing last collection
+        }
+        return prev.filter((c) => c !== collectionType);
+      } else {
+        // Add if not selected
+        return [...prev, collectionType];
+      }
+    });
+  };
+
   // Create source
   const onCreateSource = async (data: SourceRequest) => {
     setError(null);
     try {
-      await createSource(data);
+      await createSource({
+        ...data,
+        enabled_collections: enabledCollections,
+      });
       reset();
+      setEnabledCollections(['documents']); // Reset to default
       await loadSources();
     } catch (err) {
       console.error('Failed to create source:', err);
@@ -147,7 +193,57 @@ export default function SourceManagement() {
                 <span style={styles.error}>{errors.source_type.message}</span>
               )}
             </div>
+          </div>
 
+          {/* Collection Selection */}
+          <div style={styles.collectionSection}>
+            <label style={styles.label}>
+              Enable Collections *
+              <span style={styles.helpText}>
+                {' '}Select which embedding types to use for this source
+              </span>
+            </label>
+
+            <div style={styles.collectionCheckboxes}>
+              {collectionOptions.map((option) => (
+                <label
+                  key={option.value}
+                  style={{
+                    ...styles.collectionOption,
+                    ...(option.disabled ? styles.collectionOptionDisabled : {}),
+                    ...(enabledCollections.includes(option.value) && !option.disabled
+                      ? styles.collectionOptionSelected
+                      : {}),
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={enabledCollections.includes(option.value)}
+                    onChange={() => handleCollectionToggle(option.value)}
+                    disabled={option.disabled}
+                    style={styles.collectionCheckbox}
+                  />
+                  <div style={styles.collectionInfo}>
+                    <div style={styles.collectionHeader}>
+                      <span style={styles.collectionIcon}>{option.icon}</span>
+                      <span style={styles.collectionLabel}>{option.label}</span>
+                    </div>
+                    <div style={styles.collectionDescription}>
+                      {option.description}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {enabledCollections.length === 0 && (
+              <div style={styles.errorMessage}>
+                At least one collection must be enabled
+              </div>
+            )}
+          </div>
+
+          <div style={styles.formRow}>
             <button type="submit" style={styles.createButton}>
               Create Source
             </button>
@@ -574,5 +670,82 @@ const styles = {
     fontWeight: '500',
     borderRadius: '4px',
     textTransform: 'capitalize' as const,
+  },
+  collectionSection: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '12px',
+    marginTop: '16px',
+  },
+  helpText: {
+    fontSize: '12px',
+    fontWeight: '400',
+    color: '#888',
+  },
+  collectionCheckboxes: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '12px',
+  },
+  collectionOption: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    padding: '16px',
+    border: '2px solid #ddd',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    backgroundColor: '#fff',
+  },
+  collectionOptionSelected: {
+    borderColor: '#28a745',
+    backgroundColor: '#f0f9f4',
+  },
+  collectionOptionDisabled: {
+    cursor: 'not-allowed',
+    opacity: 0.6,
+    backgroundColor: '#f8f9fa',
+  },
+  collectionCheckbox: {
+    width: '18px',
+    height: '18px',
+    marginTop: '2px',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+  collectionInfo: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '4px',
+    flex: 1,
+  },
+  collectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#333',
+  },
+  collectionIcon: {
+    fontSize: '20px',
+  },
+  collectionLabel: {
+    fontSize: '16px',
+    fontWeight: '600',
+  },
+  collectionDescription: {
+    fontSize: '14px',
+    color: '#666',
+    lineHeight: '1.4',
+  },
+  errorMessage: {
+    fontSize: '13px',
+    color: '#dc3545',
+    padding: '8px 12px',
+    backgroundColor: '#f8d7da',
+    border: '1px solid #f5c6cb',
+    borderRadius: '4px',
   },
 };

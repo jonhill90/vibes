@@ -25,7 +25,7 @@ class SourceService:
     """
 
     VALID_SOURCE_TYPES = ["upload", "crawl", "api"]
-    VALID_STATUSES = ["pending", "processing", "completed", "failed"]
+    VALID_STATUSES = ["active", "processing", "failed", "archived"]
 
     def __init__(self, db_pool: asyncpg.Pool):
         """Initialize SourceService with database connection pool.
@@ -76,7 +76,7 @@ class SourceService:
             source_data: Dictionary with keys:
                 - source_type (required): 'upload', 'crawl', or 'api'
                 - url (optional): Source URL
-                - status (optional): Defaults to 'pending'
+                - status (optional): Defaults to 'active'
                 - metadata (optional): JSONB metadata
                 - error_message (optional): Error details
 
@@ -97,7 +97,8 @@ class SourceService:
                 return False, {"error": error_msg}
 
             # Validate status if provided
-            status = source_data.get("status", "pending")
+            # Default to "active" - sources are ready immediately (no "pending" confusion)
+            status = source_data.get("status", "active")
             is_valid, error_msg = self.validate_status(status)
             if not is_valid:
                 return False, {"error": error_msg}
@@ -106,22 +107,23 @@ class SourceService:
             url = source_data.get("url")
             metadata = source_data.get("metadata", {})
             error_message = source_data.get("error_message")
+            enabled_collections = source_data.get("enabled_collections", ["documents"])
 
             # Convert metadata dict to JSON string for JSONB column
             metadata_json = json.dumps(metadata) if isinstance(metadata, dict) else metadata
 
             # Insert source using asyncpg $1, $2 placeholders
             query = """
-                INSERT INTO sources (source_type, url, status, metadata, error_message)
-                VALUES ($1, $2, $3, $4::jsonb, $5)
-                RETURNING id, source_type, url, status, metadata, error_message,
+                INSERT INTO sources (source_type, enabled_collections, url, status, metadata, error_message)
+                VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+                RETURNING id, source_type, enabled_collections, url, status, metadata, error_message,
                           created_at, updated_at
             """
 
             # Critical Gotcha #8: Always use async with for connection management
             async with self.db_pool.acquire() as conn:
                 row = await conn.fetchrow(
-                    query, source_type, url, status, metadata_json, error_message
+                    query, source_type, enabled_collections, url, status, metadata_json, error_message
                 )
 
             source = dict(row)
@@ -150,7 +152,7 @@ class SourceService:
         """
         try:
             query = """
-                SELECT id, source_type, url, status, metadata, error_message,
+                SELECT id, source_type, enabled_collections, url, status, metadata, error_message,
                        created_at, updated_at
                 FROM sources
                 WHERE id = $1
@@ -188,7 +190,7 @@ class SourceService:
 
         Args:
             source_type: Optional filter by source_type ('upload', 'crawl', 'api')
-            status: Optional filter by status ('pending', 'processing', 'completed', 'failed')
+            status: Optional filter by status ('active', 'processing', 'failed', 'archived')
             limit: Maximum number of sources to return (default 50)
             offset: Number of sources to skip (default 0)
             exclude_large_fields: If True, truncate large text fields for MCP optimization
@@ -216,7 +218,7 @@ class SourceService:
             if exclude_large_fields:
                 # Truncate metadata and error_message to 1000 chars
                 select_fields = """
-                    id, source_type, url, status,
+                    id, source_type, enabled_collections, url, status,
                     CASE
                         WHEN LENGTH(metadata::text) > 1000
                         THEN LEFT(metadata::text, 1000) || '...'
@@ -231,7 +233,7 @@ class SourceService:
                 """
             else:
                 select_fields = """
-                    id, source_type, url, status, metadata, error_message,
+                    id, source_type, enabled_collections, url, status, metadata, error_message,
                     created_at, updated_at
                 """
 
@@ -322,7 +324,7 @@ class SourceService:
             params = []
             param_idx = 1
 
-            allowed_fields = ["source_type", "url", "status", "metadata", "error_message"]
+            allowed_fields = ["source_type", "enabled_collections", "url", "status", "metadata", "error_message"]
 
             for field in allowed_fields:
                 if field in updates:
@@ -340,7 +342,7 @@ class SourceService:
                 UPDATE sources
                 SET {', '.join(set_clauses)}
                 WHERE id = ${param_idx}
-                RETURNING id, source_type, url, status, metadata, error_message,
+                RETURNING id, source_type, enabled_collections, url, status, metadata, error_message,
                           created_at, updated_at
             """
 
@@ -383,7 +385,7 @@ class SourceService:
             query = """
                 DELETE FROM sources
                 WHERE id = $1
-                RETURNING id, source_type, url, status, metadata, error_message,
+                RETURNING id, source_type, enabled_collections, url, status, metadata, error_message,
                           created_at, updated_at
             """
 
