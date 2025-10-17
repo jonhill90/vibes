@@ -814,7 +814,47 @@ class IngestionService:
             f"Successfully embedded {embed_result.success_count}/{len(chunks)} chunks"
         )
 
-        # Step 5: Atomic storage (PostgreSQL + Qdrant)
+        # Step 5: Get source configuration for per-domain collections
+        logger.info("Getting source configuration for per-domain collection storage")
+        async with self.db_pool.acquire() as conn:
+            source_row = await conn.fetchrow(
+                "SELECT enabled_collections, collection_names FROM sources WHERE id = $1",
+                source_id
+            )
+
+        if not source_row:
+            return False, {
+                "error": f"Source {source_id} not found",
+                "crawl_job_id": crawl_job_id,
+            }
+
+        collection_names_raw = source_row["collection_names"]
+
+        # Parse collection_names from JSONB
+        if isinstance(collection_names_raw, str):
+            collection_names = json.loads(collection_names_raw)
+        elif isinstance(collection_names_raw, dict):
+            collection_names = collection_names_raw
+        else:
+            collection_names = {}
+
+        # For crawled content, default to "documents" collection
+        collection_name = collection_names.get("documents")
+        if not collection_name:
+            logger.error(
+                f"No 'documents' collection found for source {source_id}. "
+                f"Available collections: {collection_names}"
+            )
+            return False, {
+                "error": "Source has no 'documents' collection configured",
+                "crawl_job_id": crawl_job_id,
+            }
+
+        logger.info(
+            f"Storing crawled content in domain collection: '{collection_name}'"
+        )
+
+        # Step 6: Atomic storage (PostgreSQL + Qdrant)
         logger.info("Storing crawled document and chunks atomically")
 
         # Extract document title from URL or metadata
@@ -836,6 +876,7 @@ class IngestionService:
                 },
                 chunks=chunks,
                 embeddings=embed_result.embeddings,
+                collection_name=collection_name,  # Use domain-specific collection
             )
         except Exception as e:
             logger.error(f"Atomic storage failed: {e}", exc_info=True)

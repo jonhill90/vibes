@@ -19,7 +19,7 @@ version: '3.8'
 services:
   # PostgreSQL Database Service
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: rag-postgres
     ports:
       - "${POSTGRES_PORT:-5433}:5432"  # Offset port to avoid conflict with task-manager

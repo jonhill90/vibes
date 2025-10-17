@@ -22,6 +22,11 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install Playwright browsers and system dependencies
+# This installs Chromium browser (~175 MB) and required system libraries
+RUN playwright install chromium && \
+    playwright install-deps chromium
+
 # Copy application code
 COPY src/ ./src/
 

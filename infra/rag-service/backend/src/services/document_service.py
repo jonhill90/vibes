@@ -365,6 +365,39 @@ class DocumentService:
         """
         try:
             async with self.db_pool.acquire() as conn:
+                # Step 0: Get document source to determine collection name
+                doc_query = """
+                    SELECT d.source_id, s.collection_names
+                    FROM documents d
+                    JOIN sources s ON d.source_id = s.id
+                    WHERE d.id = $1
+                """
+                doc_row = await conn.fetchrow(doc_query, document_id)
+
+                if doc_row is None:
+                    return False, {"error": f"Document with ID {document_id} not found"}
+
+                # Parse collection_names JSONB to get the "documents" collection
+                collection_names_raw = doc_row["collection_names"]
+                if isinstance(collection_names_raw, str):
+                    collection_names = json.loads(collection_names_raw)
+                elif isinstance(collection_names_raw, dict):
+                    collection_names = collection_names_raw
+                else:
+                    collection_names = {}
+
+                collection_name = collection_names.get("documents")
+                if not collection_name:
+                    logger.error(
+                        f"No 'documents' collection found for document {document_id}. "
+                        f"Available collections: {collection_names}"
+                    )
+                    return False, {
+                        "error": "Document's source has no 'documents' collection configured"
+                    }
+
+                logger.info(f"Using collection '{collection_name}' for document {document_id} deletion")
+
                 # Step 1: Get all chunk IDs for this document before deletion
                 chunk_query = "SELECT id FROM chunks WHERE document_id = $1"
                 chunk_rows = await conn.fetch(chunk_query, document_id)
@@ -375,8 +408,8 @@ class DocumentService:
                 # Step 2: Delete vectors from Qdrant first (if vector_service provided)
                 if vector_service and chunk_ids:
                     try:
-                        deleted_count = await vector_service.delete_vectors(chunk_ids)
-                        logger.info(f"Deleted {deleted_count} vectors from Qdrant for document {document_id}")
+                        deleted_count = await vector_service.delete_vectors(collection_name, chunk_ids)
+                        logger.info(f"Deleted {deleted_count} vectors from Qdrant collection '{collection_name}' for document {document_id}")
                     except Exception as e:
                         # Qdrant deletion failed - abort to prevent orphaned vectors
                         logger.error(f"Qdrant deletion failed for document {document_id}: {e}")

@@ -419,17 +419,21 @@ class EmbeddingService:
 
         try:
             async with self.db_pool.acquire() as conn:
+                # Convert embedding list to string format for pgvector
+                # pgvector expects: "[0.1, 0.2, 0.3]" format
+                embedding_str = str(embedding)
+
                 await conn.execute(
                     """
                     INSERT INTO embedding_cache (content_hash, text_preview, embedding, model_name)
-                    VALUES ($1, $2, $3, $4)
+                    VALUES ($1, $2, $3::vector, $4)
                     ON CONFLICT (content_hash, model_name) DO UPDATE
                     SET access_count = embedding_cache.access_count + 1,
                         last_accessed_at = NOW()
                     """,
                     content_hash,
                     text[:500],  # Store preview for debugging
-                    embedding,
+                    embedding_str,
                     model_name,
                 )
 

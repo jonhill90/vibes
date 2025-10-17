@@ -206,7 +206,7 @@ async def upload_document(
             document_parser = DocumentParser()
             text_chunker = TextChunker()
             embedding_service = EmbeddingService(db_pool=db_pool, openai_client=openai_client)
-            vector_service = VectorService(qdrant_client, collection_name="documents")
+            vector_service = VectorService(qdrant_client)
 
             # Initialize ingestion service with all dependencies
             ingestion_service = IngestionService(
@@ -382,6 +382,22 @@ async def list_documents(
         documents = result["documents"]
         total_count = result["total_count"]
 
+        # Query chunk counts for all documents
+        document_ids = [doc["id"] for doc in documents]
+        chunk_counts = {}
+        if document_ids:
+            async with db_pool.acquire() as conn:
+                chunk_count_rows = await conn.fetch(
+                    """
+                    SELECT document_id, COUNT(*) as chunk_count
+                    FROM chunks
+                    WHERE document_id = ANY($1::uuid[])
+                    GROUP BY document_id
+                    """,
+                    document_ids
+                )
+                chunk_counts = {row["document_id"]: row["chunk_count"] for row in chunk_count_rows}
+
         # Convert documents to response model
         document_responses = [
             DocumentResponse(
@@ -392,7 +408,7 @@ async def list_documents(
                 url=doc.get("url"),
                 created_at=doc["created_at"] if isinstance(doc["created_at"], str) else doc["created_at"].isoformat(),
                 updated_at=doc["updated_at"] if isinstance(doc["updated_at"], str) else doc["updated_at"].isoformat(),
-                chunk_count=None,  # TODO: Query chunk count from chunks table
+                chunk_count=chunk_counts.get(doc["id"], 0),
             )
             for doc in documents
         ]
@@ -481,6 +497,14 @@ async def get_document(
 
         document = result["document"]
 
+        # Query chunk count for this document
+        chunk_count = 0
+        async with db_pool.acquire() as conn:
+            chunk_count = await conn.fetchval(
+                "SELECT COUNT(*) FROM chunks WHERE document_id = $1",
+                doc_uuid
+            )
+
         return DocumentResponse(
             id=str(document["id"]),
             source_id=str(document["source_id"]),
@@ -489,7 +513,7 @@ async def get_document(
             url=document.get("url"),
             created_at=document["created_at"] if isinstance(document["created_at"], str) else document["created_at"].isoformat(),
             updated_at=document["updated_at"] if isinstance(document["updated_at"], str) else document["updated_at"].isoformat(),
-            chunk_count=None,  # TODO: Query chunk count
+            chunk_count=chunk_count,
         )
 
     except HTTPException:
@@ -558,7 +582,7 @@ async def delete_document(
         # Initialize VectorService with Qdrant client from app state
         from src.services.vector_service import VectorService
         qdrant_client = request.app.state.qdrant_client
-        vector_service = VectorService(qdrant_client, collection_name="documents")
+        vector_service = VectorService(qdrant_client)
 
         # Delete document with Qdrant cleanup
         document_service = DocumentService(db_pool)

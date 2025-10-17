@@ -327,7 +327,7 @@ export default function CrawlManagement() {
                       <span>ID: {job.id.substring(0, 8)}...</span>
                       <span>Source: {job.source_id.substring(0, 8)}...</span>
                       <span>
-                        Pages: {job.pages_crawled}/{job.max_pages} ({getProgress(job)}%)
+                        Pages: {job.pages_crawled}/{job.pages_total ?? job.max_pages} ({getProgress(job)}%)
                       </span>
                       {job.error_count > 0 && (
                         <span style={styles.errorCount}>Errors: {job.error_count}</span>

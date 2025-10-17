@@ -258,10 +258,7 @@ async def start_crawl(
                 url=settings.QDRANT_URL,
                 timeout=60,  # 60s timeout for large batch operations
             )
-            vector_service = VectorService(
-                qdrant_client=qdrant_client,
-                collection_name=settings.QDRANT_COLLECTION_NAME,
-            )
+            vector_service = VectorService(qdrant_client)
 
             document_service = DocumentService(db_pool)
 

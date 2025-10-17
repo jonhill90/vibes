@@ -8,17 +8,23 @@
    - See prps/per_domain_collections.md and execution reports
 3. ✅ **Fix integration test data format** (15 min) - Changed .md test files to .html format - COMPLETED 2025-10-17
 4. ✅ **Add Qdrant collection cleanup fixture** (15 min) - Prevent test pollution - COMPLETED 2025-10-17
-5. **Fix crawl page count display** (10 min) - Frontend/backend mismatch
-6. **Add chunk count to documents** (30 min) - `document_service.py`, `DocumentResponse`
-7. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
-8. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
-9. **Fix service mocking paths** (15 min) - IngestionService import location
-10. **Debug hybrid search test collection** (1 hour) - Import errors
-11. **Re-run full integration suite** (30 min) - Target 80%+ pass rate
-12. **Add volume mounts for temp file storage** (15 min) - Document uploads
-13. **Configure log rotation** (30 min) - Backend logs
-14. **Add monitoring/metrics endpoints** (1-2 hours) - Production readiness
-15. **Document deployment guide** (1 hour) - Production documentation
+5. ✅ **Fix crawl page count display** (10 min) - Frontend/backend mismatch - COMPLETED 2025-10-17
+6. ✅ **Add chunk count to documents** (30 min) - `document_service.py`, `DocumentResponse` - COMPLETED 2025-10-17
+7. **Implement recursive crawling** (MEDIUM - 3-4 hours) - Currently only crawls single page
+   - **Issue**: Logs show "Recursive crawling not yet implemented" - only crawls starting URL
+   - **Desired**: Follow links up to `max_depth`, respect `max_pages` limit
+   - **Files**: `backend/src/services/crawl_service.py` or crawl implementation
+   - **Implementation**: BFS/DFS traversal, URL deduplication, same-domain filtering
+   - **UI**: Frontend already has depth/page limit inputs, backend just needs implementation
+8. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
+9. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
+10. **Fix service mocking paths** (15 min) - IngestionService import location
+11. **Debug hybrid search test collection** (1 hour) - Import errors
+12. **Re-run full integration suite** (30 min) - Target 80%+ pass rate
+13. **Add volume mounts for temp file storage** (15 min) - Document uploads
+14. **Configure log rotation** (30 min) - Backend logs
+15. **Add monitoring/metrics endpoints** (1-2 hours) - Production readiness
+16. **Document deployment guide** (1 hour) - Production documentation
 
 ---
 
@@ -33,16 +39,23 @@
    - **Screenshot**: source-management-ui.png shows 📄 Documents, 💻 Code, 🖼️ Media (disabled)
 
 ### UI/UX Issues
-1. **Remove Source Type dropdown** - UX confusion (Priority: HIGH)
+1. ✅ **Remove Source Type dropdown** - UX confusion (Priority: HIGH) - COMPLETED
    - **Issue**: "Create New Source" form shows dropdown with "Upload", "Web Crawl", "API" options
    - **Impact**: Confusing UX - users don't understand the difference, creates unnecessary complexity
    - **Desired**: Remove source type selection entirely, auto-detect or simplify
    - **Files**: `frontend/src/components/SourceManagement.tsx`
    - **Related**: Backend source_type field may need to be optional or auto-set
 
-2. **Crawl page count incorrect** - Frontend showing wrong number of pages crawled
+2. ✅ **Crawl page count incorrect** - FIXED 2025-10-17
+   - **Issue**: Frontend showing `job.pages_crawled/job.max_pages` instead of `job.pages_crawled/job.pages_total`
+   - **Fix**: Updated `CrawlManagement.tsx:330` to use `job.pages_total ?? job.max_pages`
+   - **Files**: `frontend/src/components/CrawlManagement.tsx`
 
-3. **Chunk count missing** - Documents don't display chunk count (shows "TODO" in API)
+3. ✅ **Chunk count missing** - FIXED 2025-10-17
+   - **Issue**: Documents don't display chunk count (showed `chunk_count=None` in API)
+   - **Fix**: Added chunk count queries in both `list_documents` and `get_document` endpoints
+   - **Files**: `backend/src/api/routes/documents.py:385-399, 500-506`
+   - **Implementation**: Batch query for list endpoint (efficient), single query for get endpoint
 
 4. **Document viewer missing** - No way to view original imported document or rendered markdown/HTML version of crawled websites
 
@@ -437,4 +450,72 @@ docker system prune -a --volumes
 
 ---
 
-**Last Updated**: 2025-10-17 01:45 PST (Per-Domain Collections: Tests Fixed, Production-Safe Cleanup, Global Collections Removed)
+### Quick Fixes (2025-10-17 01:50 PST)
+
+#### 1. Crawl and Document API Fixes
+- **Issue**: 500 error when starting crawl jobs
+- **Root Cause**: `VectorService.__init__()` signature changed in per-domain collections refactor - now only accepts `qdrant_client`, not `collection_name`
+- **Fix**: Updated `crawls.py:261` and `documents.py:209, 585` to use new signature: `VectorService(qdrant_client)`
+- **Files Changed**:
+  - `backend/src/api/routes/crawls.py:261`
+  - `backend/src/api/routes/documents.py:209, 585`
+- **Pattern**: VectorService is now collection-agnostic - accepts `collection_name` as parameter in methods, not constructor
+
+#### 2. Playwright Browser Installation
+- **Issue**: Crawl failed - "Executable doesn't exist at /root/.cache/ms-playwright/chromium-1187/chrome-linux/chrome"
+- **Root Cause**: Playwright browsers and system dependencies not installed in Docker image
+- **Fix**: Added Playwright installation to `backend/Dockerfile:25-28`:
+  ```dockerfile
+  RUN playwright install chromium && \
+      playwright install-deps chromium
+  ```
+- **Result**: Chromium 140.0.7339.16 + 60 system packages (~310 MB total) now baked into Docker image
+- **Note**: On next rebuild, crawling will work out-of-the-box without manual setup
+
+#### 3. Per-Domain Collection Support for Crawl Ingestion (2025-10-17 01:54 PST)
+- **Issue**: Crawl ingestion still using old `AI_DOCUMENTS` collection, causing 404 errors
+- **Root Cause**: `ingest_from_crawl` method was calling `_store_document_atomic` without `collection_name` parameter, triggering fallback to hardcoded `AI_DOCUMENTS` at line 595
+- **Fix**: Updated `ingestion_service.py:817-886` to fetch source configuration and use per-domain collections:
+  1. Query source `collection_names` from database
+  2. Extract domain-specific collection name for "documents" type
+  3. Pass `collection_name` parameter to `_store_document_atomic`
+- **Verification**:
+  - Test crawl created: Job ID `7c38e64f-64f0-4b42-ae90-2a1046567389`
+  - Document stored: `ai.pydantic.dev/` with 9 chunks
+  - Qdrant collection: `Pydantic_AI_documents` now has 9 vectors
+  - Zero `AI_DOCUMENTS` errors after backend reload
+- **Pattern**: All ingestion paths (upload, crawl) must use per-domain collections - no fallback to global collections
+
+#### 4. Document Deletion Per-Domain Collection Fix (2025-10-17 02:00 PST)
+- **Issue**: Document deletion failing with 500 error - `VectorService.delete_vectors() missing 1 required positional argument: 'chunk_ids'`
+- **Root Cause**: After per-domain collections refactor, `delete_vectors()` requires both `collection_name` and `chunk_ids`, but `delete_document` was only passing `chunk_ids`
+- **Fix**: Updated `document_service.py:366-419` to fetch collection name before deletion:
+  1. Query document's source to get `collection_names` JSONB
+  2. Extract domain-specific collection name for "documents" type
+  3. Pass both `collection_name` and `chunk_ids` to `delete_vectors()`
+- **Pattern**: All VectorService operations must include collection_name parameter (collection-agnostic design)
+
+#### 5. Embedding Cache Table Creation (2025-10-17 02:07 PST)
+- **Issue**: Hundreds of non-critical errors: "relation 'embedding_cache' does not exist"
+- **Root Cause**: Table defined in init.sql but never created in production database. PostgreSQL image missing pgvector extension.
+- **Fix**:
+  1. Updated `docker-compose.yml` - Changed postgres image from `postgres:15-alpine` to `pgvector/pgvector:pg15`
+  2. Created Migration 005 - Installs pgvector extension and creates embedding_cache table
+  3. Applied migration after recreating postgres container with pgvector support
+- **Result**: Zero cache errors in logs, embeddings now cached for 30% cost savings
+- **Pattern**: Always use `pgvector/pgvector` image for PostgreSQL when using VECTOR data type
+
+#### 6. Embedding Cache Data Type Fix (2025-10-17 02:12 PST)
+- **Issue**: New errors after table creation: "invalid input for query argument $3: [...] (expected str, got list)"
+- **Root Cause**: asyncpg expects pgvector VECTOR type as string, not Python list. Passing raw `embedding` list directly to SQL.
+- **Fix**: Updated `embedding_service.py:420-438` to convert embedding to string before INSERT:
+  ```python
+  embedding_str = str(embedding)  # Convert [0.1, 0.2] to "[0.1, 0.2]"
+  # Use ::vector cast in SQL: VALUES ($1, $2, $3::vector, $4)
+  ```
+- **Result**: Embeddings now successfully cached in PostgreSQL with no errors
+- **Pattern**: When using pgvector with asyncpg, convert Python lists to strings and cast with `::vector` in SQL
+
+---
+
+**Last Updated**: 2025-10-17 02:12 PST (Fixed embedding cache data type conversion)
