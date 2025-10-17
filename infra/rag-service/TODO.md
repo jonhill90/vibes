@@ -21,9 +21,29 @@
      - Max pages and max depth limits enforced
      - Error tolerance (continues crawling even if some pages fail)
      - Combined markdown output with page separators
-   - **Pattern**: `recursive=True` with `max_depth > 0` enables BFS crawl, `recursive=False` (max_depth=0) does single-page crawl
+   - **Pattern**: `max_depth > 0` enables BFS crawl, `max_depth=0` does single-page crawl
    - **Database**: Utilizes existing `pages_total`, `current_depth`, `error_count` fields for progress tracking
    - **UI**: Frontend already displays all progress metrics (no changes needed)
+   - **🔧 Fix Applied (2025-10-17 18:15)**: max_depth parameter now properly wired through entire stack
+     - `crawl_website()` now accepts `max_depth` parameter (was hardcoded to 3)
+     - API route passes `max_depth` from request
+     - `ingest_from_crawl()` forwards `max_depth` to crawler
+     - Fixed metadata to store `max_depth` instead of undefined `recursive` variable
+     - Users can now control crawl depth from UI (0-10 levels)
+   - **❌ BUG FOUND (2025-10-17 18:27)**: Recursive crawl logic still checking `recursive` flag
+     - **Issue**: Line 688 in `crawl_service.py` checks `if recursive and max_depth > 0`
+     - **Problem**: We removed `recursive` parameter from API/ingestion, defaults to False
+     - **Result**: Even with max_depth=1, crawl does single-page crawl (falls through to line 709)
+     - **Root Cause**: Parameter passed through but logic gate still uses boolean flag
+     - **Test Evidence**: Crawl with max_depth=1, max_pages=5 only crawled 1 page (should crawl 5+)
+     - **Fix Needed**: Replace `if recursive and max_depth > 0` with `if max_depth > 0` at line 688
+     - **Files**: `backend/src/services/crawler/crawl_service.py:688`
+   - **❌ ADDITIONAL ISSUE (2025-10-17 18:27)**: Embedding dimension errors still occurring
+     - **Issue**: "Invalid embedding dimension: 19246, expected 1536"
+     - **Problem**: Embeddings being concatenated or corrupted somehow
+     - **Evidence**: From earlier crawl logs, not the latest test
+     - **Status**: Separate issue from max_depth - needs investigation
+     - **Impact**: Previous crawls failed storage, database/Qdrant inconsistency
 8. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
 9. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
 10. **Fix service mocking paths** (15 min) - IngestionService import location

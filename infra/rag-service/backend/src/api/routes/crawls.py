@@ -278,7 +278,7 @@ async def start_crawl(
                 source_id=source_uuid,
                 url=request.url,
                 max_pages=request.max_pages,
-                recursive=(request.max_depth > 1),  # Recursive if depth > 1
+                max_depth=request.max_depth,  # Pass max_depth from request
             )
 
             # Extract job_id from crawl_result (created by crawl_website)

@@ -605,6 +605,7 @@ class CrawlerService:
         source_id: UUID,
         url: str,
         max_pages: int = 10,
+        max_depth: int = 0,
         recursive: bool = False,
     ) -> tuple[bool, dict[str, Any]]:
         """Crawl a website and track job in database.
@@ -617,14 +618,15 @@ class CrawlerService:
         5. Returns success status and metadata
 
         Supports both single-page and recursive crawling:
-        - recursive=False (max_depth=0): Crawls only the starting URL
-        - recursive=True (max_depth≥1): Follows links using BFS traversal
+        - max_depth=0: Crawls only the starting URL (single page)
+        - max_depth≥1: Follows links using BFS traversal (recursive)
 
         Args:
             source_id: UUID of source this crawl belongs to
             url: Starting URL to crawl
             max_pages: Maximum pages to crawl (default 10)
-            recursive: If True, follow links up to max_depth
+            max_depth: Maximum link depth to follow (default 0, single page only)
+            recursive: Legacy parameter (use max_depth instead). If True and max_depth=0, sets max_depth=3
 
         Returns:
             Tuple of (success, result_dict) where result_dict contains:
@@ -642,21 +644,22 @@ class CrawlerService:
                 source_id=source_uuid,
                 url="https://docs.example.com",
                 max_pages=1,
-                recursive=False,
+                max_depth=0,
             )
 
-            # Recursive crawl
+            # Recursive crawl (depth 2)
             success, result = await crawler_service.crawl_website(
                 source_id=source_uuid,
                 url="https://docs.example.com",
                 max_pages=50,
-                recursive=True,
+                max_depth=2,
             )
         """
         start_time = time.time()
 
-        # Determine max_depth from recursive flag
-        max_depth = 3 if recursive else 0
+        # Backward compatibility: if recursive=True and max_depth=0, use default depth of 3
+        if recursive and max_depth == 0:
+            max_depth = 3
 
         # Create crawl job
         try:

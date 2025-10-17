@@ -665,7 +665,7 @@ class IngestionService:
         source_id: UUID,
         url: str,
         max_pages: int = 10,
-        recursive: bool = False,
+        max_depth: int = 0,
     ) -> tuple[bool, dict[str, Any]]:
         """Crawl website and ingest content through full pipeline.
 
@@ -680,7 +680,7 @@ class IngestionService:
             source_id: UUID of source this crawl belongs to
             url: Starting URL to crawl
             max_pages: Maximum pages to crawl (default 10)
-            recursive: If True, follow links (not yet implemented in CrawlerService)
+            max_depth: Maximum link depth to follow (default 0, single page only)
 
         Returns:
             Tuple of (success, result_dict) where result_dict contains:
@@ -703,7 +703,7 @@ class IngestionService:
                 source_id=source_uuid,
                 url="https://docs.example.com",
                 max_pages=50,
-                recursive=True,
+                max_depth=2,
             )
 
             if success:
@@ -729,7 +729,7 @@ class IngestionService:
                 source_id=source_id,
                 url=url,
                 max_pages=max_pages,
-                recursive=recursive,
+                max_depth=max_depth,
             )
         except Exception as e:
             logger.error(f"Crawl failed: {e}", exc_info=True)
@@ -872,7 +872,7 @@ class IngestionService:
                     "crawl_job_id": crawl_job_id,
                     "pages_crawled": pages_crawled,
                     "crawl_time_ms": crawl_time_ms,
-                    "recursive": recursive,
+                    "max_depth": max_depth,
                 },
                 chunks=chunks,
                 embeddings=embed_result.embeddings,
