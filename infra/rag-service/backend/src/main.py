@@ -102,42 +102,10 @@ async def lifespan(app: FastAPI):
         await app.state.db_pool.close()
         raise
 
-    try:
-        # Initialize multi-collection architecture (AI_DOCUMENTS, AI_CODE, AI_MEDIA)
-        from src.services.qdrant_init import initialize_collections
-
-        collection_status = await initialize_collections(app.state.qdrant_client)
-
-        logger.info(
-            f"✅ Multi-collection initialization complete: {collection_status}"
-        )
-
-        # LEGACY: Also ensure legacy collection exists for backward compatibility
-        # This can be removed once all data is migrated to multi-collection architecture
-        collections = await app.state.qdrant_client.get_collections()
-        collection_names = [c.name for c in collections.collections]
-
-        if settings.QDRANT_COLLECTION_NAME not in collection_names:
-            await app.state.qdrant_client.create_collection(
-                collection_name=settings.QDRANT_COLLECTION_NAME,
-                vectors_config=VectorParams(
-                    size=settings.OPENAI_EMBEDDING_DIMENSION,  # 1536 for text-embedding-3-small
-                    distance=Distance.COSINE,
-                    hnsw_config=HnswConfigDiff(m=0),  # Disable HNSW for bulk upload (Gotcha #9)
-                ),
-            )
-            logger.info(
-                f"✅ Legacy Qdrant collection created: {settings.QDRANT_COLLECTION_NAME} "
-                f"(dims={settings.OPENAI_EMBEDDING_DIMENSION}, distance=COSINE, HNSW disabled for bulk)"
-            )
-        else:
-            logger.info(f"✅ Legacy Qdrant collection already exists: {settings.QDRANT_COLLECTION_NAME}")
-    except Exception as e:
-        logger.error(f"❌ Failed to initialize Qdrant collections: {e}")
-        # Clean up resources if collection initialization fails
-        await app.state.qdrant_client.close()
-        await app.state.db_pool.close()
-        raise
+    # NOTE: Per-domain collection architecture - collections created dynamically per source
+    # Old global collections (AI_DOCUMENTS, AI_CODE, AI_MEDIA, documents) are deprecated
+    # Collections now created on-demand when sources are created via SourceService
+    logger.info("✅ Using per-domain collection architecture (collections created per source)")
 
     yield
 

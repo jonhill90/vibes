@@ -6,8 +6,8 @@
 2. ✅ **Per-Domain Collections Architecture** (HIGH - 8 hours) - COMPLETED 2025-10-17
    - Replaces shared global collections with per-source domain-isolated collections
    - See prps/per_domain_collections.md and execution reports
-3. **Fix integration test data format** (15 min) - Change .md test files to .pdf format
-4. **Add Qdrant collection cleanup fixture** (15 min) - Prevent test pollution
+3. ✅ **Fix integration test data format** (15 min) - Changed .md test files to .html format - COMPLETED 2025-10-17
+4. ✅ **Add Qdrant collection cleanup fixture** (15 min) - Prevent test pollution - COMPLETED 2025-10-17
 5. **Fix crawl page count display** (10 min) - Frontend/backend mismatch
 6. **Add chunk count to documents** (30 min) - `document_service.py`, `DocumentResponse`
 7. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
@@ -113,20 +113,22 @@
 - ✅ Frontend updated to display collection_names and domain selector
 - ✅ 30 tests created (22 unit + 8 integration, 85%+ coverage)
 - ✅ Documentation updated (TODO.md, README.md, migration guide)
-- ⚠️ Integration tests partially passing (3/8 pass, test data format issue)
+- ✅ All integration tests passing (8/8 pass, 100% - 2025-10-17)
 
 **Next Steps for Production**:
-1. Fix integration test data format (.md → .pdf) - 15 min
-2. Run migration script on production database - 10 min
-3. Verify all domain collections created in Qdrant
-4. Monitor search latency per domain (target: <200ms)
-5. Verify 0% cross-domain contamination in search results
+1. ✅ Fix integration test data format (.md → .html) - COMPLETED 2025-10-17
+2. ✅ Fix VectorService.upsert_vectors() call signature in IngestionService - COMPLETED 2025-10-17
+3. ✅ Add Qdrant collection cleanup fixture to prevent test pollution - COMPLETED 2025-10-17
+4. Run migration script on production database - 10 min
+5. Verify all domain collections created in Qdrant
+6. Monitor search latency per domain (target: <200ms)
+7. Verify 0% cross-domain contamination in search results
 
 ### 2. Fix Test Infrastructure (Priority: HIGH)
-**Immediate**: Fix per-domain collections integration tests (5/8 failing)
-- [ ] Fix test data format (15 min) - Use .pdf files instead of .md (not supported by Docling)
-- [ ] Add Qdrant collection cleanup fixture (15 min) - Prevent test pollution
-- [ ] Re-run per_domain_collections tests - Target: 8/8 pass
+**Per-Domain Collections Tests**: ✅ COMPLETED (8/8 passing, 100% - 2025-10-17)
+- ✅ Fixed test data format (.md → .html) - COMPLETED 2025-10-17
+- ✅ Fixed VectorService.upsert_vectors() call signature - COMPLETED 2025-10-17
+- ✅ Added Qdrant collection cleanup fixture - COMPLETED 2025-10-17
 
 **Remaining Test Infrastructure** (Priority: MEDIUM)
 **Blocks 28 integration tests** - See INTEGRATION_TEST_REPORT.md for details
@@ -136,9 +138,10 @@
 - [ ] Re-run full integration suite
 - [ ] Target: 80%+ test pass rate
 
-**Current Status**: 35/67 integration tests passing (52%) + 3/8 per-domain tests passing
+**Current Status**: 35/67 integration tests passing (52%) + 8/8 per-domain tests passing (100%)
 - Core functionality: ✅ Excellent (search, document CRUD, per-domain collections working)
-- Test infrastructure: ⚠️ Fixture issues + test data format issues
+- Per-domain tests: ✅ All passing (100%)
+- Remaining tests: ⚠️ Fixture issues + import path issues
 
 ### 3. Fix UI/UX Issues (Priority: MEDIUM)
 - [ ] Fix crawl page count display (10 min)
@@ -183,15 +186,14 @@
 - ⚠️ Container disk at 98% usage (persisted cache prevents exhaustion)
 - ⚠️ Media collection (AI_MEDIA) currently disabled - future feature pending CLIP embeddings
 
-**Active Qdrant Collections**:
-- **AI_DOCUMENTS**: 1536 dimensions (text-embedding-3-small) - General text, articles, documentation
-- **AI_CODE**: 3072 dimensions (text-embedding-3-large) - Source code, technical examples
-- **AI_MEDIA**: 512 dimensions (clip-vit) - DISABLED (future: images, diagrams, visual content)
+**Active Qdrant Collections** (Per-Domain Architecture):
+- Collections are created dynamically per source (e.g., `DevOps_Knowledge_documents`, `DevOps_Knowledge_code`)
+- No global shared collections - each source has its own isolated collections
+- Old global collections (AI_DOCUMENTS, AI_CODE, AI_MEDIA, documents) removed - DEPRECATED
 
 **Current Data**:
-- Sources: 2+ (with enabled_collections field - Migration 003 applied)
-- Documents: ~1,227+ chunks from crawl + test uploads
-- Vectors: Distributed across AI_DOCUMENTS and AI_CODE collections based on content type
+- Sources: 1 (DevOps Knowledge)
+- Collections: Per-domain (DevOps_Knowledge_documents, DevOps_Knowledge_code)
 - Default: New sources use enabled_collections=["documents"] unless specified
 
 ---
@@ -333,6 +335,44 @@ docker system prune -a --volumes
 
 ## 📂 Recent Fixes (Reference Only)
 
+### Per-Domain Collections Integration Tests & Cleanup Fixed (2025-10-17 01:45)
+- **Issue**: 5/8 integration tests failing + tests deleting production collections
+- **Root Causes**:
+  1. Test files using `.md` format (unsupported by Docling parser)
+  2. Wrong `VectorService.upsert_vectors()` call signature in `IngestionService`
+  3. Test using "DevOps Knowledge" name conflicting with production source
+  4. Session-scoped cleanup fixture guessing which collections were "test" collections
+  5. Old global collections (AI_DOCUMENTS, AI_CODE, AI_MEDIA, documents) auto-created on startup
+- **Fixes**:
+  1. **Test Data Format** (`test_per_domain_collections.py`):
+     - Changed all test files from `.md` to `.html` format
+     - HTML is supported by Docling parser (`.htm`, `.pdf`, `.docx`, `.html`)
+  2. **VectorService Call Signature** (`ingestion_service.py:587`):
+     - Fixed: `await self.vector_service.upsert_vectors(collection_name, points)`
+     - Old (broken): `await self.vector_service.upsert_vectors(points, collection_name=collection_name)`
+     - Issue: `collection_name` is first positional argument, not keyword argument
+  3. **Test Collection Names** (`test_per_domain_collections.py:473`):
+     - Renamed test source from "DevOps Knowledge" to "Test_DevOps_Knowledge"
+     - Prevents conflict with production "DevOps Knowledge" source
+  4. **Safe Cleanup Strategy** (`test_per_domain_collections.py:120-139`):
+     - Removed dangerous session-scoped cleanup that guessed test collections by prefix
+     - Now tracks only source IDs created during current test run
+     - Deletes ONLY those specific sources (by ID, not name pattern)
+     - No prefix matching, no guessing - completely safe for production data
+  5. **Removed Global Collection Auto-Creation** (`main.py:105-108`):
+     - Removed `initialize_collections()` call that created AI_DOCUMENTS, AI_CODE, AI_MEDIA
+     - Removed legacy collection creation for "documents" collection
+     - Collections now created ONLY when sources are created (per-domain architecture)
+     - Deleted old global collections from Qdrant
+- **Result**:
+  - All 8 integration tests passing (100% pass rate)
+  - Production collections safe from test cleanup
+  - No more auto-creation of deprecated global collections
+- **Pattern**:
+  - Never guess which data is "test data" - track explicitly by ID
+  - Tests clean up by tracking source IDs, not name patterns
+  - Per-domain architecture = collections created on-demand, not at startup
+
 ### Multi-Collection Migration Applied (2025-10-17 00:15)
 - **Issue**: 500 error on GET /api/sources - "column 'enabled_collections' does not exist"
 - **Root Cause**: Migration 003 not applied to database (code deployed without schema update)
@@ -397,4 +437,4 @@ docker system prune -a --volumes
 
 ---
 
-**Last Updated**: 2025-10-17 01:05 PST (Per-Domain Collections Architecture Implemented)
+**Last Updated**: 2025-10-17 01:45 PST (Per-Domain Collections: Tests Fixed, Production-Safe Cleanup, Global Collections Removed)

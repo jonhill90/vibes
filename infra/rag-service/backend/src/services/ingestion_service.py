@@ -582,35 +582,18 @@ class IngestionService:
 
                 # Multi-collection support: use specified collection or default
                 if collection_name:
-                    # Create collection-specific VectorService instance
-                    from ..config.settings import settings
-
-                    # Determine dimension from collection name
-                    collection_type = collection_name.replace(settings.COLLECTION_NAME_PREFIX, "").lower()
-                    expected_dimension = settings.COLLECTION_DIMENSIONS.get(
-                        collection_type,
-                        settings.OPENAI_EMBEDDING_DIMENSION  # Fallback to default
-                    )
-
-                    # Create VectorService for this specific collection
-                    collection_vector_service = VectorService(
-                        self.vector_service.client,
-                        collection_name,
-                        expected_dimension=expected_dimension
-                    )
-
-                    # Ensure collection exists before upserting
-                    await collection_vector_service.ensure_collection_exists()
-
-                    # Upsert to specific collection
-                    await collection_vector_service.upsert_vectors(points)
+                    # Upsert to specific collection using existing VectorService
+                    # VectorService is collection-agnostic - collection_name is first parameter
+                    await self.vector_service.upsert_vectors(collection_name, points)
                     logger.info(
-                        f"Upserted {len(points)} vectors to collection '{collection_name}' "
-                        f"(dimension={expected_dimension})"
+                        f"Upserted {len(points)} vectors to collection '{collection_name}'"
                     )
                 else:
                     # Use default VectorService (backward compatibility)
-                    await self.vector_service.upsert_vectors(points)
+                    # Need to provide collection_name even for default
+                    from ..config.settings import settings
+                    default_collection = "AI_DOCUMENTS"  # Fallback to old default
+                    await self.vector_service.upsert_vectors(default_collection, points)
                     logger.info(f"Upserted {len(points)} vectors to default collection")
 
             except Exception:

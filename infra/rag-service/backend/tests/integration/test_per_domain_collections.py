@@ -56,7 +56,11 @@ async def db_pool():
 
 @pytest_asyncio.fixture
 async def qdrant_client():
-    """Create Qdrant client for tests."""
+    """Create Qdrant client for tests.
+
+    NOTE: No automatic cleanup of "orphaned" collections - that's dangerous and could
+    delete production data. Tests must clean up after themselves using cleanup_sources fixture.
+    """
     client = AsyncQdrantClient(url=settings.QDRANT_URL)
     yield client
     await client.close()
@@ -118,15 +122,22 @@ async def services(db_pool, qdrant_client):
 
 @pytest_asyncio.fixture
 async def cleanup_sources(services):
-    """Clean up test sources after each test."""
+    """Clean up test sources after each test.
+
+    IMPORTANT: Only deletes sources (and their collections) created during THIS test.
+    Does NOT delete existing sources/collections from previous tests or production data.
+    """
     created_sources = []
 
     yield created_sources
 
-    # Cleanup: Delete test sources (will cascade to collections via SourceService)
+    # Cleanup: Delete ONLY test sources created during this test
+    # SourceService.delete_source() handles cascade deletion of collections
     source_service = services["source_service"]
+
     for source_id in created_sources:
         try:
+            # Delete source (will cascade to collections via SourceService)
             await source_service.delete_source(source_id)
         except Exception as e:
             print(f"Warning: Failed to cleanup source {source_id}: {e}")
@@ -218,24 +229,28 @@ async def test_ingestion_routes_to_domain_collections(services, cleanup_sources)
     source_id = source_result["source"]["id"]
     cleanup_sources.append(source_id)
 
-    # Create test document with mixed content
-    test_content = """# Network Security Guide
+    # Create test document with mixed content (HTML format)
+    test_content = """<!DOCTYPE html>
+<html>
+<head><title>Network Security Guide</title></head>
+<body>
+<h1>Network Security Guide</h1>
+<p>This guide covers fundamental network security concepts.</p>
 
-This guide covers fundamental network security concepts.
-
-## Port Scanning Detection
-
-```python
+<h2>Port Scanning Detection</h2>
+<pre><code class="language-python">
 def detect_port_scan(connections: List[Connection]) -> bool:
     \"\"\"Detect potential port scanning activity.\"\"\"
     unique_ports = set(c.dst_port for c in connections)
     return len(unique_ports) > 50  # Threshold for port scan
-```
+</code></pre>
 
-Network security requires both prevention and detection strategies.
+<p>Network security requires both prevention and detection strategies.</p>
+</body>
+</html>
 """
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
         f.write(test_content)
         temp_file = f.name
 
@@ -302,25 +317,35 @@ async def test_search_returns_only_domain_results(services, cleanup_sources):
     network_source_id = network_result["source"]["id"]
     cleanup_sources.append(network_source_id)
 
-    # Ingest AI content
-    ai_content = """# Machine Learning Basics
-
-Neural networks are the foundation of modern AI.
-Deep learning uses multiple layers to extract features from raw data.
+    # Ingest AI content (HTML format)
+    ai_content = """<!DOCTYPE html>
+<html>
+<head><title>Machine Learning Basics</title></head>
+<body>
+<h1>Machine Learning Basics</h1>
+<p>Neural networks are the foundation of modern AI.</p>
+<p>Deep learning uses multiple layers to extract features from raw data.</p>
+</body>
+</html>
 """
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
         f.write(ai_content)
         ai_file = f.name
 
-    # Ingest Network content
-    network_content = """# TCP/IP Fundamentals
-
-The Transmission Control Protocol ensures reliable data delivery.
-Network packets are routed through multiple hops to reach their destination.
+    # Ingest Network content (HTML format)
+    network_content = """<!DOCTYPE html>
+<html>
+<head><title>TCP/IP Fundamentals</title></head>
+<body>
+<h1>TCP/IP Fundamentals</h1>
+<p>The Transmission Control Protocol ensures reliable data delivery.</p>
+<p>Network packets are routed through multiple hops to reach their destination.</p>
+</body>
+</html>
 """
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
         f.write(network_content)
         network_file = f.name
 
@@ -399,10 +424,11 @@ async def test_source_deletion_removes_domain_collections(services, cleanup_sour
     qdrant_client = services["qdrant_client"]
 
     # Create source with multiple collections
+    # NOTE: Using "Test_DevOps_Knowledge" to avoid conflict with production "DevOps Knowledge" source
     success, result = await source_service.create_source({
         "source_type": "upload",
         "enabled_collections": ["documents", "code"],
-        "metadata": {"title": "DevOps Knowledge"},
+        "metadata": {"title": "Test_DevOps_Knowledge"},
     })
     assert success
     source_id = result["source"]["id"]
@@ -468,15 +494,15 @@ async def test_multi_domain_search_aggregation(services, cleanup_sources):
         domains.append(result["source"]["id"])
         cleanup_sources.append(result["source"]["id"])
 
-    # Ingest content to each domain
+    # Ingest content to each domain (HTML format)
     contents = [
-        "Python functions use def keyword. Lambda functions are anonymous.",
-        "JavaScript functions can be arrow functions or traditional functions.",
-        "Database functions include aggregations like COUNT, SUM, AVG.",
+        """<!DOCTYPE html><html><body><p>Python functions use def keyword. Lambda functions are anonymous.</p></body></html>""",
+        """<!DOCTYPE html><html><body><p>JavaScript functions can be arrow functions or traditional functions.</p></body></html>""",
+        """<!DOCTYPE html><html><body><p>Database functions include aggregations like COUNT, SUM, AVG.</p></body></html>""",
     ]
 
     for source_id, content in zip(domains, contents):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
             f.write(content)
             temp_file = f.name
 
@@ -620,27 +646,31 @@ async def test_ingestion_with_multiple_collection_types(services, cleanup_source
     source_id = result["source"]["id"]
     cleanup_sources.append(source_id)
 
-    # Create document with all content types
-    test_content = """# Complete Development Guide
+    # Create document with all content types (HTML format)
+    test_content = """<!DOCTYPE html>
+<html>
+<head><title>Complete Development Guide</title></head>
+<body>
+<h1>Complete Development Guide</h1>
+<p>This guide includes documentation, code examples, and diagrams.</p>
 
-This guide includes documentation, code examples, and diagrams.
+<h2>Documentation</h2>
+<p>Software development requires clear documentation and best practices.</p>
 
-## Documentation
-Software development requires clear documentation and best practices.
-
-## Code Example
-```python
+<h2>Code Example</h2>
+<pre><code class="language-python">
 def process_data(data: list) -> dict:
     return {"count": len(data), "items": data}
-```
+</code></pre>
 
-## Architecture Diagram
-![System Architecture](https://example.com/architecture.png)
-
-The diagram shows the complete system architecture with all components.
+<h2>Architecture Diagram</h2>
+<img src="https://example.com/architecture.png" alt="System Architecture">
+<p>The diagram shows the complete system architecture with all components.</p>
+</body>
+</html>
 """
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
         f.write(test_content)
         temp_file = f.name
 
@@ -702,9 +732,9 @@ async def test_empty_enabled_collections_handling(services, cleanup_sources):
         f"Expected empty collection_names, got {collection_names}"
     )
 
-    # Attempt ingestion (should fail gracefully)
-    test_content = "This is test content that cannot be stored."
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+    # Attempt ingestion (should fail gracefully) - use HTML format
+    test_content = """<!DOCTYPE html><html><body><p>This is test content that cannot be stored.</p></body></html>"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
         f.write(test_content)
         temp_file = f.name
 
