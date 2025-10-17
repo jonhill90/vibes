@@ -390,8 +390,8 @@ async def list_documents(
                 title=doc["title"],
                 document_type=doc.get("document_type"),
                 url=doc.get("url"),
-                created_at=doc["created_at"].isoformat(),
-                updated_at=doc["updated_at"].isoformat(),
+                created_at=doc["created_at"] if isinstance(doc["created_at"], str) else doc["created_at"].isoformat(),
+                updated_at=doc["updated_at"] if isinstance(doc["updated_at"], str) else doc["updated_at"].isoformat(),
                 chunk_count=None,  # TODO: Query chunk count from chunks table
             )
             for doc in documents
@@ -487,8 +487,8 @@ async def get_document(
             title=document["title"],
             document_type=document.get("document_type"),
             url=document.get("url"),
-            created_at=document["created_at"].isoformat(),
-            updated_at=document["updated_at"].isoformat(),
+            created_at=document["created_at"] if isinstance(document["created_at"], str) else document["created_at"].isoformat(),
+            updated_at=document["updated_at"] if isinstance(document["updated_at"], str) else document["updated_at"].isoformat(),
             chunk_count=None,  # TODO: Query chunk count
         )
 

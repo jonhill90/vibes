@@ -94,6 +94,8 @@ services:
     volumes:
       # Mount source code for development hot reload
       - ./backend/src:/app/src:ro
+      # Mount tests for integration testing
+      - ./backend/tests:/app/tests:ro
       # Mount cache directory for ML models, browsers, and pip packages
       # Persists ~2GB of downloaded content across container restarts
       - ${APP_CACHE_DIR:-./cache}:/root/.cache

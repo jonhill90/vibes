@@ -1,1 +1,0 @@
-"""Progress tracking test utilities."""
