@@ -95,10 +95,11 @@ class ContentClassifier:
         if code_indicator_count >= 3:
             return "code"
 
-        # Check code fence density for markdown documents with code examples
-        # Count pairs of code fences (opening and closing)
+        # Check for code fences (highest confidence signal)
+        # Any chunk with code fences should be classified as code
+        # This catches JSON/YAML/config blocks that have no language keywords
         code_fence_count = text.count("```") // 2
-        if code_fence_count > 0 and (code_fence_count / total_lines) > settings.CODE_DETECTION_THRESHOLD:
+        if code_fence_count > 0:
             return "code"
 
         # Check for code-heavy content based on threshold

@@ -30,11 +30,13 @@
    - ✅ Impact: Hybrid search (vector 70% + text 30%) now available for better keyword matching
    - 📝 Note: Testing requires chunks in PostgreSQL (current: 0 chunks after cleanup)
 
-5. **Fix crawl ingestion to extract code** (30 min) - CRITICAL BUG
-   - Issue: Crawled content goes to documents collection only (0 code vectors in MCP_code)
-   - Root cause: `ingest_from_crawl()` doesn't classify chunks (hardcodes "documents")
-   - Fix: Apply ContentClassifier to crawled chunks like `ingest_document()` does
-   - Expected: ~178 code chunks extracted from MCP documentation
+5. **Fix crawl ingestion to extract code** (IN PROGRESS)
+   - ✅ Applied ContentClassifier to crawled chunks (same as `ingest_document()`)
+   - ✅ Modified: `ingestion_service.py:817-1007` (multi-collection crawl ingestion)
+   - ⚠️ **Issue**: Classifier too strict for JSON/YAML code blocks (no language keywords)
+   - 🔧 **Next**: Improve classifier to detect code fences as code (any ``` = code)
+   - Current: JSON blocks classified as "documents" (0 code indicators)
+   - Target: Chunks with code fences should always be "code" (regardless of density)
 
 6. **Add code-specific quality tests** (1 hour) - Regression testing
    - Syntax parsing validation
