@@ -42,9 +42,10 @@ docker exec -w /app rag-backend python3 src/scripts/extract_code_blocks.py \
 
 ## Results
 
-From 708 documentation chunks:
-- **234 code blocks extracted** (33% coverage)
-- **Languages**: json (108), bash (37), mermaid (18), powershell (15), typescript (13), kotlin (10), python (9)
+From 387 documentation chunks:
+- **244 code blocks extracted** (88.7% coverage)
+- **Total MCP_code points**: 275 (244 with language field)
+- **Languages**: json (106), bash (39), typescript (18), mermaid (18), powershell (14), python (12), kotlin (10), csharp (6), groovy (5), http (4), xml (3), java (3), env (2), javascript (1), yml (1), properties (1), yaml (1)
 
 ## Why This Approach?
 
