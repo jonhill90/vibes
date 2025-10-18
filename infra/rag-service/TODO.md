@@ -76,33 +76,40 @@
    - 📝 **Tested**: Reverted Task 5 aggressive code fence detection (was causing docs to be classified as code)
    - ⏸️ **TODO (Future)**: UI language badges and search filtering by language (frontend work)
 
-7. **Add code-specific quality tests** (1 hour) - Regression testing
+7. ✅ **Fix embedding cache dimension constraint** - **COMPLETED 2025-10-18**
+   - ✅ Changed `embedding_cache.embedding` from `VECTOR(1536)` to `VECTOR` (variable dimension)
+   - ✅ Fixes "expected 1536 dimensions, not 3072" errors when caching large model embeddings
+   - ✅ Migration: `006_support_variable_embedding_dimensions.sql`
+   - 📝 **Context**: Multi-collection uses text-embedding-3-small (1536d) + text-embedding-3-large (3072d)
+   - 📝 **Impact**: Cache now works for both document and code embeddings
+
+8. **Add code-specific quality tests** (1 hour) - Regression testing
    - Syntax parsing validation
    - Runnable example checks
    - Update `/tmp/rag_quality_test.py` with code search tests
 
-8. **Lower chunk size for code** (2 hours) - Better code isolation
+9. **Lower chunk size for code** (2 hours) - Better code isolation
    - Current: 500 tokens (mixes code with documentation)
    - Target: 200 tokens for code blocks
    - Update content classifier threshold: 40% → 20% code ratio
 
 ### Phase 3: Production Readiness (MEDIUM PRIORITY)
-8. **Add monitoring/metrics** (4-6 hours) - CNCF stack
+10. **Add monitoring/metrics** (4-6 hours) - CNCF stack
    - OpenTelemetry instrumentation
    - Prometheus + Grafana dashboards
    - Search quality metrics (score distribution, latency p95)
    - Create evaluation dataset (20+ queries)
 
-9. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
-10. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
-11. **Fix service mocking paths** (15 min) - IngestionService import location
-12. **Debug hybrid search test collection** (1 hour) - Import errors
-13. **Re-run full integration suite** (30 min) - Target 80%+ pass rate
+11. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
+12. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
+13. **Fix service mocking paths** (15 min) - IngestionService import location
+14. **Debug hybrid search test collection** (1 hour) - Import errors
+15. **Re-run full integration suite** (30 min) - Target 80%+ pass rate
 
 ### Phase 4: Infrastructure (LOW PRIORITY)
-14. **Add volume mounts for temp file storage** (15 min) - Document uploads
-15. **Configure log rotation** (30 min) - Backend logs
-16. **Document deployment guide** (1 hour) - Production documentation
+16. **Add volume mounts for temp file storage** (15 min) - Document uploads
+17. **Configure log rotation** (30 min) - Backend logs
+18. **Document deployment guide** (1 hour) - Production documentation
 
 ## ✅ Completed
 
