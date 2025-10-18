@@ -27,6 +27,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install SSH client and rsync for remote operations
+# Keeps image minimal while enabling remote connectivity
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-client \
+    rsync \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy virtual environment from builder stage
 # Only the compiled packages, not build tools
 COPY --from=builder /venv /venv

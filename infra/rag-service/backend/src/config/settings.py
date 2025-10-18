@@ -127,8 +127,8 @@ class Settings(BaseSettings):
     )
 
     SIMILARITY_THRESHOLD: float = Field(
-        default=0.05,
-        description="Minimum similarity score for search results",
+        default=0.6,
+        description="Minimum similarity score for search results (raised from 0.05 to 0.6 for better quality)",
         ge=0.0,
         le=1.0
     )

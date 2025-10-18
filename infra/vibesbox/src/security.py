@@ -62,6 +62,10 @@ ALLOWED_COMMANDS = {
     "cp",
     "mv",
     "ln",
+    "rm",        # Remove files/directories - use with caution
+    # Permission commands
+    "chmod",     # Change file permissions
+    "chown",     # Change file ownership
     # System commands
     "ps",
     "top",
@@ -88,6 +92,10 @@ ALLOWED_COMMANDS = {
     "gunzip",
     "unzip",
     "zip",
+    # Remote operations
+    "ssh",       # Secure shell connection
+    "scp",       # Secure copy
+    "rsync",     # File synchronization
 }
 
 # Shell metacharacters that indicate command chaining/injection
