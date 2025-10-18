@@ -61,7 +61,8 @@ class ContentClassifier:
             None
 
         Note:
-            - Only extracts from explicit code fence markers
+            - Searches for code fences anywhere in text (not just at start)
+            - Returns first language found if multiple fences exist
             - Returns None for unfenced code blocks
             - Language identifiers are lowercased for consistency
             - Pattern matches existing extract_code_blocks.py script (lines 58-61)
@@ -69,10 +70,11 @@ class ContentClassifier:
         # Match code fence with optional language identifier
         # Pattern: ``` followed by language (alphanumeric + _ + - + +), optional attributes
         # Matches: ```python, ```c++, ```objective-c, ```python {highlight}
-        fence_pattern = r'^```([a-zA-Z0-9_+-]+)(?:\s+[^\n]*)?'
+        fence_pattern = r'```([a-zA-Z0-9_+-]+)(?:\s+[^\n]*)?'
 
-        # Search for code fence at start of text (after whitespace)
-        match = re.search(fence_pattern, text.strip(), re.MULTILINE)
+        # Search for code fence anywhere in text (use re.search, not text.strip())
+        # This finds fences embedded in documentation, not just at the start
+        match = re.search(fence_pattern, text, re.MULTILINE)
 
         if match and match.group(1):
             # Found language identifier (e.g., "python" from ```python)
@@ -148,13 +150,6 @@ class ContentClassifier:
         if code_indicator_count >= 3:
             return "code"
 
-        # Check for code fences (highest confidence signal)
-        # Any chunk with code fences should be classified as code
-        # This catches JSON/YAML/config blocks that have no language keywords
-        code_fence_count = text.count("```") // 2
-        if code_fence_count > 0:
-            return "code"
-
         # Check for code-heavy content based on threshold
         # This catches files with high code indicator density
         threshold = settings.CODE_DETECTION_THRESHOLD
@@ -163,6 +158,8 @@ class ContentClassifier:
 
         # Default to documents for general text
         # This includes: articles, documentation, blog posts, plain text, etc.
+        # Note: Documentation with embedded code examples will be in "documents"
+        # Use extract_code_blocks.py script to extract actual code blocks
         return "documents"
 
 

@@ -591,6 +591,9 @@ class IngestionService:
                     # Field name matches extract_code_blocks.py script (line 264)
                     if chunk_languages and i < len(chunk_languages) and chunk_languages[i]:
                         payload["language"] = chunk_languages[i]
+                        logger.debug(f"Added language='{chunk_languages[i]}' to chunk {i}")
+                    elif i < len(chunk_languages):
+                        logger.debug(f"Skipped language for chunk {i}: chunk_languages[{i}]={repr(chunk_languages[i])}")
 
                     points.append({
                         "id": chunk_id,
@@ -848,6 +851,9 @@ class IngestionService:
             code_language = None
             if content_type == "code":
                 code_language = classifier.extract_code_language(chunk.text)
+                logger.debug(
+                    f"Chunk {i}: extract_code_language() returned: {repr(code_language)}"
+                )
 
             logger.info(
                 f"Chunk {i}: classified as '{content_type}'"

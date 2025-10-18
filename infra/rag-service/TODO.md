@@ -59,17 +59,22 @@
    - 📝 Note: Similarity threshold lowered to 0.2 for small datasets (will tune with more data)
 
 6. ✅ ~~**Add language type detection for code**~~ - **COMPLETED 2025-10-18**
-   - ✅ Added `ContentClassifier.extract_code_language()` method with regex pattern matching
-   - ✅ Modified: `content_classifier.py:32-75` (new method)
-   - ✅ Updated ingestion to extract language for code chunks
-   - ✅ Modified: `ingestion_service.py` (both `ingest_document` and `ingest_from_crawl`)
-   - ✅ Added `chunk_languages` parameter to `_store_document_atomic()`
-   - ✅ Modified: Qdrant payload construction to include `code_language` field (lines 572-589)
-   - ✅ Tested: Language extraction works correctly (python, javascript, json, etc.)
-   - ✅ Impact: Code chunks now tagged with programming language when detected from ` ```language` fences
-   - 📝 Note: Language only extracted from explicit markdown code fences (e.g., ` ```python`)
-   - 📝 Note: Chunks without language specifier (` ```) will not have `code_language` field
-   - ⏸️ TODO (Future): UI language badges and search filtering by language (frontend work)
+   - ✅ **Workflow**: Two-phase approach (crawl → extract script) - **THIS IS THE CORRECT APPROACH**
+   - ✅ **Phase 1 - Crawl**: Creates chunks in PostgreSQL + MCP_documents collection (docs with embedded code)
+   - ✅ **Phase 2 - Extract**: Run `extract_code_blocks.py` script AFTER crawling to extract pure code blocks
+   - ✅ **Script**: `backend/src/scripts/extract_code_blocks.py` (lines 58-61: regex pattern)
+   - ✅ **Pattern**: `r'```([a-zA-Z0-9_+-]+)(?:\s+[^\n]*)?\n(.*?)```'` extracts language + code
+   - ✅ **Results**: Extracted 234 code blocks with `language` field from 708 chunks (33% coverage)
+   - ✅ **Languages detected**: json (108), bash (37), mermaid (18), powershell (15), typescript (13), kotlin (10), python (9), and more
+   - ✅ **Orphan Prevention**: Document deletion automatically cleans up code vectors (document_service.py:380-453)
+   - ✅ **Impact**: Code chunks properly tagged with programming language for filtering and syntax highlighting
+   - 📝 **Critical**: Don't try to extract language during crawl - it misclassifies docs with embedded code
+   - 📝 **Why Script**: Chunks may not start with code fences, may have no language tags, or mix docs+code
+   - 📝 **Note**: Script creates NEW Qdrant points in MCP_code collection (doesn't modify original chunks)
+   - 📝 **Note**: Code fences without language (` ``` `) are extracted but have no `language` field
+   - 📝 **Command**: `docker exec -w /app rag-backend python3 src/scripts/extract_code_blocks.py --source-id <uuid>`
+   - 📝 **Tested**: Reverted Task 5 aggressive code fence detection (was causing docs to be classified as code)
+   - ⏸️ **TODO (Future)**: UI language badges and search filtering by language (frontend work)
 
 7. **Add code-specific quality tests** (1 hour) - Regression testing
    - Syntax parsing validation
