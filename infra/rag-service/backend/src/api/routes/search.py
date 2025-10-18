@@ -75,10 +75,9 @@ async def get_rag_service(
             openai_client=openai_client,
         )
 
-        # Initialize vector service
+        # Initialize vector service (collection-agnostic - per-domain collections)
         vector_service = VectorService(
             qdrant_client=qdrant_client,
-            collection_name=settings.QDRANT_COLLECTION_NAME,
         )
 
         # Initialize base search strategy (required)
@@ -208,7 +207,6 @@ async def search_documents(
             )
             vector_service = VectorService(
                 qdrant_client=qdrant_client,
-                collection_name=settings.QDRANT_COLLECTION_NAME,
             )
             search_service = SearchService(
                 db_pool=db_pool,
