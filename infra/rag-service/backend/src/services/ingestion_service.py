@@ -587,13 +587,19 @@ class IngestionService:
                         "source_id": str(source_id),
                     }
 
-                    # Add language if available (only for code chunks)
-                    # Field name matches extract_code_blocks.py script (line 264)
+                    # Add language field for code chunks ONLY
+                    # CRITICAL: Code chunks MUST have language field - no exceptions
+                    # If going to code collection without language = BUG
                     if chunk_languages and i < len(chunk_languages) and chunk_languages[i]:
                         payload["language"] = chunk_languages[i]
-                        logger.debug(f"Added language='{chunk_languages[i]}' to chunk {i}")
-                    elif i < len(chunk_languages):
-                        logger.debug(f"Skipped language for chunk {i}: chunk_languages[{i}]={repr(chunk_languages[i])}")
+                        logger.info(f"Added language='{chunk_languages[i]}' to chunk {i}")
+                    elif collection_name and "code" in collection_name.lower():
+                        # This should NEVER happen with new strict classification
+                        logger.error(
+                            f"BUG: Code chunk {i} missing language field! "
+                            f"Collection: {collection_name}. Skipping this point."
+                        )
+                        continue  # Skip this point - don't add to Qdrant
 
                     points.append({
                         "id": chunk_id,
@@ -851,9 +857,15 @@ class IngestionService:
             code_language = None
             if content_type == "code":
                 code_language = classifier.extract_code_language(chunk.text)
-                logger.debug(
-                    f"Chunk {i}: extract_code_language() returned: {repr(code_language)}"
-                )
+                # CRITICAL: If we can't extract language, skip this chunk
+                # It was misclassified - code MUST have language tag
+                if not code_language:
+                    logger.warning(
+                        f"Chunk {i}: Classified as code but no language detected. "
+                        f"Reclassifying as documents. Text preview: {chunk.text[:100]}"
+                    )
+                    content_type = "documents"
+                    code_language = None
 
             logger.info(
                 f"Chunk {i}: classified as '{content_type}'"

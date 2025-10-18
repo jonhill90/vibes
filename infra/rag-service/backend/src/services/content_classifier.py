@@ -87,10 +87,8 @@ class ContentClassifier:
     def detect_content_type(text: str) -> CollectionType:
         """Detect if chunk is code, document, or media based on content.
 
-        This is the primary classification method that routes text chunks
-        to appropriate embedding collections. The algorithm prioritizes
-        specificity: media indicators are checked first (most specific),
-        then code patterns, then defaults to documents.
+        CRITICAL RULE: Only classify as "code" if it's an ACTUAL code snippet
+        with a code fence AND language tag. Everything else is "documents".
 
         Args:
             text: Text content to classify (typically a chunk from ingestion)
@@ -99,7 +97,7 @@ class ContentClassifier:
             CollectionType: "code", "media", or "documents"
 
         Examples:
-            >>> ContentClassifier.detect_content_type("def foo(): pass")
+            >>> ContentClassifier.detect_content_type("```python\\ndef foo(): pass\\n```")
             "code"
 
             >>> ContentClassifier.detect_content_type("![image](test.png)")
@@ -109,12 +107,12 @@ class ContentClassifier:
             "documents"
 
         Note:
-            - Media detection has highest priority (most specific)
-            - Code detection uses CODE_DETECTION_THRESHOLD from settings (default 0.4)
-            - When in doubt, defaults to "documents" collection
+            - Media detection has highest priority
+            - Code MUST have code fence with language tag (```python, ```bash, etc.)
+            - No language tag = NOT a code snippet = goes to documents
+            - API docs, JSON examples without fences = documents
         """
         # Check for media (highest priority - most specific)
-        # These are explicit visual content indicators
         media_indicators = [
             "![" in text,           # Markdown image syntax: ![alt](url)
             "<img" in text,         # HTML image tag
@@ -125,41 +123,16 @@ class ContentClassifier:
         if any(media_indicators):
             return "media"
 
-        # Check for code patterns
-        # We use multiple indicators to avoid false positives on technical docs
-        code_indicators = [
-            text.strip().startswith("```"),                     # Code fence start
-            text.strip().startswith("    "),                   # Indented code block (4+ spaces)
-            bool(re.search(r'\bdef\s+\w+\s*\(', text)),        # Python function definition
-            bool(re.search(r'\bfunction\s+\w+\s*\(', text)),   # JavaScript function
-            bool(re.search(r'\bclass\s+\w+', text)),           # Class definition (Python/JS/Java)
-            "import " in text or "from " in text,              # Python imports
-            "{" in text and "}" in text and ";" in text,       # C-style syntax (JS/Java/C++)
-            bool(re.search(r'\bconst\s+\w+\s*=', text)),       # Modern JavaScript const
-            bool(re.search(r'\blet\s+\w+\s*=', text)),         # Modern JavaScript let
-            bool(re.search(r'\basync\s+\w+\s*\(', text)),      # Async function
-            bool(re.search(r'=>', text)),                       # Arrow function (JS/TS)
-        ]
-
-        # Calculate code density
-        code_indicator_count = sum(code_indicators)
-        total_lines = max(text.count("\n") + 1, 1)  # +1 for single-line text
-
-        # Absolute minimum: if 3+ code indicators present, classify as code
-        # This catches obvious code blocks regardless of length
-        if code_indicator_count >= 3:
+        # Check for code snippets (MUST have code fence with language tag)
+        # CRITICAL: Only classify as "code" if we can extract a language
+        # If there's no language tag, it's not a proper code snippet
+        fence_pattern = r'```([a-zA-Z0-9_+-]+)(?:\s+[^\n]*)?'
+        if re.search(fence_pattern, text, re.MULTILINE):
+            # Found code fence with language tag - this is actual code
             return "code"
 
-        # Check for code-heavy content based on threshold
-        # This catches files with high code indicator density
-        threshold = settings.CODE_DETECTION_THRESHOLD
-        if total_lines > 0 and (code_indicator_count / total_lines) > threshold:
-            return "code"
-
-        # Default to documents for general text
-        # This includes: articles, documentation, blog posts, plain text, etc.
-        # Note: Documentation with embedded code examples will be in "documents"
-        # Use extract_code_blocks.py script to extract actual code blocks
+        # Everything else is documents
+        # This includes: API docs, JSON examples without fences, technical documentation
         return "documents"
 
 
