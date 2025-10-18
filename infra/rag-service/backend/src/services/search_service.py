@@ -214,27 +214,43 @@ class SearchService:
                 f"{len(rows)} sources"
             )
 
-            # Step 4: Embed query (use documents model for general queries)
-            embedding_start = time.time()
-            query_embedding = await self.embedding_service.embed_text(
-                query,
-                model_name=settings.COLLECTION_EMBEDDING_MODELS["documents"]
-            )
-
-            if query_embedding is None:
-                logger.error("Failed to generate query embedding")
-                raise ValueError("Query embedding generation failed")
-
-            embedding_time = (time.time() - embedding_start) * 1000  # ms
-            logger.debug(f"Query embedding generated in {embedding_time:.1f}ms")
-
-            # Step 5: Search each collection
+            # Step 4 & 5: Generate embeddings per collection type and search
+            # Different collections use different embedding models (documents=1536d, code=3072d)
             all_results = []
             search_start = time.time()
+            total_embedding_time = 0
 
             for col in collections_to_search:
                 try:
-                    # Search this collection
+                    # Generate query embedding for this collection type
+                    collection_type = col["collection_type"]
+                    model_name = settings.COLLECTION_EMBEDDING_MODELS.get(collection_type)
+
+                    if not model_name:
+                        logger.warning(
+                            f"No embedding model configured for collection_type={collection_type}, "
+                            f"skipping"
+                        )
+                        continue
+
+                    embedding_start = time.time()
+                    query_embedding = await self.embedding_service.embed_text(
+                        query,
+                        model_name=model_name
+                    )
+
+                    if query_embedding is None:
+                        logger.error(f"Failed to generate {collection_type} query embedding")
+                        continue
+
+                    embedding_time = (time.time() - embedding_start) * 1000  # ms
+                    total_embedding_time += embedding_time
+                    logger.debug(
+                        f"{collection_type} embedding generated in {embedding_time:.1f}ms "
+                        f"(dimension={len(query_embedding)})"
+                    )
+
+                    # Search this collection with the appropriate embedding
                     results = await self.vector_service.search_vectors(
                         collection_name=col["collection_name"],
                         query_vector=query_embedding,
@@ -307,7 +323,7 @@ class SearchService:
                 f"total_results={len(all_results)}, "
                 f"returned={len(formatted_results)}, "
                 f"total_time={total_time:.1f}ms "
-                f"(embedding={embedding_time:.1f}ms, search={search_time:.1f}ms)"
+                f"(embedding={total_embedding_time:.1f}ms, search={search_time:.1f}ms)"
             )
 
             # Performance warning if exceeds target

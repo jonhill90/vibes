@@ -377,7 +377,7 @@ class DocumentService:
                 if doc_row is None:
                     return False, {"error": f"Document with ID {document_id} not found"}
 
-                # Parse collection_names JSONB to get the "documents" collection
+                # Parse collection_names JSONB to get all collections for this source
                 collection_names_raw = doc_row["collection_names"]
                 if isinstance(collection_names_raw, str):
                     collection_names = json.loads(collection_names_raw)
@@ -386,17 +386,18 @@ class DocumentService:
                 else:
                     collection_names = {}
 
-                collection_name = collection_names.get("documents")
-                if not collection_name:
+                if not collection_names:
                     logger.error(
-                        f"No 'documents' collection found for document {document_id}. "
-                        f"Available collections: {collection_names}"
+                        f"No collection_names found for document {document_id}'s source"
                     )
                     return False, {
-                        "error": "Document's source has no 'documents' collection configured"
+                        "error": "Document's source has no collections configured"
                     }
 
-                logger.info(f"Using collection '{collection_name}' for document {document_id} deletion")
+                logger.info(
+                    f"Deleting document {document_id} from collections: "
+                    f"{list(collection_names.values())}"
+                )
 
                 # Step 1: Get all chunk IDs for this document before deletion
                 chunk_query = "SELECT id FROM chunks WHERE document_id = $1"
@@ -405,18 +406,51 @@ class DocumentService:
 
                 logger.info(f"Found {len(chunk_ids)} chunks to delete for document {document_id}")
 
-                # Step 2: Delete vectors from Qdrant first (if vector_service provided)
-                if vector_service and chunk_ids:
-                    try:
-                        deleted_count = await vector_service.delete_vectors(collection_name, chunk_ids)
-                        logger.info(f"Deleted {deleted_count} vectors from Qdrant collection '{collection_name}' for document {document_id}")
-                    except Exception as e:
-                        # Qdrant deletion failed - abort to prevent orphaned vectors
-                        logger.error(f"Qdrant deletion failed for document {document_id}: {e}")
-                        return False, {
-                            "error": f"Failed to delete vectors from Qdrant: {str(e)}",
-                            "detail": "Document not deleted to prevent orphaned vectors"
-                        }
+                # Step 2: Delete vectors from ALL Qdrant collections (documents + code)
+                total_deleted = 0
+                if vector_service:
+                    for collection_type, collection_name in collection_names.items():
+                        try:
+                            if collection_type == "documents" and chunk_ids:
+                                # Delete document chunks by chunk IDs
+                                deleted_count = await vector_service.delete_vectors(
+                                    collection_name,
+                                    chunk_ids
+                                )
+                                logger.info(
+                                    f"Deleted {deleted_count} document vectors from '{collection_name}'"
+                                )
+                                total_deleted += deleted_count
+
+                            elif collection_type == "code":
+                                # Delete code blocks by document_id filter
+                                # Code blocks have document_id in their payload
+                                deleted_count = await vector_service.delete_vectors_by_filter(
+                                    collection_name=collection_name,
+                                    filter_conditions={
+                                        "must": [
+                                            {
+                                                "key": "document_id",
+                                                "match": {"value": str(document_id)}
+                                            }
+                                        ]
+                                    }
+                                )
+                                logger.info(
+                                    f"Deleted {deleted_count} code vectors from '{collection_name}' "
+                                    f"for document {document_id}"
+                                )
+                                total_deleted += deleted_count
+
+                        except Exception as e:
+                            # Qdrant deletion failed - abort to prevent orphaned vectors
+                            logger.error(
+                                f"Qdrant deletion failed for collection '{collection_name}': {e}"
+                            )
+                            return False, {
+                                "error": f"Failed to delete vectors from {collection_name}: {str(e)}",
+                                "detail": "Document not deleted to prevent orphaned vectors"
+                            }
 
                 # Step 3: Delete document from PostgreSQL (CASCADE deletes chunks)
                 delete_query = "DELETE FROM documents WHERE id = $1 RETURNING id"
@@ -426,14 +460,15 @@ class DocumentService:
                     return False, {"error": f"Document with ID {document_id} not found"}
 
                 logger.info(
-                    f"Deleted document {document_id} with {len(chunk_ids)} chunks "
-                    f"(Qdrant cleanup: {bool(vector_service and chunk_ids)})"
+                    f"Deleted document {document_id} with {len(chunk_ids)} chunks and "
+                    f"{total_deleted} vectors from Qdrant"
                 )
 
                 return True, {
                     "message": f"Document {document_id} deleted successfully",
                     "chunks_deleted": len(chunk_ids),
-                    "qdrant_cleanup": bool(vector_service and chunk_ids),
+                    "vectors_deleted": total_deleted,
+                    "collections_cleaned": list(collection_names.values()),
                 }
 
         except asyncpg.PostgresError as e:

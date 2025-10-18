@@ -21,6 +21,7 @@ Critical Gotchas Addressed:
 Performance Target: <50ms p95 latency (single collection), <150ms p95 (multi-collection)
 """
 
+import json
 import logging
 import time
 from typing import Any, Dict, List, Optional
@@ -188,29 +189,44 @@ class BaseSearchStrategy:
                 f"{collections_to_search}"
             )
 
-            # Step 2: Generate query embedding once (use "documents" model for general queries)
-            logger.debug(f"Generating embedding for query: {query[:50]}...")
-            embedding_start = time.time()
-
-            # Use "documents" model for general query embeddings
-            query_embedding = await self.embedding_service.embed_text(
-                query,
-                model_name=settings.COLLECTION_EMBEDDING_MODELS.get("documents")
-            )
-
-            if query_embedding is None:
-                logger.error("Failed to generate query embedding")
-                raise ValueError("Query embedding generation failed")
-
-            embedding_time = (time.time() - embedding_start) * 1000  # Convert to ms
-            logger.debug(f"Embedding generation took {embedding_time:.1f}ms")
-
-            # Step 3: Search each collection
+            # Step 2 & 3: Generate embeddings and search each collection
+            # Note: We generate embeddings per collection type because different collections
+            # use different embedding models (documents=1536d, code=3072d)
             all_results = []
             search_start = time.time()
+            total_embedding_time = 0
 
             for collection_type in collections_to_search:
                 try:
+                    # Generate query embedding for this collection type
+                    logger.debug(f"Generating {collection_type} embedding for query: {query[:50]}...")
+                    embedding_start = time.time()
+
+                    model_name = settings.COLLECTION_EMBEDDING_MODELS.get(collection_type)
+                    if not model_name:
+                        logger.warning(
+                            f"No embedding model configured for collection_type={collection_type}, "
+                            f"skipping"
+                        )
+                        continue
+
+                    query_embedding = await self.embedding_service.embed_text(
+                        query,
+                        model_name=model_name
+                    )
+
+                    if query_embedding is None:
+                        logger.error(f"Failed to generate {collection_type} query embedding")
+                        continue
+
+                    embedding_time = (time.time() - embedding_start) * 1000  # Convert to ms
+                    total_embedding_time += embedding_time
+                    logger.debug(
+                        f"{collection_type} embedding generation took {embedding_time:.1f}ms "
+                        f"(dimension={len(query_embedding)})"
+                    )
+
+                    # Search this collection with the appropriate embedding
                     collection_results = await self._search_collection(
                         collection_type=collection_type,
                         query_embedding=query_embedding,
@@ -261,7 +277,7 @@ class BaseSearchStrategy:
                 f"total_results={len(all_results)}, "
                 f"returned={len(formatted_results)}, "
                 f"total_time={total_time:.1f}ms "
-                f"(embedding={embedding_time:.1f}ms, search={search_time:.1f}ms)"
+                f"(embedding={total_embedding_time:.1f}ms, search={search_time:.1f}ms)"
             )
 
             # Performance warning if exceeds target
@@ -370,18 +386,18 @@ class BaseSearchStrategy:
         Raises:
             Exception: If collection search fails
         """
-        collection_name = VectorService.get_collection_name(collection_type)
-
         # Build source_id filter if specified (only search sources with this collection enabled)
         filter_conditions = None
+        collection_name = None
+
         if filters and "source_id" in filters:
             source_id = filters["source_id"]
 
-            # Verify this source has this collection enabled
+            # Query database for source's collection_names mapping (per-domain collections)
             async with self.db_pool.acquire() as conn:
                 row = await conn.fetchrow(
                     """
-                    SELECT id FROM sources
+                    SELECT collection_names FROM sources
                     WHERE id = $1
                     AND $2 = ANY(enabled_collections)
                     """,
@@ -396,6 +412,23 @@ class BaseSearchStrategy:
                     )
                     return []
 
+                # Parse collection_names JSONB to get the actual collection name
+                collection_names_raw = row["collection_names"]
+                if isinstance(collection_names_raw, str):
+                    collection_names = json.loads(collection_names_raw)
+                elif isinstance(collection_names_raw, dict):
+                    collection_names = collection_names_raw
+                else:
+                    collection_names = {}
+
+                collection_name = collection_names.get(collection_type)
+                if not collection_name:
+                    logger.error(
+                        f"No '{collection_type}' collection found for source {source_id}. "
+                        f"Available collections: {collection_names}"
+                    )
+                    return []
+
             # Build Qdrant filter for this source
             filter_conditions = {
                 "must": [
@@ -405,6 +438,65 @@ class BaseSearchStrategy:
                     }
                 ]
             }
+        else:
+            # No source_id filter: Query all sources for this collection type
+            # and search across all their per-domain collections
+            async with self.db_pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT id, collection_names FROM sources
+                    WHERE $1 = ANY(enabled_collections)
+                    AND status = 'active'
+                    """,
+                    collection_type
+                )
+
+                if not rows:
+                    logger.debug(f"No active sources have {collection_type} collection enabled")
+                    return []
+
+                # Collect all unique collection names for this collection type
+                collection_names_set = set()
+                source_ids = []
+                for row in rows:
+                    source_ids.append(str(row["id"]))
+                    collection_names_raw = row["collection_names"]
+                    if isinstance(collection_names_raw, str):
+                        collection_names_dict = json.loads(collection_names_raw)
+                    elif isinstance(collection_names_raw, dict):
+                        collection_names_dict = collection_names_raw
+                    else:
+                        collection_names_dict = {}
+
+                    coll_name = collection_names_dict.get(collection_type)
+                    if coll_name:
+                        collection_names_set.add(coll_name)
+
+                if not collection_names_set:
+                    logger.warning(f"No collection_names found for type {collection_type}")
+                    return []
+
+                # For now, search the first collection and filter by source_ids
+                # In the future, we could search multiple collections if sources use different names
+                collection_name = list(collection_names_set)[0]
+                if len(collection_names_set) > 1:
+                    logger.warning(
+                        f"Multiple collection names found for type {collection_type}: {collection_names_set}. "
+                        f"Using first: {collection_name}"
+                    )
+
+                # Filter to only include these source_ids
+                filter_conditions = {
+                    "should": [
+                        {"key": "source_id", "match": {"value": source_id}}
+                        for source_id in source_ids
+                    ]
+                }
+
+        # Validate collection_name was set
+        if not collection_name:
+            logger.error(f"No collection_name determined for collection_type={collection_type}")
+            return []
 
         # Create VectorService (collection-agnostic - collection_name passed per-method)
         vector_service = VectorService(
@@ -414,7 +506,8 @@ class BaseSearchStrategy:
         # Search this collection
         logger.debug(
             f"Searching {collection_name} with limit={limit}, "
-            f"threshold={self.similarity_threshold}"
+            f"threshold={self.similarity_threshold}, "
+            f"filter_conditions={filter_conditions is not None}"
         )
 
         results = await vector_service.search_vectors(

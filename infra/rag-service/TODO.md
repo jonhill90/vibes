@@ -3,24 +3,23 @@
 ## 📋 Active Tasks (Priority Order)
 
 ### Phase 1: Critical Bugs (BLOCKING)
-1. **Fix search collection name resolution** (2-3 hours) - BLOCKING all search functionality
-   - Problem: Search uses global collections (`AI_DOCUMENTS`) but we have per-domain collections (`MCP_documents`)
-   - Impact: All search queries return 0 results (404 errors)
-   - Fix: Query database for `source.collection_names` mapping instead of using static method
-   - Files: `base_search_strategy.py:373`, `search_service.py`, `vector_service.py`
-   - See: Linear JON-12 comment for full details
+1. ✅ ~~**Fix search collection name resolution**~~ - **COMPLETED 2025-10-18**
+   - ✅ Fixed: Query database for `source.collection_names` mapping
+   - ✅ Modified: `base_search_strategy.py`, `search_service.py`
+   - ✅ Verified: Search correctly routes to per-domain collections
 
-2. **Fix embedding dimension mismatch in search** (1 hour) - BLOCKING code search
-   - Problem: Search generates 1536d embeddings but code collection expects 3072d
-   - Impact: Code search fails silently with validation errors
-   - Fix: Generate per-collection embeddings or unify embedding models
-   - Files: `base_search_strategy.py:196-198`
+2. ✅ ~~**Fix embedding dimension mismatch in search**~~ - **COMPLETED 2025-10-18**
+   - ✅ Fixed: Generate per-collection embeddings (1536d for docs, 3072d for code)
+   - ✅ Modified: `base_search_strategy.py`, `search_service.py`
+   - ✅ Verified: Code search works without dimension validation errors
 
-3. **Implement orphaned vector cleanup** (2-3 hours) - DATA INTEGRITY
-   - Problem: Deleting documents leaves orphaned code vectors in MCP_code collection
-   - Impact: Stale search results, wasted storage, incorrect counts
-   - Fix: Update delete operations to clean up related code vectors
-   - Files: `documents.py`, `document_service.py`, `extract_code_blocks.py`
+3. ✅ ~~**Implement orphaned vector cleanup**~~ - **COMPLETED 2025-10-18**
+   - ✅ Fixed: Delete operations now clean up code vectors when documents are deleted
+   - ✅ Modified: `document_service.py:380-453`, `vector_service.py:391-448`
+   - ✅ Added: `delete_vectors_by_filter()` method with count return
+   - ✅ Cleaned up: Removed 227 pre-existing orphaned code vectors
+   - ✅ Verified: All collections now clean, no orphaned vectors
+   - ✅ Impact: No more orphaned code blocks, maintains data integrity
 
 ### Phase 2: Quality Improvements (HIGH PRIORITY)
 4. **Enable hybrid search** (30 min) - Keyword matching for code queries
@@ -58,7 +57,21 @@
 
 ## ✅ Completed
 
-### Code Extraction (2025-10-18)
+### Search Fixes & Data Integrity (2025-10-18 Evening)
+- ✅ **Fixed collection name resolution** - Search queries database for per-domain `collection_names` mapping
+- ✅ **Fixed embedding dimension mismatch** - Generate embeddings per collection type (1536d vs 3072d)
+- ✅ **Implemented orphaned vector cleanup** - Document deletion now cleans up code vectors automatically
+- ✅ **Added delete_vectors_by_filter()** - New VectorService method returns count of deleted vectors
+- ✅ **Cleaned up existing orphans** - Removed 227 pre-existing orphaned code vectors from MCP_code
+- ✅ **Verified multi-collection search** - Both code and document searches return results
+- ✅ **Verified clean state** - All Qdrant collections now have 0 orphaned vectors
+- ✅ **Files modified**:
+  - `base_search_strategy.py:192-479`
+  - `search_service.py:217-326`
+  - `document_service.py:380-472`
+  - `vector_service.py:391-483`
+
+### Code Extraction (2025-10-18 Afternoon)
 - ✅ **Extracted code blocks into MCP_code collection** - 227 code blocks from 916 documentation chunks
 - ✅ **Created extract_code_blocks.py script** - Automated extraction with embedding and storage
 - ✅ **Used text-embedding-3-large for code** - 3072d embeddings for better code understanding

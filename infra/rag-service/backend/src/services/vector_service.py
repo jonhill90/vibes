@@ -388,12 +388,71 @@ class VectorService:
             logger.error(f"Error deleting vectors: {e}")
             raise
 
+    async def delete_vectors_by_filter(
+        self,
+        collection_name: str,
+        filter_conditions: Dict[str, Any],
+    ) -> int:
+        """Delete vectors matching filter conditions and return count.
+
+        Args:
+            collection_name: Name of the Qdrant collection to delete from
+            filter_conditions: Qdrant filter dict for deletion
+                Example: {"must": [{"key": "document_id", "match": {"value": "doc-123"}}]}
+
+        Returns:
+            int: Number of points deleted
+
+        Raises:
+            Exception: If deletion fails
+
+        Pattern: Useful for deleting all code blocks for a document
+        """
+        try:
+            # First, count how many points match the filter
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+            # Build Qdrant filter from conditions
+            search_filter = Filter(**filter_conditions)
+
+            # Scroll to count matching points before deletion
+            scroll_result = await self.client.scroll(
+                collection_name=collection_name,
+                scroll_filter=search_filter,
+                limit=10000,  # Should be enough for most documents
+                with_payload=False,
+                with_vectors=False,
+            )
+
+            points_to_delete = scroll_result[0]
+            count = len(points_to_delete)
+
+            if count == 0:
+                logger.debug(f"No vectors found matching filter in '{collection_name}'")
+                return 0
+
+            # Delete the vectors
+            await self.client.delete(
+                collection_name=collection_name,
+                points_selector=search_filter,
+            )
+
+            logger.info(
+                f"Deleted {count} vectors from '{collection_name}' "
+                f"matching filter: {filter_conditions}"
+            )
+            return count
+
+        except Exception as e:
+            logger.error(f"Error deleting vectors by filter: {e}")
+            raise
+
     async def delete_by_filter(
         self,
         collection_name: str,
         filter_conditions: Dict[str, Any],
     ) -> None:
-        """Delete vectors matching filter conditions.
+        """Delete vectors matching filter conditions (no count returned).
 
         Args:
             collection_name: Name of the Qdrant collection to delete from
@@ -404,6 +463,7 @@ class VectorService:
             Exception: If deletion fails
 
         Pattern: Useful for deleting all chunks for a document
+        Note: Use delete_vectors_by_filter() if you need the count of deleted vectors
         """
         try:
             search_filter = Filter(**filter_conditions)
