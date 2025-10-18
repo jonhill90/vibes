@@ -587,9 +587,10 @@ class IngestionService:
                         "source_id": str(source_id),
                     }
 
-                    # Add code_language if available (only for code chunks)
+                    # Add language if available (only for code chunks)
+                    # Field name matches extract_code_blocks.py script (line 264)
                     if chunk_languages and i < len(chunk_languages) and chunk_languages[i]:
-                        payload["code_language"] = chunk_languages[i]
+                        payload["language"] = chunk_languages[i]
 
                     points.append({
                         "id": chunk_id,

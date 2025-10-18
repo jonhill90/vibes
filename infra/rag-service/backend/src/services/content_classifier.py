@@ -33,10 +33,12 @@ class ContentClassifier:
         """Extract programming language from code fence markers.
 
         Searches for markdown code fences (```language) and extracts the
-        language identifier. Common patterns:
+        language identifier. Handles various fence formats:
         - ```python → "python"
         - ```javascript → "javascript"
-        - ```json → "json"
+        - ```c++ → "c++"
+        - ```objective-c → "objective-c"
+        - ```python {highlight} → "python" (ignores attributes)
         - ``` → None (no language specified)
 
         Args:
@@ -49,6 +51,9 @@ class ContentClassifier:
             >>> ContentClassifier.extract_code_language("```python\\nprint('hello')")
             "python"
 
+            >>> ContentClassifier.extract_code_language("```c++\\nint main()")
+            "c++"
+
             >>> ContentClassifier.extract_code_language("```\\nsome code")
             None
 
@@ -59,10 +64,12 @@ class ContentClassifier:
             - Only extracts from explicit code fence markers
             - Returns None for unfenced code blocks
             - Language identifiers are lowercased for consistency
+            - Pattern matches existing extract_code_blocks.py script (lines 58-61)
         """
         # Match code fence with optional language identifier
-        # Pattern: ``` followed by optional language, then newline
-        fence_pattern = r'^```(\w+)?'
+        # Pattern: ``` followed by language (alphanumeric + _ + - + +), optional attributes
+        # Matches: ```python, ```c++, ```objective-c, ```python {highlight}
+        fence_pattern = r'^```([a-zA-Z0-9_+-]+)(?:\s+[^\n]*)?'
 
         # Search for code fence at start of text (after whitespace)
         match = re.search(fence_pattern, text.strip(), re.MULTILINE)
