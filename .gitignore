@@ -1,6 +1,7 @@
 # Local environment files
 .env
 .vibes/
+.ssh
 
 # Examples
 /examples/*
