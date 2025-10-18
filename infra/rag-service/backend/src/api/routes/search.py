@@ -94,8 +94,7 @@ async def get_rag_service(
         if settings.USE_HYBRID_SEARCH:
             try:
                 hybrid_strategy = HybridSearchStrategy(
-                    embedding_service=embedding_service,
-                    vector_service=vector_service,
+                    base_strategy=base_strategy,
                     db_pool=db_pool,
                     vector_weight=settings.HYBRID_VECTOR_WEIGHT,
                     text_weight=settings.HYBRID_TEXT_WEIGHT,

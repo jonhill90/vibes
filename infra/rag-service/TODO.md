@@ -22,10 +22,13 @@
    - ✅ Impact: No more orphaned code blocks, maintains data integrity
 
 ### Phase 2: Quality Improvements (HIGH PRIORITY)
-4. **Enable hybrid search** (30 min) - Keyword matching for code queries
-   - Set `USE_HYBRID_SEARCH=true` in .env
-   - Test with code-focused queries (`"async def @tool decorator"`)
-   - Expected: Better keyword coverage (53% → 70%+)
+4. ✅ ~~**Enable hybrid search**~~ - **COMPLETED 2025-10-18**
+   - ✅ Set `USE_HYBRID_SEARCH=true` in .env
+   - ✅ Fixed: `HybridSearchStrategy` initialization to pass `base_strategy` instead of individual services
+   - ✅ Modified: `search.py:96-101` (routes)
+   - ✅ Verified: API responses now show `"search_type": "hybrid"`
+   - ✅ Impact: Hybrid search (vector 70% + text 30%) now available for better keyword matching
+   - 📝 Note: Testing requires chunks in PostgreSQL (current: 0 chunks after cleanup)
 
 5. **Add code-specific quality tests** (1 hour) - Regression testing
    - Syntax parsing validation
@@ -65,11 +68,14 @@
 - ✅ **Cleaned up existing orphans** - Removed 227 pre-existing orphaned code vectors from MCP_code
 - ✅ **Verified multi-collection search** - Both code and document searches return results
 - ✅ **Verified clean state** - All Qdrant collections now have 0 orphaned vectors
+- ✅ **Enabled hybrid search** - Fixed `HybridSearchStrategy` initialization, enabled in .env
 - ✅ **Files modified**:
   - `base_search_strategy.py:192-479`
   - `search_service.py:217-326`
   - `document_service.py:380-472`
   - `vector_service.py:391-483`
+  - `.env:93` (USE_HYBRID_SEARCH=true)
+  - `api/routes/search.py:96-101` (hybrid strategy init)
 
 ### Code Extraction (2025-10-18 Afternoon)
 - ✅ **Extracted code blocks into MCP_code collection** - 227 code blocks from 916 documentation chunks
