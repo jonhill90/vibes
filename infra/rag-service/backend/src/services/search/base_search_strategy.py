@@ -406,10 +406,9 @@ class BaseSearchStrategy:
                 ]
             }
 
-        # Create VectorService for this collection
+        # Create VectorService (collection-agnostic - collection_name passed per-method)
         vector_service = VectorService(
-            self.qdrant_client,
-            collection_name
+            qdrant_client=self.qdrant_client
         )
 
         # Search this collection
@@ -419,6 +418,7 @@ class BaseSearchStrategy:
         )
 
         results = await vector_service.search_vectors(
+            collection_name=collection_name,  # Pass collection name to method
             query_vector=query_embedding,
             limit=limit,
             score_threshold=self.similarity_threshold,
