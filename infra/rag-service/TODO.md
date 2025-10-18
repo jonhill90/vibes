@@ -2,48 +2,68 @@
 
 ## 📋 Active Tasks (Priority Order)
 
-### Phase 1: Quality Improvements (HIGH PRIORITY)
-1. **Extract code blocks into MCP_code collection** (4-6 hours) - CRITICAL for code search
-   - Problem: Code examples embedded in 500-token docs chunks (MCP_code has 0 points)
-   - Goal: Standalone code snippets in separate collection
-   - Implementation: Parse markdown code blocks from existing chunks, create new code-only chunks
-   - Expected: Improve code search from 0.41 avg score to 0.65+ (agent rating: 7/10 → 9/10)
-   - See: `/tmp/rag_agent_experience.md` for detailed analysis
+### Phase 1: Critical Bugs (BLOCKING)
+1. **Fix search collection name resolution** (2-3 hours) - BLOCKING all search functionality
+   - Problem: Search uses global collections (`AI_DOCUMENTS`) but we have per-domain collections (`MCP_documents`)
+   - Impact: All search queries return 0 results (404 errors)
+   - Fix: Query database for `source.collection_names` mapping instead of using static method
+   - Files: `base_search_strategy.py:373`, `search_service.py`, `vector_service.py`
+   - See: Linear JON-12 comment for full details
 
-2. **Enable hybrid search** (30 min) - Keyword matching for code queries
+2. **Fix embedding dimension mismatch in search** (1 hour) - BLOCKING code search
+   - Problem: Search generates 1536d embeddings but code collection expects 3072d
+   - Impact: Code search fails silently with validation errors
+   - Fix: Generate per-collection embeddings or unify embedding models
+   - Files: `base_search_strategy.py:196-198`
+
+3. **Implement orphaned vector cleanup** (2-3 hours) - DATA INTEGRITY
+   - Problem: Deleting documents leaves orphaned code vectors in MCP_code collection
+   - Impact: Stale search results, wasted storage, incorrect counts
+   - Fix: Update delete operations to clean up related code vectors
+   - Files: `documents.py`, `document_service.py`, `extract_code_blocks.py`
+
+### Phase 2: Quality Improvements (HIGH PRIORITY)
+4. **Enable hybrid search** (30 min) - Keyword matching for code queries
    - Set `USE_HYBRID_SEARCH=true` in .env
    - Test with code-focused queries (`"async def @tool decorator"`)
    - Expected: Better keyword coverage (53% → 70%+)
 
-3. **Add code-specific quality tests** (1 hour) - Regression testing
+5. **Add code-specific quality tests** (1 hour) - Regression testing
    - Syntax parsing validation
    - Runnable example checks
    - Update `/tmp/rag_quality_test.py` with code search tests
 
-4. **Lower chunk size for code** (2 hours) - Better code isolation
+6. **Lower chunk size for code** (2 hours) - Better code isolation
    - Current: 500 tokens (mixes code with documentation)
    - Target: 200 tokens for code blocks
    - Update content classifier threshold: 40% → 20% code ratio
 
-### Phase 2: Production Readiness (MEDIUM PRIORITY)
-5. **Add monitoring/metrics** (4-6 hours) - CNCF stack
+### Phase 3: Production Readiness (MEDIUM PRIORITY)
+7. **Add monitoring/metrics** (4-6 hours) - CNCF stack
    - OpenTelemetry instrumentation
    - Prometheus + Grafana dashboards
    - Search quality metrics (score distribution, latency p95)
    - Create evaluation dataset (20+ queries)
 
-6. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
-7. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
-8. **Fix service mocking paths** (15 min) - IngestionService import location
-9. **Debug hybrid search test collection** (1 hour) - Import errors
-10. **Re-run full integration suite** (30 min) - Target 80%+ pass rate
+8. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
+9. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
+10. **Fix service mocking paths** (15 min) - IngestionService import location
+11. **Debug hybrid search test collection** (1 hour) - Import errors
+12. **Re-run full integration suite** (30 min) - Target 80%+ pass rate
 
-### Phase 3: Infrastructure (LOW PRIORITY)
-11. **Add volume mounts for temp file storage** (15 min) - Document uploads
-12. **Configure log rotation** (30 min) - Backend logs
-13. **Document deployment guide** (1 hour) - Production documentation
+### Phase 4: Infrastructure (LOW PRIORITY)
+13. **Add volume mounts for temp file storage** (15 min) - Document uploads
+14. **Configure log rotation** (30 min) - Backend logs
+15. **Document deployment guide** (1 hour) - Production documentation
 
-## ✅ Completed (2025-10-17)
+## ✅ Completed
+
+### Code Extraction (2025-10-18)
+- ✅ **Extracted code blocks into MCP_code collection** - 227 code blocks from 916 documentation chunks
+- ✅ **Created extract_code_blocks.py script** - Automated extraction with embedding and storage
+- ✅ **Used text-embedding-3-large for code** - 3072d embeddings for better code understanding
+- ✅ **Fixed VectorService instantiation bug** - Corrected argument passing in base_search_strategy.py
+- ✅ **Added .ssh to .gitignore** - Security improvement
 
 ### Quality Fixes (2025-10-17)
 - ✅ **Raised similarity threshold** - 0.05 → 0.6 (industry standard for better quality)
