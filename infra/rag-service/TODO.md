@@ -30,33 +30,39 @@
    - ✅ Impact: Hybrid search (vector 70% + text 30%) now available for better keyword matching
    - 📝 Note: Testing requires chunks in PostgreSQL (current: 0 chunks after cleanup)
 
-5. **Add code-specific quality tests** (1 hour) - Regression testing
+5. **Fix crawl ingestion to extract code** (30 min) - CRITICAL BUG
+   - Issue: Crawled content goes to documents collection only (0 code vectors in MCP_code)
+   - Root cause: `ingest_from_crawl()` doesn't classify chunks (hardcodes "documents")
+   - Fix: Apply ContentClassifier to crawled chunks like `ingest_document()` does
+   - Expected: ~178 code chunks extracted from MCP documentation
+
+6. **Add code-specific quality tests** (1 hour) - Regression testing
    - Syntax parsing validation
    - Runnable example checks
    - Update `/tmp/rag_quality_test.py` with code search tests
 
-6. **Lower chunk size for code** (2 hours) - Better code isolation
+7. **Lower chunk size for code** (2 hours) - Better code isolation
    - Current: 500 tokens (mixes code with documentation)
    - Target: 200 tokens for code blocks
    - Update content classifier threshold: 40% → 20% code ratio
 
 ### Phase 3: Production Readiness (MEDIUM PRIORITY)
-7. **Add monitoring/metrics** (4-6 hours) - CNCF stack
+8. **Add monitoring/metrics** (4-6 hours) - CNCF stack
    - OpenTelemetry instrumentation
    - Prometheus + Grafana dashboards
    - Search quality metrics (score distribution, latency p95)
    - Create evaluation dataset (20+ queries)
 
-8. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
-9. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
-10. **Fix service mocking paths** (15 min) - IngestionService import location
-11. **Debug hybrid search test collection** (1 hour) - Import errors
-12. **Re-run full integration suite** (30 min) - Target 80%+ pass rate
+9. **Implement document viewer** (2-3 hours) - Backend endpoint + frontend modal
+10. **Fix database pool fixture** (30 min) - Returns async generator instead of pool
+11. **Fix service mocking paths** (15 min) - IngestionService import location
+12. **Debug hybrid search test collection** (1 hour) - Import errors
+13. **Re-run full integration suite** (30 min) - Target 80%+ pass rate
 
 ### Phase 4: Infrastructure (LOW PRIORITY)
-13. **Add volume mounts for temp file storage** (15 min) - Document uploads
-14. **Configure log rotation** (30 min) - Backend logs
-15. **Document deployment guide** (1 hour) - Production documentation
+14. **Add volume mounts for temp file storage** (15 min) - Document uploads
+15. **Configure log rotation** (30 min) - Backend logs
+16. **Document deployment guide** (1 hour) - Production documentation
 
 ## ✅ Completed
 

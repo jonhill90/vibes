@@ -667,14 +667,15 @@ class IngestionService:
         max_pages: int = 10,
         max_depth: int = 0,
     ) -> tuple[bool, dict[str, Any]]:
-        """Crawl website and ingest content through full pipeline.
+        """Crawl website and ingest content through full pipeline with content classification.
 
-        This method orchestrates the complete crawl → parse → chunk → embed → store pipeline:
+        This method orchestrates the complete crawl → parse → chunk → classify → embed → store pipeline:
         1. Crawl URL using CrawlerService (with job tracking)
         2. Parse markdown content (already in markdown from Crawl4AI)
         3. Chunk text using TextChunker
-        4. Batch embed chunks using EmbeddingService
-        5. Store atomically in PostgreSQL + Qdrant
+        4. Classify chunks by content type (code/documents/media) using ContentClassifier
+        5. Embed chunks per collection type with appropriate models
+        6. Store atomically in PostgreSQL + per-domain Qdrant collections
 
         Args:
             source_id: UUID of source this crawl belongs to
@@ -685,9 +686,12 @@ class IngestionService:
         Returns:
             Tuple of (success, result_dict) where result_dict contains:
                 On success:
-                - document_id: UUID of created document
+                - document_ids: List of UUIDs of created documents (one per collection)
                 - crawl_job_id: UUID of crawl job
                 - chunks_stored: Number of chunks successfully stored
+                - chunks_failed: Number of chunks that failed to embed
+                - total_chunks: Total chunks created
+                - collections_used: List of domain-specific collections used
                 - pages_crawled: Number of pages crawled
                 - crawl_time_ms: Time spent crawling
                 - ingestion_time_ms: Total time including embedding/storage
@@ -707,9 +711,11 @@ class IngestionService:
             )
 
             if success:
-                doc_id = result["document_id"]
+                doc_ids = result["document_ids"]
                 job_id = result["crawl_job_id"]
+                collections = result["collections_used"]
                 print(f"Crawled and ingested {result['pages_crawled']} pages")
+                print(f"Created {len(doc_ids)} documents across {len(collections)} collections")
             else:
                 print(f"Error: {result['error']}")
         """
@@ -828,6 +834,7 @@ class IngestionService:
                 "crawl_job_id": crawl_job_id,
             }
 
+        enabled_collections = source_row["enabled_collections"]
         collection_names_raw = source_row["collection_names"]
 
         # Parse collection_names from JSONB
@@ -838,70 +845,170 @@ class IngestionService:
         else:
             collection_names = {}
 
-        # For crawled content, default to "documents" collection
-        collection_name = collection_names.get("documents")
-        if not collection_name:
-            logger.error(
-                f"No 'documents' collection found for source {source_id}. "
-                f"Available collections: {collection_names}"
-            )
-            return False, {
-                "error": "Source has no 'documents' collection configured",
-                "crawl_job_id": crawl_job_id,
-            }
-
         logger.info(
-            f"Storing crawled content in domain collection: '{collection_name}'"
+            f"Source {source_id} enabled collections: {enabled_collections}, "
+            f"collection_names: {collection_names}"
         )
 
-        # Step 6: Atomic storage (PostgreSQL + Qdrant)
-        logger.info("Storing crawled document and chunks atomically")
+        # Step 6: Classify chunks by content type (same as ingest_document)
+        logger.info("Step 6/9: Classifying crawled chunks by content type")
+        from .content_classifier import ContentClassifier
+        classifier = ContentClassifier()
 
-        # Extract document title from URL or metadata
+        classified_chunks: dict[str, list[tuple[Chunk, int]]] = {
+            "documents": [],
+            "code": [],
+            "media": [],
+        }
+
+        for i, chunk in enumerate(chunks):
+            content_type = classifier.detect_content_type(chunk.text)
+
+            # Only process if collection is enabled for this source
+            if content_type in enabled_collections:
+                classified_chunks[content_type].append((chunk, i))
+            else:
+                logger.debug(
+                    f"Skipping chunk {i} (type={content_type}, not in enabled_collections)"
+                )
+
+        # Log classification results
+        for collection_type, chunk_tuples in classified_chunks.items():
+            if chunk_tuples:
+                logger.info(
+                    f"Classified {len(chunk_tuples)} chunks as '{collection_type}' "
+                    f"(enabled={collection_type in enabled_collections})"
+                )
+
+        # Step 7-9: Embed and store per collection (same pattern as ingest_document)
+        total_chunks_stored = 0
+        total_chunks_failed = 0
+        document_ids = []
+
+        # Extract document metadata once (used for all collections)
         from urllib.parse import urlparse
         parsed_url = urlparse(url)
         document_title = parsed_url.netloc + parsed_url.path or url
 
-        try:
-            document_id, chunks_stored = await self._store_document_atomic(
-                source_id=source_id,
-                title=document_title,
-                document_type="html",  # Crawled content is HTML
-                url=url,
-                metadata={
-                    "crawl_job_id": crawl_job_id,
-                    "pages_crawled": pages_crawled,
-                    "crawl_time_ms": crawl_time_ms,
-                    "max_depth": max_depth,
-                },
-                chunks=chunks,
-                embeddings=embed_result.embeddings,
-                collection_name=collection_name,  # Use domain-specific collection
+        # Process each collection type
+        for collection_type, chunk_tuples in classified_chunks.items():
+            if not chunk_tuples:
+                continue  # Skip empty collections
+
+            chunks_only = [chunk for chunk, _ in chunk_tuples]
+            chunk_texts = [chunk.text for chunk in chunks_only]
+
+            # Get domain-specific collection name for this collection type
+            collection_name = collection_names.get(collection_type)
+            if not collection_name:
+                logger.warning(
+                    f"No collection_name found for collection_type '{collection_type}'. "
+                    f"Skipping {len(chunk_texts)} chunks. "
+                    f"Available collection_names: {collection_names}"
+                )
+                total_chunks_failed += len(chunk_texts)
+                continue
+
+            # Get appropriate embedding model for this collection
+            from ..config.settings import settings
+            model_name = settings.COLLECTION_EMBEDDING_MODELS[collection_type]
+
+            # Embed with collection-specific model
+            logger.info(
+                f"Step 8/9 ({collection_type}): Embedding {len(chunk_texts)} chunks "
+                f"using {model_name} for domain collection '{collection_name}'"
             )
-        except Exception as e:
-            logger.error(f"Atomic storage failed: {e}", exc_info=True)
-            return False, {
-                "error": f"Atomic storage failed: {str(e)}",
-                "crawl_job_id": crawl_job_id,
-            }
+
+            try:
+                embed_result_coll = await self.embedding_service.batch_embed(
+                    chunk_texts,
+                    model_name=model_name
+                )
+            except Exception as e:
+                logger.error(
+                    f"Batch embedding failed for {collection_type} collection: {e}",
+                    exc_info=True
+                )
+                total_chunks_failed += len(chunk_texts)
+                continue  # Skip this collection, continue with others
+
+            # CRITICAL (Gotcha #1): Check for failed embeddings
+            if embed_result_coll.failure_count > 0:
+                logger.warning(
+                    f"Embedding quota exhaustion detected for {collection_type}: "
+                    f"{embed_result_coll.success_count} success, "
+                    f"{embed_result_coll.failure_count} failed"
+                )
+
+            if embed_result_coll.success_count == 0:
+                logger.error(
+                    f"All embeddings failed for {collection_type} collection - skipping"
+                )
+                total_chunks_failed += embed_result_coll.failure_count
+                continue  # Skip this collection
+
+            logger.info(
+                f"Successfully embedded {embed_result_coll.success_count}/{len(chunk_texts)} "
+                f"chunks for {collection_type} collection (model: {model_name})"
+            )
+
+            logger.info(
+                f"Step 9/9 ({collection_type}): Storing {embed_result_coll.success_count} chunks "
+                f"in domain-specific collection '{collection_name}'"
+            )
+
+            try:
+                document_id, chunks_stored = await self._store_document_atomic(
+                    source_id=source_id,
+                    title=document_title,
+                    document_type="html",  # Crawled content is HTML
+                    url=url,
+                    metadata={
+                        "crawl_job_id": crawl_job_id,
+                        "pages_crawled": pages_crawled,
+                        "crawl_time_ms": crawl_time_ms,
+                        "max_depth": max_depth,
+                        "collection_type": collection_type
+                    },
+                    chunks=chunks_only[:len(embed_result_coll.embeddings)],  # Only successful chunks
+                    embeddings=embed_result_coll.embeddings,
+                    collection_name=collection_name,
+                )
+
+                document_ids.append(document_id)
+                total_chunks_stored += chunks_stored
+                logger.info(
+                    f"Stored {chunks_stored} {collection_type} chunks in '{collection_name}' "
+                    f"(document_id: {document_id})"
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"Failed to store {collection_type} chunks: {e}",
+                    exc_info=True
+                )
+                total_chunks_failed += embed_result_coll.success_count
+                continue  # Continue with other collections
 
         # Calculate total ingestion time
         elapsed_ms = int((time.time() - start_time) * 1000)
 
         logger.info(
-            f"Crawl ingestion complete: document_id={document_id}, "
-            f"crawl_job_id={crawl_job_id}, chunks_stored={chunks_stored}, "
+            f"Crawl ingestion complete: document_ids={document_ids}, "
+            f"crawl_job_id={crawl_job_id}, chunks_stored={total_chunks_stored}, "
+            f"chunks_failed={total_chunks_failed}, collections={len(document_ids)}, "
             f"total_time={elapsed_ms}ms (crawl={crawl_time_ms}ms)"
         )
 
         return True, {
-            "document_id": str(document_id),
+            "document_ids": [str(doc_id) for doc_id in document_ids],
             "crawl_job_id": crawl_job_id,
-            "chunks_stored": chunks_stored,
-            "chunks_failed": embed_result.failure_count,
+            "chunks_stored": total_chunks_stored,
+            "chunks_failed": total_chunks_failed,
             "total_chunks": len(chunks),
             "pages_crawled": pages_crawled,
             "crawl_time_ms": crawl_time_ms,
             "ingestion_time_ms": elapsed_ms,
+            "collections_used": [collection_names.get(ct) for ct in classified_chunks.keys() if classified_chunks[ct]],
             "message": "Website crawled and ingested successfully",
         }
