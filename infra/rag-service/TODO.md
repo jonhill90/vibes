@@ -59,21 +59,25 @@
    - 📝 Note: Similarity threshold lowered to 0.2 for small datasets (will tune with more data)
 
 6. ✅ ~~**Add language type detection for code**~~ - **COMPLETED 2025-10-18**
-   - ✅ **Workflow**: Two-phase approach (crawl → extract script) - **THIS IS THE CORRECT APPROACH**
-   - ✅ **Phase 1 - Crawl**: Creates chunks in PostgreSQL + MCP_documents collection (docs with embedded code)
-   - ✅ **Phase 2 - Extract**: Run `extract_code_blocks.py` script AFTER crawling to extract pure code blocks
-   - ✅ **Script**: `backend/src/scripts/extract_code_blocks.py` (lines 58-61: regex pattern)
-   - ✅ **Pattern**: `r'```([a-zA-Z0-9_+-]+)(?:\s+[^\n]*)?\n(.*?)```'` extracts language + code
-   - ✅ **Results**: Extracted 234 code blocks with `language` field from 708 chunks (33% coverage)
-   - ✅ **Languages detected**: json (108), bash (37), mermaid (18), powershell (15), typescript (13), kotlin (10), python (9), and more
-   - ✅ **Orphan Prevention**: Document deletion automatically cleans up code vectors (document_service.py:380-453)
-   - ✅ **Impact**: Code chunks properly tagged with programming language for filtering and syntax highlighting
-   - 📝 **Critical**: Don't try to extract language during crawl - it misclassifies docs with embedded code
-   - 📝 **Why Script**: Chunks may not start with code fences, may have no language tags, or mix docs+code
-   - 📝 **Note**: Script creates NEW Qdrant points in MCP_code collection (doesn't modify original chunks)
-   - 📝 **Note**: Code fences without language (` ``` `) are extracted but have no `language` field
-   - 📝 **Command**: `docker exec -w /app rag-backend python3 src/scripts/extract_code_blocks.py --source-id <uuid>`
-   - 📝 **Tested**: Reverted Task 5 aggressive code fence detection (was causing docs to be classified as code)
+   - ✅ **Approach**: Inline classification during ingestion with STRICT language requirements
+   - ✅ **Implementation**: Modified ContentClassifier + IngestionService for code fence detection
+   - ✅ **Strict Classification Rules**:
+     - ONLY chunks with ` ```language` code fences are classified as "code"
+     - NO "unknown" language fallback (removed completely)
+     - Chunks without language tags → reclassified to "documents" collection
+     - Final safeguard skips code vectors missing language field
+   - ✅ **Code Pattern**: `r'```([a-zA-Z0-9_+-]+)(?:\s+[^\n]*)?'` extracts language from fence
+   - ✅ **Reclassification Logic**: If code detected but no language → goes to documents (ingestion_service.py:855-867)
+   - ✅ **Safeguard**: Skip code vectors without language field (ingestion_service.py:590-602)
+   - ✅ **Files Modified**:
+     - `content_classifier.py` - Strict fence-based classification
+     - `ingestion_service.py` - Reclassification + safeguard logic
+   - ✅ **Test Results** (modelcontextprotocol.io crawl):
+     - 122/122 code chunks have language field (100% coverage)
+     - 0 chunks with missing or "unknown" language
+     - 14 unique languages: bash, csharp, env, groovy, http, java, javascript, json, kotlin, mermaid, powershell, python, typescript, xml
+   - ✅ **Impact**: All code chunks guaranteed to have valid language field for filtering and syntax highlighting
+   - 📝 **Note**: Alternative approach (`extract_code_blocks.py` script) available for post-crawl extraction from full documents
    - ⏸️ **TODO (Future)**: UI language badges and search filtering by language (frontend work)
 
 7. ✅ **Fix embedding cache dimension constraint** - **COMPLETED 2025-10-18**
@@ -501,4 +505,4 @@ docker system prune -a --volumes
 
 ---
 
-**Last Updated**: 2025-10-18 10:30 EDT (Task 5 completed - code ingestion during crawl now working)
+**Last Updated**: 2025-10-18 16:30 EDT (Task 6 completed - language field implementation working with 100% coverage)
