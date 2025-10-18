@@ -7,8 +7,8 @@ This script tests the recursive crawling implementation by:
 3. Monitoring progress
 4. Verifying results
 
-Run from host:
-    docker exec rag-backend python /app/test_recursive_crawl.py
+Run from project root:
+    docker exec rag-backend python /app/tests/test_recursive_crawl.py
 """
 import asyncio
 import asyncpg

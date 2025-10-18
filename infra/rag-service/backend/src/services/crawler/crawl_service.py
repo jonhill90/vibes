@@ -685,7 +685,7 @@ class CrawlerService:
 
         # Perform crawl
         try:
-            if recursive and max_depth > 0:
+            if max_depth > 0:
                 # Recursive crawl with BFS
                 logger.info(
                     f"Starting recursive crawl for job {job_id}: "

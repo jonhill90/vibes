@@ -259,19 +259,61 @@ class EmbeddingService:
         )
         self._log_cache_hit_rate_if_needed()
 
-        # Step 2: Batch generate embeddings for cache misses
+        # Step 2: Batch generate embeddings for cache misses (token-aware batching)
         if cache_misses:
             start_time = time.time()
 
-            # Process in batches of EMBEDDING_BATCH_SIZE (default 100)
-            for batch_start in range(0, len(cache_misses), self.batch_size):
-                batch_end = min(batch_start + self.batch_size, len(cache_misses))
-                batch_items = cache_misses[batch_start:batch_end]
-                batch_texts = [text for _, text in batch_items]
+            # CRITICAL: OpenAI has 8,192 token limit per batch request
+            # Use conservative limit of 7,000 tokens to leave margin for encoding overhead
+            MAX_BATCH_TOKENS = 7000
 
+            batch_num = 0
+            i = 0
+            while i < len(cache_misses):
+                batch_items = []
+                batch_texts = []
+                current_batch_tokens = 0
+
+                # Build batch respecting both token limit and max batch size
+                while i < len(cache_misses) and len(batch_items) < self.batch_size:
+                    original_idx, text = cache_misses[i]
+
+                    # Estimate tokens (rough approximation: 1 token ≈ 4 chars)
+                    # This is conservative - actual tokenization may differ
+                    estimated_tokens = len(text) // 4
+
+                    # Check if adding this text would exceed token limit
+                    if current_batch_tokens + estimated_tokens > MAX_BATCH_TOKENS:
+                        if batch_items:
+                            # Batch full - process what we have
+                            logger.info(
+                                f"Batch {batch_num + 1} token limit reached: "
+                                f"~{current_batch_tokens} tokens, {len(batch_items)} texts"
+                            )
+                            break
+                        else:
+                            # Single text exceeds limit - fail it immediately
+                            logger.error(
+                                f"Text at index {original_idx} too large: ~{estimated_tokens} tokens "
+                                f"(exceeds {MAX_BATCH_TOKENS} limit)"
+                            )
+                            failed_items.append({
+                                "index": original_idx,
+                                "text": text[:100],
+                                "reason": "token_limit_exceeded",
+                                "error": f"Text exceeds {MAX_BATCH_TOKENS} token limit",
+                            })
+                            i += 1
+                            continue
+
+                    batch_items.append((original_idx, text))
+                    batch_texts.append(text)
+                    current_batch_tokens += estimated_tokens
+                    i += 1
+
+                batch_num += 1
                 logger.info(
-                    f"Processing batch {batch_start // self.batch_size + 1}: "
-                    f"{len(batch_texts)} texts"
+                    f"Processing batch {batch_num}: {len(batch_texts)} texts, ~{current_batch_tokens} tokens"
                 )
 
                 # Generate embeddings with retry logic (using specified model)
@@ -290,12 +332,12 @@ class EmbeddingService:
                 except openai.RateLimitError as e:
                     # CRITICAL: Quota exhausted - STOP immediately (Gotcha #1)
                     logger.error(
-                        f"Quota exhausted after processing {batch_start} items. "
-                        f"Marking remaining {len(cache_misses) - batch_start} items as failed."
+                        f"Quota exhausted after processing {i - len(batch_items)} items. "
+                        f"Marking remaining {len(cache_misses) - i} items as failed."
                     )
 
                     # Mark ALL remaining items as failed (current batch + future batches)
-                    for original_idx, text in cache_misses[batch_start:]:
+                    for original_idx, text in cache_misses[i:]:
                         failed_items.append({
                             "index": original_idx,
                             "text": text[:100],
@@ -376,6 +418,33 @@ class EmbeddingService:
                 )
 
                 if row:
+                    embedding = row["embedding"]
+
+                    # CRITICAL: Validate cached embedding dimensions
+                    # Corrupted embeddings can be stored if previous requests failed
+                    expected_dims = {
+                        "text-embedding-3-small": 1536,
+                        "text-embedding-3-large": 3072,
+                    }
+                    expected_dim = expected_dims.get(model_name, 1536)
+
+                    if len(embedding) != expected_dim:
+                        logger.warning(
+                            f"Invalid cached embedding dimension: {len(embedding)}, "
+                            f"expected {expected_dim} for model {model_name}. "
+                            f"Deleting corrupted cache entry."
+                        )
+                        # Delete corrupted cache entry
+                        await conn.execute(
+                            """
+                            DELETE FROM embedding_cache
+                            WHERE content_hash = $1 AND model_name = $2
+                            """,
+                            content_hash,
+                            model_name,
+                        )
+                        return None  # Force re-generation
+
                     # Update access statistics
                     await conn.execute(
                         """
@@ -387,7 +456,7 @@ class EmbeddingService:
                         content_hash,
                         model_name,
                     )
-                    return row["embedding"]
+                    return embedding
 
         except Exception as e:
             logger.error(f"Cache lookup error: {e}", exc_info=True)
