@@ -30,13 +30,27 @@
    - ✅ Impact: Hybrid search (vector 70% + text 30%) now available for better keyword matching
    - 📝 Note: Testing requires chunks in PostgreSQL (current: 0 chunks after cleanup)
 
-5. **Fix crawl ingestion to extract code** (IN PROGRESS)
-   - ✅ Applied ContentClassifier to crawled chunks (same as `ingest_document()`)
-   - ✅ Modified: `ingestion_service.py:817-1007` (multi-collection crawl ingestion)
-   - ⚠️ **Issue**: Classifier too strict for JSON/YAML code blocks (no language keywords)
-   - 🔧 **Next**: Improve classifier to detect code fences as code (any ``` = code)
-   - Current: JSON blocks classified as "documents" (0 code indicators)
-   - Target: Chunks with code fences should always be "code" (regardless of density)
+5. **Fix crawl ingestion to extract code** (IN PROGRESS - 90% complete)
+   - ✅ Fixed ContentClassifier: Any ``` code fence → "code" (removed density requirement)
+   - ✅ Modified: `content_classifier.py:98-103` (commit 3a76133)
+   - ✅ Fixed: Removed old batch embedding path from `ingest_from_crawl()`
+   - ✅ Modified: `ingestion_service.py:785-822` deleted, steps renumbered (commit 1878b80)
+   - ✅ Fixed: Settings import moved to module level (commit ea4f0c0)
+   - ✅ Added: Verbose classification logging for debugging
+   - ⚠️ **Current Issue**: Classification logs not appearing during crawls
+   - 🔧 **NEXT STEPS** (for new session):
+     1. Full Docker restart: `docker-compose down && docker-compose up -d`
+     2. Wait for services to stabilize (30s)
+     3. Test crawl: `curl -X POST http://localhost:8003/api/crawls -H "Content-Type: application/json" -d '{"url": "https://modelcontextprotocol.io/introduction", "source_id": "604659af-f494-4f3a-afce-bd87820bf983", "max_pages": 5, "max_depth": 1}'`
+     4. Check classification logs: `docker-compose logs backend | grep -E "(Chunk [0-9]+: classified|Classification summary)"`
+     5. Verify vector counts: `curl -s http://localhost:6333/collections/MCP_code | python3 -c "import sys, json; print(json.load(sys.stdin)['result']['points_count'])"`
+   - **Expected Result**: Code chunks should appear in MCP_code collection with 3072d embeddings
+   - **Debug Notes**:
+     - Code IS in container (verified with grep)
+     - `ingest_from_crawl()` logging never appears (not even "Starting crawl ingestion")
+     - 43 vectors exist in MCP_documents (from previous tests)
+     - Hot-reload detected during testing may have caused state issues
+     - Issue may be development environment caching, not code bug
 
 6. **Add code-specific quality tests** (1 hour) - Regression testing
    - Syntax parsing validation
