@@ -782,46 +782,7 @@ class IngestionService:
             f"(avg {sum(c.token_count for c in chunks) / len(chunks):.1f} tokens/chunk)"
         )
 
-        # Step 4: Batch embed chunks using EmbeddingService
-        logger.info(f"Batch embedding {len(chunks)} chunks")
-        chunk_texts = [chunk.text for chunk in chunks]
-
-        try:
-            embed_result = await self.embedding_service.batch_embed(chunk_texts)
-        except Exception as e:
-            logger.error(f"Batch embedding failed: {e}", exc_info=True)
-            return False, {
-                "error": f"Batch embedding failed: {str(e)}",
-                "crawl_job_id": crawl_job_id,
-            }
-
-        # CRITICAL (Gotcha #1): Check for failed embeddings
-        if embed_result.failure_count > 0:
-            logger.warning(
-                f"Embedding quota exhaustion detected: "
-                f"{embed_result.success_count} success, "
-                f"{embed_result.failure_count} failed"
-            )
-
-            # If ALL embeddings failed, abort ingestion
-            if embed_result.success_count == 0:
-                return False, {
-                    "error": "All embeddings failed - quota exhausted or API error",
-                    "crawl_job_id": crawl_job_id,
-                    "failed_items": embed_result.failed_items,
-                }
-
-            # Partial success - log warning and continue
-            logger.warning(
-                f"Partial embedding success: storing {embed_result.success_count} chunks, "
-                f"skipping {embed_result.failure_count} failed chunks"
-            )
-
-        logger.info(
-            f"Successfully embedded {embed_result.success_count}/{len(chunks)} chunks"
-        )
-
-        # Step 5: Get source configuration for per-domain collections
+        # Step 4: Get source configuration for per-domain collections
         logger.info("Getting source configuration for per-domain collection storage")
         async with self.db_pool.acquire() as conn:
             source_row = await conn.fetchrow(
@@ -851,8 +812,8 @@ class IngestionService:
             f"collection_names: {collection_names}"
         )
 
-        # Step 6: Classify chunks by content type (same as ingest_document)
-        logger.info("Step 6/9: Classifying crawled chunks by content type")
+        # Step 5: Classify chunks by content type (same as ingest_document)
+        logger.info("Step 5/8: Classifying crawled chunks by content type")
         from .content_classifier import ContentClassifier
         classifier = ContentClassifier()
 
@@ -915,7 +876,7 @@ class IngestionService:
 
             # Embed with collection-specific model
             logger.info(
-                f"Step 8/9 ({collection_type}): Embedding {len(chunk_texts)} chunks "
+                f"Step 7/8 ({collection_type}): Embedding {len(chunk_texts)} chunks "
                 f"using {model_name} for domain collection '{collection_name}'"
             )
 
@@ -953,7 +914,7 @@ class IngestionService:
             )
 
             logger.info(
-                f"Step 9/9 ({collection_type}): Storing {embed_result_coll.success_count} chunks "
+                f"Step 8/8 ({collection_type}): Storing {embed_result_coll.success_count} chunks "
                 f"in domain-specific collection '{collection_name}'"
             )
 
