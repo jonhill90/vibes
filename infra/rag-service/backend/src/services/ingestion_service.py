@@ -242,7 +242,8 @@ class IngestionService:
             from .content_classifier import ContentClassifier
             classifier = ContentClassifier()
 
-            classified_chunks: dict[str, list[tuple[Chunk, int]]] = {
+            # Store tuples of (Chunk, chunk_index, language|None)
+            classified_chunks: dict[str, list[tuple[Chunk, int, str | None]]] = {
                 "documents": [],
                 "code": [],
                 "media": [],
@@ -251,9 +252,14 @@ class IngestionService:
             for i, chunk in enumerate(chunks):
                 content_type = classifier.detect_content_type(chunk.text)
 
+                # Extract language for code chunks
+                code_language = None
+                if content_type == "code":
+                    code_language = classifier.extract_code_language(chunk.text)
+
                 # Only process if collection is enabled for this source
                 if content_type in enabled_collections:
-                    classified_chunks[content_type].append((chunk, i))
+                    classified_chunks[content_type].append((chunk, i, code_language))
                 else:
                     logger.debug(
                         f"Skipping chunk {i} (type={content_type}, not in enabled_collections)"
@@ -292,8 +298,10 @@ class IngestionService:
                 if not chunk_tuples:
                     continue  # Skip empty collections
 
-                chunks_only = [chunk for chunk, _ in chunk_tuples]
+                # Extract chunks and languages from tuples
+                chunks_only = [chunk for chunk, _, _ in chunk_tuples]
                 chunk_texts = [chunk.text for chunk in chunks_only]
+                chunk_languages = [lang for _, _, lang in chunk_tuples]  # Extract languages
 
                 # Get domain-specific collection name for this collection type
                 collection_name = collection_names.get(collection_type)
@@ -366,6 +374,7 @@ class IngestionService:
                         chunks=chunks_only[:len(embed_result.embeddings)],  # Only successful chunks
                         embeddings=embed_result.embeddings,
                         collection_name=collection_name,
+                        chunk_languages=chunk_languages[:len(embed_result.embeddings)],  # Match embeddings length
                     )
 
                     total_chunks_stored += chunks_stored
@@ -435,6 +444,7 @@ class IngestionService:
         chunks: list[Chunk],
         embeddings: list[list[float]],
         collection_name: str | None = None,
+        chunk_languages: list[str | None] | None = None,
     ) -> tuple[UUID, int]:
         """Store document and chunks atomically in PostgreSQL + Qdrant (multi-collection).
 
@@ -568,17 +578,23 @@ class IngestionService:
             try:
                 points = []
                 # Combine chunk_records with embeddings (they're parallel arrays)
-                for (chunk_id, doc_id_val, chunk_index, text, token_count), embedding in zip(chunk_records, embeddings):
+                for i, ((chunk_id, doc_id_val, chunk_index, text, token_count), embedding) in enumerate(zip(chunk_records, embeddings)):
+                    payload = {
+                        "document_id": str(doc_id_val),
+                        "chunk_index": chunk_index,
+                        "text": text[:1000],  # Truncate for payload optimization
+                        "token_count": token_count,
+                        "source_id": str(source_id),
+                    }
+
+                    # Add code_language if available (only for code chunks)
+                    if chunk_languages and i < len(chunk_languages) and chunk_languages[i]:
+                        payload["code_language"] = chunk_languages[i]
+
                     points.append({
                         "id": chunk_id,
                         "embedding": embedding,
-                        "payload": {
-                            "document_id": str(doc_id_val),
-                            "chunk_index": chunk_index,
-                            "text": text[:1000],  # Truncate for payload optimization
-                            "token_count": token_count,
-                            "source_id": str(source_id),
-                        },
+                        "payload": payload,
                     })
 
                 # Multi-collection support: use specified collection or default
@@ -817,7 +833,8 @@ class IngestionService:
         from .content_classifier import ContentClassifier
         classifier = ContentClassifier()
 
-        classified_chunks: dict[str, list[tuple[Chunk, int]]] = {
+        # Store tuples of (Chunk, chunk_index, language|None)
+        classified_chunks: dict[str, list[tuple[Chunk, int, str | None]]] = {
             "documents": [],
             "code": [],
             "media": [],
@@ -825,11 +842,21 @@ class IngestionService:
 
         for i, chunk in enumerate(chunks):
             content_type = classifier.detect_content_type(chunk.text)
-            logger.info(f"Chunk {i}: classified as '{content_type}' (enabled={content_type in enabled_collections})")
+
+            # Extract language for code chunks
+            code_language = None
+            if content_type == "code":
+                code_language = classifier.extract_code_language(chunk.text)
+
+            logger.info(
+                f"Chunk {i}: classified as '{content_type}'"
+                f"{f' (language={code_language})' if code_language else ''} "
+                f"(enabled={content_type in enabled_collections})"
+            )
 
             # Only process if collection is enabled for this source
             if content_type in enabled_collections:
-                classified_chunks[content_type].append((chunk, i))
+                classified_chunks[content_type].append((chunk, i, code_language))
             else:
                 logger.warning(
                     f"Skipping chunk {i} (type={content_type}, not in enabled_collections={enabled_collections})"
@@ -859,8 +886,10 @@ class IngestionService:
             if not chunk_tuples:
                 continue  # Skip empty collections
 
-            chunks_only = [chunk for chunk, _ in chunk_tuples]
+            # Extract chunks and languages from tuples
+            chunks_only = [chunk for chunk, _, _ in chunk_tuples]
             chunk_texts = [chunk.text for chunk in chunks_only]
+            chunk_languages = [lang for _, _, lang in chunk_tuples]  # Extract languages
 
             # Get domain-specific collection name for this collection type
             collection_name = collection_names.get(collection_type)
@@ -936,6 +965,7 @@ class IngestionService:
                     chunks=chunks_only[:len(embed_result_coll.embeddings)],  # Only successful chunks
                     embeddings=embed_result_coll.embeddings,
                     collection_name=collection_name,
+                    chunk_languages=chunk_languages[:len(embed_result_coll.embeddings)],  # Match embeddings length
                 )
 
                 document_ids.append(document_id)

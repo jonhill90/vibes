@@ -58,12 +58,18 @@
    - 📝 Note: Warning logs at line 834 (`Skipping chunk`) DO appear and confirm classification working
    - 📝 Note: Similarity threshold lowered to 0.2 for small datasets (will tune with more data)
 
-6. **Add language type detection for code** (2 hours) - Code metadata enhancement
-   - Extract language from code fences (```python, ```json, ```terraform, etc.)
-   - Add `code_language` field to chunk metadata
-   - Store language in Qdrant payload for filtering
-   - Display language badges in UI search results
-   - Support filtering by language type in search API
+6. ✅ ~~**Add language type detection for code**~~ - **COMPLETED 2025-10-18**
+   - ✅ Added `ContentClassifier.extract_code_language()` method with regex pattern matching
+   - ✅ Modified: `content_classifier.py:32-75` (new method)
+   - ✅ Updated ingestion to extract language for code chunks
+   - ✅ Modified: `ingestion_service.py` (both `ingest_document` and `ingest_from_crawl`)
+   - ✅ Added `chunk_languages` parameter to `_store_document_atomic()`
+   - ✅ Modified: Qdrant payload construction to include `code_language` field (lines 572-589)
+   - ✅ Tested: Language extraction works correctly (python, javascript, json, etc.)
+   - ✅ Impact: Code chunks now tagged with programming language when detected from ` ```language` fences
+   - 📝 Note: Language only extracted from explicit markdown code fences (e.g., ` ```python`)
+   - 📝 Note: Chunks without language specifier (` ```) will not have `code_language` field
+   - ⏸️ TODO (Future): UI language badges and search filtering by language (frontend work)
 
 7. **Add code-specific quality tests** (1 hour) - Regression testing
    - Syntax parsing validation

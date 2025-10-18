@@ -29,6 +29,52 @@ class ContentClassifier:
     """
 
     @staticmethod
+    def extract_code_language(text: str) -> str | None:
+        """Extract programming language from code fence markers.
+
+        Searches for markdown code fences (```language) and extracts the
+        language identifier. Common patterns:
+        - ```python → "python"
+        - ```javascript → "javascript"
+        - ```json → "json"
+        - ``` → None (no language specified)
+
+        Args:
+            text: Text content to analyze (typically a code chunk)
+
+        Returns:
+            str | None: Language identifier if found, None otherwise
+
+        Examples:
+            >>> ContentClassifier.extract_code_language("```python\\nprint('hello')")
+            "python"
+
+            >>> ContentClassifier.extract_code_language("```\\nsome code")
+            None
+
+            >>> ContentClassifier.extract_code_language("def foo(): pass")
+            None
+
+        Note:
+            - Only extracts from explicit code fence markers
+            - Returns None for unfenced code blocks
+            - Language identifiers are lowercased for consistency
+        """
+        # Match code fence with optional language identifier
+        # Pattern: ``` followed by optional language, then newline
+        fence_pattern = r'^```(\w+)?'
+
+        # Search for code fence at start of text (after whitespace)
+        match = re.search(fence_pattern, text.strip(), re.MULTILINE)
+
+        if match and match.group(1):
+            # Found language identifier (e.g., "python" from ```python)
+            return match.group(1).lower()
+
+        # No code fence or no language specified
+        return None
+
+    @staticmethod
     def detect_content_type(text: str) -> CollectionType:
         """Detect if chunk is code, document, or media based on content.
 
