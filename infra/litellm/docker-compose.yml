@@ -10,7 +10,7 @@ services:
       STORE_MODEL_IN_DB: ${STORE_MODEL_IN_DB}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       UI_BASE_URL: ${UI_BASE_URL}
-      MCP_TOOL_PREFIX_SEPARATOR: "_"
+      MCP_TOOL_PREFIX_SEPARATOR: "__"
     volumes:
       - ./config.yaml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml"]
