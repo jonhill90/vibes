@@ -825,20 +825,22 @@ class IngestionService:
 
         for i, chunk in enumerate(chunks):
             content_type = classifier.detect_content_type(chunk.text)
+            logger.info(f"Chunk {i}: classified as '{content_type}' (enabled={content_type in enabled_collections})")
 
             # Only process if collection is enabled for this source
             if content_type in enabled_collections:
                 classified_chunks[content_type].append((chunk, i))
             else:
-                logger.debug(
-                    f"Skipping chunk {i} (type={content_type}, not in enabled_collections)"
+                logger.warning(
+                    f"Skipping chunk {i} (type={content_type}, not in enabled_collections={enabled_collections})"
                 )
 
-        # Log classification results
+        # Log classification summary
+        logger.info(f"Classification summary: documents={len(classified_chunks['documents'])}, code={len(classified_chunks['code'])}, media={len(classified_chunks['media'])}")
         for collection_type, chunk_tuples in classified_chunks.items():
             if chunk_tuples:
                 logger.info(
-                    f"Classified {len(chunk_tuples)} chunks as '{collection_type}' "
+                    f"Will embed {len(chunk_tuples)} '{collection_type}' chunks "
                     f"(enabled={collection_type in enabled_collections})"
                 )
 
