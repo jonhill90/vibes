@@ -24,6 +24,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
+from ..config.settings import settings
 from ..services.chunker import TextChunker, Chunk
 from ..services.crawler.crawl_service import CrawlerService
 from ..services.document_parser import DocumentParser
@@ -910,7 +911,6 @@ class IngestionService:
                 continue
 
             # Get appropriate embedding model for this collection
-            from ..config.settings import settings
             model_name = settings.COLLECTION_EMBEDDING_MODELS[collection_type]
 
             # Embed with collection-specific model
