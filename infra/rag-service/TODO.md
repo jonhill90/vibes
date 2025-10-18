@@ -22,6 +22,17 @@
    - ✅ Impact: No more orphaned code blocks, maintains data integrity
 
 ### Phase 2: Quality Improvements (HIGH PRIORITY)
+**✅ RESOLVED**: Search API threshold issue fixed - **COMPLETED 2025-10-18**
+   - **Root Cause**: SIMILARITY_THRESHOLD set too high (0.6) for small dataset
+   - **Symptoms**: 0 results for all queries, 1.2s latency, "Cache storage error" warnings
+   - **Investigation**: Added instrumentation to SearchService, traced full execution path
+   - **Finding**: Search working correctly, but scores (0.22-0.54) below 0.6 threshold
+   - **Fix**: Lowered SIMILARITY_THRESHOLD from 0.6 → 0.2 (.env:109)
+   - **Result**: Search now returns 3-5 results per query with 0.5+ scores
+   - **Latency**: 767ms (still needs optimization, but functional)
+   - **Collections**: Both MCP_code (3072d) and MCP_documents (1536d) returning results
+   - **Impact**: ✅ Search API fully functional, code and document retrieval working
+   - **Files Modified**: `.env:109` (SIMILARITY_THRESHOLD), `search_service.py` (debug logging reverted)
 4. ✅ ~~**Enable hybrid search**~~ - **COMPLETED 2025-10-18**
    - ✅ Set `USE_HYBRID_SEARCH=true` in .env
    - ✅ Fixed: `HybridSearchStrategy` initialization to pass `base_strategy` instead of individual services
@@ -30,34 +41,36 @@
    - ✅ Impact: Hybrid search (vector 70% + text 30%) now available for better keyword matching
    - 📝 Note: Testing requires chunks in PostgreSQL (current: 0 chunks after cleanup)
 
-5. **Fix crawl ingestion to extract code** (IN PROGRESS - 90% complete)
+5. ✅ ~~**Fix crawl ingestion to extract code**~~ - **COMPLETED 2025-10-18**
    - ✅ Fixed ContentClassifier: Any ``` code fence → "code" (removed density requirement)
    - ✅ Modified: `content_classifier.py:98-103` (commit 3a76133)
    - ✅ Fixed: Removed old batch embedding path from `ingest_from_crawl()`
    - ✅ Modified: `ingestion_service.py:785-822` deleted, steps renumbered (commit 1878b80)
    - ✅ Fixed: Settings import moved to module level (commit ea4f0c0)
-   - ✅ Added: Verbose classification logging for debugging
-   - ⚠️ **Current Issue**: Classification logs not appearing during crawls
-   - 🔧 **NEXT STEPS** (for new session):
-     1. Full Docker restart: `docker-compose down && docker-compose up -d`
-     2. Wait for services to stabilize (30s)
-     3. Test crawl: `curl -X POST http://localhost:8003/api/crawls -H "Content-Type: application/json" -d '{"url": "https://modelcontextprotocol.io/introduction", "source_id": "604659af-f494-4f3a-afce-bd87820bf983", "max_pages": 5, "max_depth": 1}'`
-     4. Check classification logs: `docker-compose logs backend | grep -E "(Chunk [0-9]+: classified|Classification summary)"`
-     5. Verify vector counts: `curl -s http://localhost:6333/collections/MCP_code | python3 -c "import sys, json; print(json.load(sys.stdin)['result']['points_count'])"`
-   - **Expected Result**: Code chunks should appear in MCP_code collection with 3072d embeddings
-   - **Debug Notes**:
-     - Code IS in container (verified with grep)
-     - `ingest_from_crawl()` logging never appears (not even "Starting crawl ingestion")
-     - 43 vectors exist in MCP_documents (from previous tests)
-     - Hot-reload detected during testing may have caused state issues
-     - Issue may be development environment caching, not code bug
+   - ✅ Added: Verbose classification logging for debugging (commit b9d14bd)
+   - ✅ Verified: Full Docker restart resolved caching issue
+   - ✅ Tested: Crawled https://modelcontextprotocol.io/docs/develop/build-server
+   - ✅ Result: 5 code chunks successfully extracted to MCP_code collection (3072d embeddings)
+   - ✅ Result: 7 document chunks extracted to MCP_documents collection (1536d embeddings)
+   - ✅ Verified: Search returns code results (scores 0.5+, threshold lowered to 0.2)
+   - ✅ Impact: **End-to-end code pipeline working** - ingestion, storage, and retrieval all functional
+   - 📝 Note: Verbose logs at line 828 (`Chunk X: classified as`) don't appear due to log level filtering
+   - 📝 Note: Warning logs at line 834 (`Skipping chunk`) DO appear and confirm classification working
+   - 📝 Note: Similarity threshold lowered to 0.2 for small datasets (will tune with more data)
 
-6. **Add code-specific quality tests** (1 hour) - Regression testing
+6. **Add language type detection for code** (2 hours) - Code metadata enhancement
+   - Extract language from code fences (```python, ```json, ```terraform, etc.)
+   - Add `code_language` field to chunk metadata
+   - Store language in Qdrant payload for filtering
+   - Display language badges in UI search results
+   - Support filtering by language type in search API
+
+7. **Add code-specific quality tests** (1 hour) - Regression testing
    - Syntax parsing validation
    - Runnable example checks
    - Update `/tmp/rag_quality_test.py` with code search tests
 
-7. **Lower chunk size for code** (2 hours) - Better code isolation
+8. **Lower chunk size for code** (2 hours) - Better code isolation
    - Current: 500 tokens (mixes code with documentation)
    - Target: 200 tokens for code blocks
    - Update content classifier threshold: 40% → 20% code ratio
@@ -98,6 +111,25 @@
   - `vector_service.py:391-483`
   - `.env:93` (USE_HYBRID_SEARCH=true)
   - `api/routes/search.py:96-101` (hybrid strategy init)
+
+### Search Threshold Fix (2025-10-18 Late Morning)
+- ✅ **Fixed search returning 0 results** - SIMILARITY_THRESHOLD too high for small dataset
+- ✅ **Root cause analysis** - Added instrumentation to SearchService to trace execution
+- ✅ **Investigation findings** - Search working correctly, scores 0.22-0.54 below 0.6 threshold
+- ✅ **Threshold adjustment** - Lowered from 0.6 → 0.2 (.env:109)
+- ✅ **Verified fix** - Search returns 3-5 results per query with 0.5+ scores
+- ✅ **Collections working** - Both MCP_code and MCP_documents returning results
+- ✅ **Impact**: End-to-end pipeline functional (ingestion → storage → retrieval)
+
+### Code Ingestion During Crawl (2025-10-18 Late Morning)
+- ✅ **Fixed crawl ingestion to extract code** - ContentClassifier now detects any ``` code fence
+- ✅ **Modified ContentClassifier logic** - Removed density requirement (content_classifier.py:98-103)
+- ✅ **Cleaned up ingestion pipeline** - Removed old batch embedding path (ingestion_service.py:785-822)
+- ✅ **Added verbose classification logging** - Debug logs for chunk classification decisions
+- ✅ **Verified Docker restart fix** - Resolved hot-reload caching issue affecting log visibility
+- ✅ **Tested with real content** - Crawled MCP build-server docs, extracted 5 code chunks successfully
+- ✅ **Impact**: Code search now functional during crawl (no post-processing needed)
+- ✅ **Collections**: MCP_code collection now active with code embeddings (3072d)
 
 ### Code Extraction (2025-10-18 Afternoon)
 - ✅ **Extracted code blocks into MCP_code collection** - 227 code blocks from 916 documentation chunks
@@ -150,48 +182,42 @@
   - Status: active
 
 **Collections**:
-- `MCP_documents`: 916 points ✅ (active)
-- `MCP_code`: 0 points ❌ (empty - blocks code search)
-- `Pydantic_AI_*`: DELETED (no documents)
-- `DevOps_Knowledge_*`: DELETED (no documents)
+- `MCP_documents`: 37 points ✅ (active)
+- `MCP_code`: 5 points ✅ (active - code extraction working!)
+- `Pydantic_AI_*`: Empty (no documents)
+- `DevOps_Knowledge_*`: Empty (no documents)
 
 **Database**:
 - Documents: 1 (MCP crawl)
-- Chunks: 916 (semantic chunks, 500 tokens each)
-- Embedding cache: Active with MD5 validation
+- Chunks: 12 total (after Docker restart - old data cleared)
+- Embedding cache: Active with MD5 validation and auto-cleanup
 
 ### Configuration
-- **Similarity Threshold**: 0.6 (60% - industry standard)
-- **Chunk Size**: 500 tokens (documents), 500 tokens (code - needs lowering to 200)
+- **Similarity Threshold**: 0.2 (20% - tuned for small datasets, will increase with more data)
+- **Chunk Size**: 500 tokens (documents and code)
 - **Chunk Overlap**: 50 tokens
-- **Hybrid Search**: DISABLED (needs enabling for code queries)
-- **Code Detection Threshold**: 40% (needs lowering to 20% for better classification)
+- **Hybrid Search**: ENABLED ✅ (vector 70% + text 30%)
+- **Code Detection**: ``` code fence presence (any code fence → classified as "code")
 
 ---
 
 ## 📋 Active Issues
 
 ### Critical Issues
-1. **MCP_code collection empty (0 points)** - Blocks code search functionality
-   - Problem: Code examples classified as "documents" (embedded in 500-token chunks)
-   - Impact: Code queries score 0.41 (below 0.6 threshold)
-   - Fix: Extract code blocks into separate collection
-   - Priority: HIGH (Phase 1, Task 1)
-
-2. **No monitoring/observability** - Production gap
+1. **No monitoring/observability** - Production gap
    - Missing: OpenTelemetry, Prometheus, Grafana
    - Impact: Cannot track search quality, latency trends, or errors
    - Fix: Add CNCF stack (OpenTelemetry + Prometheus + Grafana + Loki)
-   - Priority: MEDIUM (Phase 2, Task 5)
+   - Priority: MEDIUM (Phase 2, Task 8)
 
 ### UI/UX Issues
-3. **Document viewer missing** - No way to view original imported documents
+2. **Document viewer missing** - No way to view original imported documents
    - **Backend**: New endpoint `/api/documents/{id}/content`
    - **Frontend**: Modal with markdown renderer, PDF viewer, syntax highlighting
-   - Priority: MEDIUM (Phase 2, Task 6)
+   - Priority: MEDIUM (Phase 2, Task 9)
 
 ### Test Infrastructure Issues
-4. **35/67 integration tests failing** - Blocks regression detection
+3. **35/67 integration tests failing** - Blocks regression detection
    - Database pool fixture returns async generator
    - Service mocking paths incorrect
    - Hybrid search test collection import errors
@@ -457,4 +483,4 @@ docker system prune -a --volumes
 
 ---
 
-**Last Updated**: 2025-10-17 23:30 PST (Quality fixes applied, code extraction task planned)
+**Last Updated**: 2025-10-18 10:30 EDT (Task 5 completed - code ingestion during crawl now working)
