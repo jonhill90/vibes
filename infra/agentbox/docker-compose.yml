@@ -1,0 +1,57 @@
+# AgentBox MCP Server
+# Pattern: infra/vibesbox with Alpine base and HTTP/SSE streaming
+
+services:
+  agentbox:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: agentbox
+
+    ports:
+      - "${AGENTBOX_PORT:-8054}:8000"
+
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+          pids: 200
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${VIBES_PATH:-/workspace/vibes}:/workspace/vibes:rw
+      - agentbox-screenshots:/workspace/screenshots
+
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep -v grep | grep -q 'python src/mcp_server.py'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - vibes-network
+
+    restart: unless-stopped
+
+networks:
+  vibes-network:
+    external: true
+
+volumes:
+  agentbox-screenshots:
