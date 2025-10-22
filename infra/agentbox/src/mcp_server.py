@@ -12,6 +12,8 @@ import asyncio
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 
 # Configure logging
 logging.basicConfig(
@@ -27,6 +29,16 @@ mcp = FastMCP(
     host="0.0.0.0",
     port=8000
 )
+
+# Add custom health endpoint to underlying Starlette app
+@mcp.custom_route("/health", methods=["GET"])
+async def health_endpoint(request):
+    """HTTP health endpoint for Docker healthcheck"""
+    return JSONResponse({
+        "status": "healthy",
+        "service": "agentbox",
+        "version": "1.0.0"
+    })
 
 # Simple process tracking
 active_processes = {}

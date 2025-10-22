@@ -26,7 +26,7 @@ fi
 
 # Test 2: Port 8054 open
 echo -n "2. Port 8054 accessible... "
-RESPONSE=$(curl -s -m 2 http://localhost:8054/sse 2>&1)
+RESPONSE=$(curl -s -m 2 http://localhost:8054/health 2>&1)
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ open${NC}"
 else
@@ -34,10 +34,10 @@ else
     exit 1
 fi
 
-# Test 3: SSE endpoint responds
-echo -n "3. SSE endpoint... "
-SSE=$(curl -s -m 2 http://localhost:8054/sse -H "Accept: text/event-stream" 2>&1)
-if echo "$SSE" | grep -q "event: endpoint"; then
+# Test 3: Health endpoint responds
+echo -n "3. Health endpoint... "
+HEALTH=$(curl -s -m 2 http://localhost:8054/health 2>&1)
+if echo "$HEALTH" | grep -q "healthy"; then
     echo -e "${GREEN}✓ responding${NC}"
 else
     echo -e "${RED}✗ not responding${NC}"
@@ -46,16 +46,16 @@ fi
 
 # Test 4: Server logs show startup
 echo -n "4. Server started... "
-if docker logs agentbox 2>&1 | grep -q "Starting MCP server"; then
+if docker logs agentbox 2>&1 | grep -q "Starting AgentBox MCP server"; then
     echo -e "${GREEN}✓ yes${NC}"
 else
     echo -e "${RED}✗ no startup message${NC}"
 fi
 
-# Test 5: FastMCP in SSE mode
-echo -n "5. SSE transport mode... "
-if docker logs agentbox 2>&1 | grep -q "Transport:.*SSE"; then
-    echo -e "${GREEN}✓ SSE mode${NC}"
+# Test 5: FastMCP in streamable-http mode
+echo -n "5. Streamable HTTP mode... "
+if docker logs agentbox 2>&1 | grep -q "Streamable HTTP"; then
+    echo -e "${GREEN}✓ streamable-http mode${NC}"
 else
     echo -e "${RED}✗ wrong mode${NC}"
 fi
@@ -88,8 +88,9 @@ echo
 echo -e "${GREEN}✓ All smoke tests passed!${NC}"
 echo
 echo "Server Details:"
-echo "  URL: http://localhost:8054/sse"
-echo "  Transport: SSE (HTTP/EventStream)"
+echo "  URL: http://localhost:8054/mcp"
+echo "  Transport: streamable-http"
+echo "  Health: http://localhost:8054/health"
 echo "  Image: $(docker inspect --format='{{.Config.Image}}' agentbox)"
 echo "  Status: $(docker inspect --format='{{.State.Status}}' agentbox)"
 echo
