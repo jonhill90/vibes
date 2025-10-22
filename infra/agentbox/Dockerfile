@@ -46,11 +46,11 @@ RUN pip install --no-cache-dir -e .
 # Copy application source
 COPY src/ src/
 
-# Create non-root user
-RUN addgroup -S agentbox && adduser -S agentbox -G agentbox && \
-    chown -R agentbox:agentbox /app
+# Create non-root user (disabled for Docker socket access)
+# RUN addgroup -S agentbox && adduser -S agentbox -G agentbox && \
+#     chown -R agentbox:agentbox /app
 
-USER agentbox
+# USER agentbox
 
 # CRITICAL: Unbuffered output for streaming
 ENV PYTHONUNBUFFERED=1
