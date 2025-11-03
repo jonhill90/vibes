@@ -2,10 +2,7 @@
   "mcpServers": {
     "agentbox": {
       "command": "npx",
-      "args": [
-        "mcp-remote",
-        "http://localhost:8054/mcp"
-      ]
+      "args": ["mcp-remote", "http://localhost:8054/mcp"]
     },
     "basic-memory": {
       "command": "docker",
@@ -17,3 +14,4 @@
     }
   }
 }
+
