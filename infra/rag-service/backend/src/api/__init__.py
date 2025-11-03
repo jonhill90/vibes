@@ -1,1 +1,0 @@
-"""FastAPI application and middleware."""
