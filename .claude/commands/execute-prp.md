@@ -1,6 +1,8 @@
 # Execute PRP
 
-Multi-subagent system: parallel task execution, automated tests, systematic validation. **PRP File**: $ARGUMENTS
+Multi-subagent system: parallel task execution, domain expert auto-selection, automated tests, systematic validation. **PRP File**: $ARGUMENTS
+
+**NEW**: Domain experts auto-selected based on feature analysis technical components. See `.claude/patterns/domain-expert-selection.md` for details.
 
 ## 5-Phase Workflow
 
@@ -336,9 +338,112 @@ groups = parse_execution_groups(execution_plan)
 
 ### Phase 2: Parallel Implementation
 
-**Subagents**: Multiple `prp-exec-implementer` | **Duration**: 30-50% faster (see `.claude/patterns/parallel-subagents.md`)
+**Subagents**: Domain Experts (auto-selected) | **Duration**: 30-50% faster (see `.claude/patterns/parallel-subagents.md`)
 
 ```python
+# PHASE 0.5: Domain Expert Auto-Selection (NEW)
+# Read feature analysis to detect technical components
+feature_analysis_path = f"prps/{feature_name}/planning/feature-analysis.md"
+
+try:
+    feature_analysis = Read(feature_analysis_path)
+except:
+    feature_analysis = None
+    print("⚠️ Feature analysis not found, using generic implementer")
+
+# Domain detection and expert selection
+if feature_analysis:
+    # Extract technical components (usually under "## Technical Components")
+    components = []
+    in_tech_section = False
+    for line in feature_analysis.split("\n"):
+        if "## Technical Components" in line:
+            in_tech_section = True
+        elif line.startswith("##") and in_tech_section:
+            break  # End of section
+        elif in_tech_section and line.strip().startswith("-"):
+            components.append(line.strip().lstrip("- "))
+
+    # Domain detection keywords
+    DOMAIN_KEYWORDS = {
+        "terraform": ["terraform", "iac", "infrastructure as code", ".tf", "tfvars"],
+        "azure": ["azure", "arm template", "azure cli", "az ", "resource group"],
+        "kubernetes": ["kubernetes", "k8s", "kubectl", "helm", "pods"],
+        "task_management": ["task tracking", "orchestration", "workflow", "dependency"],
+        "knowledge_curation": ["knowledge base", "documentation", "basic-memory"],
+        "context_engineering": ["context optimization", "token management", "prompt"]
+    }
+
+    DOMAIN_PRIORITIES = {
+        "terraform": 100,
+        "azure": 90,
+        "kubernetes": 80,
+        "task_management": 70,
+        "knowledge_curation": 60,
+        "context_engineering": 50
+    }
+
+    # Detect applicable domains
+    detected_domains = []
+    for component in components:
+        component_lower = component.lower()
+        for domain, keywords in DOMAIN_KEYWORDS.items():
+            if any(keyword in component_lower for keyword in keywords):
+                priority = DOMAIN_PRIORITIES[domain]
+                detected_domains.append((domain, priority))
+                break  # One domain per component
+
+    # Sort by priority and select experts
+    if detected_domains:
+        detected_domains.sort(key=lambda x: x[1], reverse=True)
+        primary_domain = detected_domains[0][0]
+        collaborators = [d[0] for d in detected_domains[1:]]
+
+        # Agent existence validation (graceful fallback)
+        from pathlib import Path
+        primary_expert = f"{primary_domain}-expert"
+        if not Path(f".claude/agents/{primary_expert}.md").exists():
+            print(f"⚠️ Primary expert {primary_expert} not found, using generic implementer")
+            primary_expert = "prp-exec-implementer"
+            collaborators = []
+        else:
+            # Validate collaborators
+            validated_collaborators = []
+            for collaborator in collaborators:
+                collab_expert = f"{collaborator}-expert"
+                if Path(f".claude/agents/{collab_expert}.md").exists():
+                    validated_collaborators.append(collaborator)
+                else:
+                    print(f"⚠️ Collaborator {collab_expert} not found, skipping")
+            collaborators = validated_collaborators
+
+        expert_selection = {
+            "primary": primary_expert,
+            "collaborators": [f"{d}-expert" for d in collaborators],
+            "strategy": "parallel" if len(collaborators) <= 3 else "sequential"
+        }
+
+        print(f"🔍 Domain Expert Auto-Selection:")
+        print(f"   Detected Domains: {[d[0] for d in detected_domains]}")
+        print(f"   Primary Expert: {expert_selection['primary']}")
+        print(f"   Collaborators: {expert_selection['collaborators']}")
+        print(f"   Strategy: {expert_selection['strategy']}")
+    else:
+        # No domains detected, fallback
+        expert_selection = {
+            "primary": "prp-exec-implementer",
+            "collaborators": [],
+            "strategy": "sequential"
+        }
+        print("⚠️ No domains detected, using generic implementer")
+else:
+    # No feature analysis, fallback
+    expert_selection = {
+        "primary": "prp-exec-implementer",
+        "collaborators": [],
+        "strategy": "sequential"
+    }
+
 for group_number, group in enumerate(groups):
     if group['mode'] == "parallel":
         if archon_available:
@@ -346,7 +451,14 @@ for group_number, group in enumerate(groups):
                 mcp__archon__manage_task("update", task_id=get_archon_task_id(task, task_mappings), status="doing")
 
         for task in group['tasks']:
-            Task(subagent_type="prp-exec-implementer", description=f"Implement {task['name']}", prompt=f'''
+            # Select expert for task (use primary by default, or task-specific if specified)
+            task_expert = expert_selection["primary"]
+
+            # Check if task specifies a different domain expert
+            if "domain" in task and f"{task['domain']}-expert" in [expert_selection["primary"]] + expert_selection["collaborators"]:
+                task_expert = f"{task['domain']}-expert"
+
+            Task(subagent_type=task_expert, description=f"Implement {task['name']}", prompt=f'''
 Implement single task from PRP.
 
 **CONTEXT**:
@@ -432,7 +544,14 @@ Your work will be validated immediately after completion:
             if archon_available:
                 mcp__archon__manage_task("update", task_id=get_archon_task_id(task, task_mappings), status="doing")
 
-            Task(subagent_type="prp-exec-implementer", description=f"Implement {task['name']}", prompt=f'''
+            # Select expert for task (use primary by default, or task-specific if specified)
+            task_expert = expert_selection["primary"]
+
+            # Check if task specifies a different domain expert
+            if "domain" in task and f"{task['domain']}-expert" in [expert_selection["primary"]] + expert_selection["collaborators"]:
+                task_expert = f"{task['domain']}-expert"
+
+            Task(subagent_type=task_expert, description=f"Implement {task['name']}", prompt=f'''
 Implement single task from PRP.
 
 **CONTEXT**:

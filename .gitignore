@@ -40,6 +40,12 @@
 !/projects/Agent-0/
 !/projects/Agent-1/
 
+# PRPs
+/prps/*
+/prps/EXAMPLE_multi_agent_prp.md
+!/prps/templates/
+!/prps/README.md
+
 # Screenshots
 /screenshots/*
 

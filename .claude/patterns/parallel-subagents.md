@@ -40,13 +40,15 @@ Task(subagent_type="prp-gen-example-curator",
      prompt=curator_ctx)
 ```
 
-## With Archon
+## With Task Tracking
 
 ```python
-# Update ALL to "doing" BEFORE
-if archon_available:
-    for task_id in parallel_task_ids:
-        mcp__archon__manage_task("update", task_id=task_id, status="doing")
+# Update ALL to "doing" BEFORE (file-based state)
+state = read_json_file(state_path)
+for task_id in parallel_task_ids:
+    state["tasks"][task_id]["status"] = "doing"
+    state["tasks"][task_id]["updated_at"] = current_timestamp()
+write_json_file(state_path, state)
 
 # Invoke ALL in SAME response
 Task(subagent_type="researcher", prompt=researcher_ctx)
@@ -54,9 +56,11 @@ Task(subagent_type="hunter", prompt=hunter_ctx)
 Task(subagent_type="curator", prompt=curator_ctx)
 
 # Update ALL to "done" AFTER
-if archon_available:
-    for task_id in parallel_task_ids:
-        mcp__archon__manage_task("update", task_id=task_id, status="done")
+state = read_json_file(state_path)
+for task_id in parallel_task_ids:
+    state["tasks"][task_id]["status"] = "done"
+    state["tasks"][task_id]["updated_at"] = current_timestamp()
+write_json_file(state_path, state)
 ```
 
 
@@ -100,12 +104,15 @@ Task(...) # → tests/ (needs both)
 ## Error Handling & Conflict Check
 
 ```python
-# Reset failed tasks
+# Reset failed tasks (file-based state)
 failed = [t for t in results if t.status == "failed"]
-if failed and archon_available:
+if failed:
+    state = read_json_file(state_path)
     for task in failed:
-        mcp__archon__manage_task("update", task_id=task.id,
-            status="todo", description=f"ERROR: {task.error}")
+        state["tasks"][task.id]["status"] = "todo"
+        state["tasks"][task.id]["description"] = f"ERROR: {task.error}"
+        state["tasks"][task.id]["updated_at"] = current_timestamp()
+    write_json_file(state_path, state)
 
 # Check file conflicts before parallelizing
 def can_run_in_parallel(tasks):
@@ -121,13 +128,13 @@ def can_run_in_parallel(tasks):
 **ALWAYS**:
 - Prepare contexts BEFORE invoking
 - Invoke ALL in SINGLE response
-- Update Archon in batches (before/after)
+- Update task state in batches (before/after)
 - Validate timing (~max, not sum)
 - Limit to 3-6 tasks per group
 
 **NEVER**:
 - Invoke in separate responses
-- Interleave Archon updates
+- Interleave task state updates
 - Parallelize dependent tasks
 - Parallelize same file writes
 - Exceed 6 parallel tasks
