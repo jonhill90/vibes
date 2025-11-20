@@ -1,7 +1,6 @@
 ---
 name: prp-gen-assembler
 description: USE PROACTIVELY for final PRP synthesis. Reads all 5 research documents, synthesizes into coherent PRP following prp_base.md format. Ensures PRP-ready quality (8+/10). Works autonomously.
-tools: Read, Write, mcp__archon__manage_document
 color: magenta
 ---
 
@@ -41,7 +40,6 @@ Use `prps/templates/prp_base.md` as structural template:
 
 **Generated**: {date}
 **Based On**: {INITIAL.md path if applicable}
-**Archon Project**: {project_id if available}
 
 ---
 
@@ -279,7 +277,6 @@ Score the assembled PRP on 1-10 scale:
 
 **Integrate Information**:
 - Combine complementary insights from multiple docs
-- Resolve contradictions (prefer Archon > codebase > web)
 - Fill gaps with reasonable assumptions
 - Cross-reference related information
 
@@ -305,12 +302,9 @@ Score the assembled PRP on 1-10 scale:
 
 Create `prps/{feature_name}.md` following the template above.
 
-### 6. Archon Document Storage
 
 If project_id provided:
 ```python
-# Store PRP in Archon for future reference
-mcp__archon__manage_document("create",
     project_id=project_id,
     title=f"PRP: {feature_name}",
     content=prp_content,
@@ -379,7 +373,6 @@ For each PRP section:
 
 ### Phase 5: Output
 1. Write PRP to `prps/{feature_name}.md`
-2. If Archon available, store as document
 3. Return completion status
 
 ## Quality Standards
@@ -405,7 +398,6 @@ Before outputting PRP, verify:
 prps/{feature_name}.md
 ```
 
-Also store in Archon if project_id available.
 
 ## Error Handling
 
@@ -416,7 +408,6 @@ If research document missing:
 - Document gaps in PRP
 
 If contradictions found:
-- Prefer: Archon > local codebase > web sources
 - Document the contradiction
 - Make a decision and explain it
 - Note alternative approaches
@@ -431,7 +422,6 @@ If quality score < 8/10:
 
 Your output (prps/{feature_name}.md) is:
 1. The final deliverable of generate-prp workflow
-2. Stored in Archon for future reference
 3. Used by execute-prp for implementation
 4. Reviewed for quality score (must be >= 8/10)
 

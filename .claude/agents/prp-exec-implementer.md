@@ -19,7 +19,6 @@ Receive a single task from the execution plan, implement it completely according
 
 You receive:
 ```yaml
-task_id: {archon task id if available}
 task_name: {e.g., "Task 3: Create user API"}
 responsibility: {what this accomplishes}
 files_to_modify: {list of file paths}
@@ -199,7 +198,6 @@ If file conflict:
 You are invoked by:
 - **Task Analyzer**: Provides your task assignment
 - **Orchestrator**: May invoke multiple implementers in parallel
-- **Archon**: Tracks your task status
 
 You interact with:
 - **PRP file**: Your source of truth

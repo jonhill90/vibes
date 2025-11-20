@@ -299,16 +299,11 @@ def calculate_report_coverage(feature_name: str, total_tasks: int) -> dict:
 # 4. Extract tasks
 tasks = extract_tasks_from_prp(prp_content)
 
-# 5. Archon setup (see .claude/patterns/archon-workflow.md)
-health = mcp__archon__health_check()
 if health["status"] == "healthy":
-    project = mcp__archon__manage_project("create", title=f"PRP: {feature_name}", description=f"From {prp_path}")
     project_id = project["project"]["id"]
     task_mappings = []
     for i, t in enumerate(tasks):
-        at = mcp__archon__manage_task("create", project_id=project_id, title=t["name"],
                                        description=t["responsibility"], status="todo", task_order=100-i)
-        task_mappings.append({"prp_task": t, "archon_task_id": at["task"]["id"]})
 else:
     project_id = None
     task_mappings = tasks
@@ -322,7 +317,6 @@ else:
 Task(subagent_type="prp-exec-task-analyzer", description="Analyze dependencies", prompt=f'''
 Analyze PRP tasks for parallel execution.
 
-PRP: {prp_path}, Feature: {feature_name}, Tasks: {len(tasks)}, Archon: {project_id}
 
 Steps:
 1. Read PRP "Implementation Blueprint" → "Task List"
@@ -446,9 +440,7 @@ else:
 
 for group_number, group in enumerate(groups):
     if group['mode'] == "parallel":
-        if archon_available:
             for task in group['tasks']:
-                mcp__archon__manage_task("update", task_id=get_archon_task_id(task, task_mappings), status="doing")
 
         for task in group['tasks']:
             # Select expert for task (use primary by default, or task-specific if specified)
@@ -521,11 +513,7 @@ Your work will be validated immediately after completion:
             except ValidationError as e:
                 print(str(e))
 
-                # Update Archon task status to "todo" (failed, needs retry)
-                if archon_available:
-                    mcp__archon__manage_task(
                         "update",
-                        task_id=get_archon_task_id(task, task_mappings),
                         status="todo",
                         description=f"VALIDATION FAILED: Report missing"
                     )
@@ -535,14 +523,10 @@ Your work will be validated immediately after completion:
 
         print(f"✅ Group {group_number + 1}: All {len(group['tasks'])} reports validated\n")
 
-        if archon_available:
             for task in group['tasks']:
-                mcp__archon__manage_task("update", task_id=get_archon_task_id(task, task_mappings), status="done")
 
     elif group['mode'] == "sequential":
         for task in group['tasks']:
-            if archon_available:
-                mcp__archon__manage_task("update", task_id=get_archon_task_id(task, task_mappings), status="doing")
 
             # Select expert for task (use primary by default, or task-specific if specified)
             task_expert = expert_selection["primary"]
@@ -611,11 +595,7 @@ Your work will be validated immediately after completion:
             except ValidationError as e:
                 print(str(e))
 
-                # Update Archon task status to "todo" (failed, needs retry)
-                if archon_available:
-                    mcp__archon__manage_task(
                         "update",
-                        task_id=get_archon_task_id(task, task_mappings),
                         status="todo",
                         description=f"VALIDATION FAILED: Report missing"
                     )
@@ -623,8 +603,6 @@ Your work will be validated immediately after completion:
                 # HALT EXECUTION - don't continue
                 raise
 
-            if archon_available:
-                mcp__archon__manage_task("update", task_id=get_archon_task_id(task, task_mappings), status="done")
 ```
 
 ### Phase 3: Test Generation
@@ -788,7 +766,6 @@ Next Steps:
   4. Review task reports: ls prps/{feature_name}/execution/TASK*_COMPLETION.md
   5. Commit changes
 
-Archon: {project_status}
 ```
 
 **Partial** (issues):
@@ -824,8 +801,6 @@ Options:
 # Subagent failure
 try: Task(...)
 except Exception as e:
-    if archon_available:
-        mcp__archon__manage_task("update", task_id=task_id, status="todo", description=f"ERROR: {e}")
     print("Options: 1. Retry 2. Partial 3. Abort")
 
 # Circular dependency

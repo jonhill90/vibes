@@ -63,7 +63,6 @@ Read research documents to understand:
 - Security-sensitive components (auth, data handling)
 - Performance-critical operations
 
-### 2. Archon Issue Search
 Search for:
 - Known bugs or issues with specified versions
 - Common mistakes with frameworks
@@ -72,7 +71,6 @@ Search for:
 - Version compatibility issues
 
 ### 3. Web Research for Gaps
-For issues not in Archon:
 1. Search for common mistakes
 2. Find security advisories
 3. Look for performance guides
@@ -112,7 +110,6 @@ Create the gotchas file at the specified path with:
 **Severity**: Critical
 **Category**: [Security / Data Loss / System Stability]
 **Affects**: [Framework/Library name and version]
-**Source**: [Archon source_id or URL]
 
 **What it is**:
 [Clear description of the issue]
@@ -150,7 +147,6 @@ secure_code_example
 **Severity**: High
 **Category**: [Performance / Common Bug / API Misuse]
 **Affects**: [Component/Library]
-**Source**: [Archon or URL]
 
 **What it is**:
 [Description]
@@ -400,7 +396,6 @@ Before marking PRP complete, verify these gotchas are addressed:
 
 ## Sources Referenced
 
-### From Archon
 - [source_id]: [Description]
 - [source_id]: [Description]
 
@@ -439,7 +434,6 @@ When generating the PRP:
 3. Identify security-sensitive components
 4. Note performance-critical operations
 
-### Phase 2: Archon Search
 For each technology:
 1. Search for known issues
 2. Search for security advisories
@@ -447,7 +441,6 @@ For each technology:
 4. Rate findings by severity
 
 ### Phase 3: Web Research
-For gaps not in Archon:
 1. Search "{library} common mistakes"
 2. Search "{library} security vulnerabilities"
 3. Search "{library} performance pitfalls"
@@ -477,13 +470,11 @@ For each gotcha:
 ## Quality Standards
 
 Before outputting gotchas.md, verify:
-- ✅ Archon searched first
 - ✅ At least 5-10 gotchas documented
 - ✅ Every gotcha has a solution (not just warning)
 - ✅ Critical security issues highlighted
 - ✅ Performance pitfalls included
 - ✅ Code examples show wrong vs. right approach
-- ✅ Sources referenced (Archon IDs or URLs)
 - ✅ Severity ratings applied
 - ✅ Checklist provided
 - ✅ Output is 400+ lines (comprehensive)
@@ -503,7 +494,6 @@ Use that EXACT path for Write() operation.
 
 ## Error Handling
 
-If Archon unavailable:
 - Use web search exclusively
 - Note reduced confidence
 - Recommend manual review

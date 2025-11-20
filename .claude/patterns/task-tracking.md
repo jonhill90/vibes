@@ -2,20 +2,15 @@
 
 **Version**: 1.0
 **Created**: 2025-11-20
-**Purpose**: Abstract task tracking to support multiple backends (file-based, Archon) with graceful degradation
 **Part of**: Agent Architecture Modernization (prps/agent_architecture_modernization.md)
 
 ---
 
 ## Problem Statement
 
-**Current State**: All PRP generation and execution workflows tightly coupled to Archon MCP for task tracking.
 
 **Pain Points**:
-- Single point of failure (Archon unavailable = workflows broken)
-- No graceful degradation (hard failures when Archon down)
 - External dependency for core workflow functionality
-- Difficult to test without Archon configured
 
 **Goal**: Create abstraction layer supporting multiple backends with automatic fallback.
 
@@ -38,7 +33,6 @@
         ┌─────────┴──────────┐
         ▼                    ▼
 ┌──────────────┐    ┌──────────────┐
-│ File Backend │    │Archon Backend│
 │ (Primary)    │    │ (Fallback)   │
 └──────────────┘    └──────────────┘
 ```
@@ -46,7 +40,6 @@
 ### Backend Selection Priority
 
 1. **File Backend** (default): Local JSON state files
-2. **Archon Backend** (fallback): If explicitly requested and available
 
 **Rationale**: File backend is more reliable (no external dependencies), easier to debug, and sufficient for PRP workflows.
 
@@ -270,12 +263,9 @@ state_path = f"prps/{feature_name}/execution/state.json"
 ```
 ```
 
-### Pattern 4: Graceful Degradation (Archon Fallback)
 
-**If Archon backend needed** (backward compatibility only):
 
 ```markdown
-## Archon Backend Support (Optional)
 
 **When to use**: Only for backward compatibility during migration period.
 
@@ -284,16 +274,10 @@ state_path = f"prps/{feature_name}/execution/state.json"
 def create_task_tracker(backend: str = "file"):
     """
     Create TaskTracker with specified backend.
-    Falls back to file backend if Archon unavailable.
     """
 
-    if backend == "archon":
         try:
-            # Test if Archon available
-            mcp__archon__health_check()
-            return TaskTrackerArchon()
         except Exception as e:
-            print(f"⚠️  Archon unavailable: {e}")
             print("⚠️  Falling back to file backend")
             return TaskTrackerFile()
 
@@ -301,32 +285,26 @@ def create_task_tracker(backend: str = "file"):
     return TaskTrackerFile()
 ```
 
-**Archon Backend Operations**:
 ```python
-class TaskTrackerArchon:
     def create_project(self, name: str, description: str) -> str:
-        return mcp__archon__manage_project(
             "create",
             name=name,
             description=description
         )
 
     def create_task(self, title: str, project_id: str) -> str:
-        return mcp__archon__manage_task(
             "create",
             title=title,
             project_id=project_id
         )
 
     def update_task(self, task_id: str, status: str):
-        mcp__archon__manage_task(
             "update",
             task_id=task_id,
             status=status
         )
 
     def find_tasks(self, filter_by: str, filter_value: str):
-        return mcp__archon__find_tasks(
             filter_by=filter_by,
             filter_value=filter_value
         )
@@ -514,22 +492,18 @@ print(f"📋 {len(todo_tasks)} tasks remaining")
 
 ---
 
-## Migration from Archon
 
-### Before (Archon-coupled)
 
 ```markdown
 # Old pattern in generate-prp.md
 
 # Create project
-project_id = mcp__archon__manage_project(
     "create",
     name=f"PRP: {feature_name}",
     description=description
 )
 
 # Create task
-task_id = mcp__archon__manage_task(
     "create",
     title=f"Phase 1: {task_name}",
     project_id=project_id,
@@ -537,21 +511,18 @@ task_id = mcp__archon__manage_task(
 )
 
 # Update task
-mcp__archon__manage_task(
     "update",
     task_id=task_id,
     status="doing"
 )
 
 # Find tasks
-tasks = mcp__archon__find_tasks(
     filter_by="status",
     filter_value="todo"
 )
 ```
 
 **Problems**:
-- Hard dependency on Archon MCP
 - No graceful degradation
 - Difficult to test locally
 - External service availability risk
@@ -619,8 +590,6 @@ tasks = [
 - [ ] State files created in `prps/{feature_name}/execution/` directory
 - [ ] State persists across command invocations (file system)
 - [ ] Task status follows flow: `todo` → `doing` → `review` → `done`
-- [ ] All mcp__archon__manage_* calls replaced in commands
-- [ ] Graceful degradation if Archon backend needed (optional)
 
 ### Testing Requirements
 
@@ -749,7 +718,6 @@ write_json_file(state_path, state)
 - No external dependencies
 - Works offline
 
-### Archon Backend (Reference)
 
 **Latency**:
 - Create project: 100-500ms (HTTP API call)
@@ -850,7 +818,6 @@ def create_task_tracker(feature_name: str, estimated_tasks: int):
 
 - **PRP**: prps/agent_architecture_modernization.md (Task 3, lines 667-705)
 - **Security Validation**: .claude/conventions/prp-naming.md (6-level validation)
-- **Gotchas**: prps/agent_architecture_modernization.md (lines 432-460, Archon coupling)
 - **File Format**: JSON (RFC 8259)
 - **UUID Standard**: RFC 4122 (UUID v4)
 
@@ -858,5 +825,4 @@ def create_task_tracker(feature_name: str, estimated_tasks: int):
 
 **Pattern Status**: ✅ Complete
 **Testing**: File backend tested with user_authentication PRP
-**Backward Compatibility**: Archon backend supported via graceful degradation
 **Next Steps**: Update generate-prp.md and execute-prp.md to use this pattern

@@ -7,7 +7,6 @@ This directory contains reusable implementation patterns extracted from the PRP 
 **Need to...** | **See Pattern** | **Used By**
 ---|---|---
 Extract secure feature names | [security-validation.md](security-validation.md) | All commands
-Integrate with Archon MCP | [archon-workflow.md](archon-workflow.md) | generate-prp, execute-prp
 Execute subagents in parallel | [parallel-subagents.md](parallel-subagents.md) | generate-prp Phase 2, execute-prp Phase 2
 Validate PRP/execution quality | [quality-gates.md](quality-gates.md) | generate-prp Phase 5, execute-prp Phase 4
 Validate frontend UIs via browser | [browser-validation.md](browser-validation.md) | validation-gates, prp-exec-validator
@@ -20,9 +19,6 @@ Validate frontend UIs via browser | [browser-validation.md](browser-validation.m
   - Key benefit: Prevents path traversal, command injection, and directory traversal
 
 ### Integration Patterns
-- **[archon-workflow.md](archon-workflow.md)**: Health check, project/task management, graceful degradation
-  - Use when: Any command needing Archon tracking
-  - Key benefit: Works with or without Archon (graceful fallback)
 
 ### Performance Patterns
 - **[parallel-subagents.md](parallel-subagents.md)**: Multi-task invocation in single response

@@ -69,9 +69,7 @@ model: o4-mini  # Cost-effective for research phases
 # Approval policy (CRITICAL for parallel execution)
 approval_policy: on-failure  # Phase 2 is read-only (safe to auto-approve)
 
-# MCP servers (if Archon available)
 mcp_servers:
-  - archon  # Task tracking and knowledge base
 
 # Timeouts
 timeout: 600  # 10 minutes default
@@ -83,7 +81,6 @@ stream: true
 
 **Profile Notes**:
 - **`approval_policy: on-failure`** is CRITICAL for Phase 2 parallel execution
-  - Phase 2 agents only read files (Archon search, file reads)
   - `on-request` would hang workflow waiting for approval in background
 - Use `o4-mini` for PRP generation (cost-effective research)
 - Use `gpt-5-codex` for PRP execution (better implementation)
@@ -311,7 +308,6 @@ PHASE2_TIMEOUT=1200 ./.codex/scripts/codex-generate-prp.sh prps/INITIAL_feature.
 | **Quality Gate** | ≥8/10 PRP score | ≥8/10 PRP score |
 | **Validation Loop** | `codex-execute-prp.sh` | `/execute-prp` |
 | **Coverage Requirement** | ≥70% | ≥70% |
-| **Archon Integration** | Optional (graceful degradation) | Optional |
 | **Profile** | `codex-prp.yaml` | Claude uses Tasks |
 | **Manifest Logging** | JSONL (same format) | JSONL (same format) |
 | **Model Choice** | o4-mini / gpt-5-codex | claude-opus / sonnet |
@@ -464,19 +460,13 @@ cat prps/feature/codex/logs/validation_level3.log
 
 ---
 
-#### Error 7: "Archon CLI not found"
 
-**Cause**: Archon MCP server not installed (optional dependency)
 
 **Impact**: PRP generation proceeds without task tracking
 
 **Solution** (optional):
 ```bash
-# Install Archon (if desired)
-# Follow Archon installation instructions
 
-# Or proceed without Archon
-# ℹ️  Archon CLI not found - proceeding without project tracking
 # [workflow continues normally]
 ```
 

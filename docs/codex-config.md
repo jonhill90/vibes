@@ -115,13 +115,9 @@ env = { KEY = "value" }              # Optional environment variables
 startup_timeout_sec = 90              # Optional: override profile default
 ```
 
-**Example: Archon MCP Server (uvx)**
 
 ```toml
-[profiles.codex-prp.mcp_servers.archon_stdio]
 command = "uvx"
-args = ["archon"]
-env = { ARCHON_ENV = "production" }
 startup_timeout_sec = 90  # Allow time for uvx dependency download
 ```
 
@@ -161,12 +157,9 @@ url = "http://host:port/path"
 bearer_token = "TOKEN"  # Optional: for authenticated servers
 ```
 
-**Example: Archon MCP Server (HTTP)**
 
 ```toml
-[profiles.codex-prp.mcp_servers.archon]
 url = "http://localhost:8051/mcp"
-# Note: No bearer_token needed for local Archon server
 ```
 
 **Example: Authenticated Remote Server**
@@ -204,9 +197,7 @@ startup_timeout_sec = 60   # 1 minute for server startup
 tool_timeout_sec = 600      # 10 minutes for long operations
 
 # Server-specific overrides
-[profiles.codex-prp.mcp_servers.archon]
 command = "uvx"
-args = ["archon"]
 startup_timeout_sec = 90  # Override: Allow extra time for uvx
 
 [profiles.codex-prp.mcp_servers.basic_memory]
@@ -402,9 +393,7 @@ Two types of timeouts control Codex behavior:
 startup_timeout_sec = 60  # Profile-level default
 
 # Server-specific override
-[profiles.codex-prp.mcp_servers.archon]
 command = "uvx"
-args = ["archon"]
 startup_timeout_sec = 90  # Allow extra time for dependency download
 ```
 
@@ -589,11 +578,8 @@ network_access = true
 # =============================================================================
 # Pattern: Each server has either:
 #   - STDIO: command + args + optional env
-#   - HTTP: url (for HTTP-based servers like Archon)
 
-# Archon MCP Server (HTTP)
 # Provides: Task tracking, knowledge base, project management
-[profiles.codex-prp.mcp_servers.archon]
 url = "http://localhost:8051/mcp"
 # Note: HTTP servers don't use command/args, only URL
 
@@ -618,13 +604,8 @@ command = "docker"
 args = ["mcp", "gateway", "run"]
 
 # =============================================================================
-# Alternative: Archon as STDIO Server (if uvx installation available)
 # =============================================================================
-# Uncomment if you want to run Archon as STDIO instead of HTTP
-# [profiles.codex-prp.mcp_servers.archon_stdio]
 # command = "uvx"
-# args = ["archon"]
-# env = { ARCHON_ENV = "production" }
 # startup_timeout_sec = 90  # Allow time for uvx dependency download
 
 # =============================================================================
@@ -689,7 +670,6 @@ codex exec --profile codex-prp --prompt "echo test"
 tail -f ~/.codex/logs/mcp-servers.log
 
 # Test specific server (if available)
-codex exec --profile codex-prp --json --prompt "ping archon"
 
 # View all available MCP tools
 codex exec --profile codex-prp --prompt "list available tools"

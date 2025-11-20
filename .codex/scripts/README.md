@@ -70,7 +70,6 @@ log-phase.sh
 ```bash
 main()
 ├── validate input (security-validation.sh)
-├── check Archon availability (graceful degradation)
 └── execute phases sequentially:
     ├── execute_phase0_setup()           # Setup (60s)
     ├── execute_sequential_phase(phase1)  # Feature analysis (600s)
@@ -95,7 +94,6 @@ execute_sequential_phase(feature, phase, prompt_file)
 ```bash
 execute_phase2_parallel(feature)
 ├── check_dependencies()           # All Phase 2 agents
-├── archon_update_task_status()    # Mark tasks "doing"
 ├── execute_parallel_group()       # FROM parallel-exec.sh
 │   ├── timeout ... codex exec --profile codex-prp ... &   # Agent 2A
 │   ├── timeout ... codex exec --profile codex-prp ... &   # Agent 2B
@@ -103,7 +101,6 @@ execute_phase2_parallel(feature)
 │   ├── wait $PID_2A; EXIT_2A=$?  # CRITICAL: immediate capture
 │   ├── wait $PID_2B; EXIT_2B=$?
 │   └── wait $PID_2C; EXIT_2C=$?
-└── archon_update_task_status()    # Mark tasks "done"
 ```
 
 ### Configuration
@@ -147,16 +144,11 @@ handle_phase_failure(feature, phase, exit_code)
     └── 4. Abort
 ```
 
-### Archon Integration
 
 ```bash
 # Check availability (graceful degradation)
-check_archon_availability()
-├── command -v archon              # CLI exists?
-└── timeout 3s archon health-check # Server responding?
 
 # Initialize project and tasks
-archon_initialize_project(feature)
 ├── create project: "PRP: {feature}"
 └── create tasks:
     ├── phase0 (priority 100)
@@ -168,7 +160,6 @@ archon_initialize_project(feature)
     └── phase4 (priority 70)
 
 # Update task status
-archon_update_task_status(phase, status)
 ├── Statuses: "todo", "doing", "done", "blocked"
 └── Graceful: ignores errors to prevent workflow disruption
 ```
@@ -960,9 +951,7 @@ esac
    execute_sequential_phase "$feature" "phase5" ".codex/prompts/phase5.md"
    ```
 
-4. **Update Archon Integration** (if desired):
    ```bash
-   # Add to archon_initialize_project()
    task_priorities[phase5]=65
    ```
 

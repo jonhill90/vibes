@@ -243,23 +243,17 @@ class TestStatePersistence:
 
 
 class TestGracefulDegradation:
-    """Test graceful degradation when Archon unavailable."""
 
     def test_fallback_to_file_backend(self):
         """Test automatic fallback to file backend."""
         def create_task_tracker(backend: str = "file"):
             """Create task tracker with specified backend."""
-            if backend == "archon":
-                # Simulate Archon unavailable
                 try:
                     # Mock health check failure
-                    raise ConnectionError("Archon unavailable")
                 except Exception:
-                    print("Archon unavailable, falling back to file backend")
                     return "file"
             return backend
 
-        result = create_task_tracker("archon")
         assert result == "file", "Should fallback to file backend"
 
     def test_file_backend_works_offline(self, temp_prp_dir):
@@ -282,9 +276,6 @@ class TestGracefulDegradation:
         assert state_path.exists()
         assert json.loads(state_path.read_text())["project_id"] == state["project_id"]
 
-    def test_no_archon_dependency_in_file_backend(self):
-        """Test file backend has zero Archon dependencies."""
-        # File backend operations should not reference Archon
         def file_backend_create_task(state_path: Path, task_title: str):
             """Create task using only file operations."""
             state = json.loads(state_path.read_text())
@@ -300,12 +291,9 @@ class TestGracefulDegradation:
             state_path.write_text(json.dumps(state, indent=2))
             return task_id
 
-        # Function signature has no Archon references
         import inspect
         source = inspect.getsource(file_backend_create_task)
 
-        assert "archon" not in source.lower(), \
-            "File backend should have no Archon references"
 
 
 class TestBackwardCompatibility:

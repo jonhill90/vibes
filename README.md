@@ -20,7 +20,6 @@ Vibes runs as a distributed system of specialized MCP servers, each handling spe
 | `mcp-vibesbox-server` | Unified shell + VNC GUI | ✅ Active | Docker exec |
 | `basic-memory` | Persistent memory across Claude sessions | ✅ Active | Docker exec |
 | `MCP_DOCKER` | Container orchestration gateway | ✅ Active | docker mcp |
-| `archon` | Task/knowledge management, RAG search | ✅ Active | npx mcp-remote |
 
 ## Quick Start
 
@@ -63,7 +62,6 @@ cd ..
       "command": "docker",
       "args": ["mcp", "gateway", "run"]
     },
-    "archon": {
       "command": "npx",
       "args": ["mcp-remote", "http://localhost:8051/mcp"]
     }
@@ -88,7 +86,6 @@ After updating the configuration, restart Claude Desktop to load the MCP servers
   - Mouse/keyboard control (click, drag, type)
   - ARM64 Chromium browser automation
 
-- **Task & knowledge management** via `archon` MCP
   - Task tracking (find_tasks, manage_task)
   - RAG search across documentation (2-5 keyword queries)
   - Project management and organization
@@ -163,7 +160,6 @@ vibes/
 │   │   └── prep-parallel.md
 │   ├── patterns/         # Reusable implementation patterns
 │   │   ├── README.md          # Pattern library index
-│   │   ├── archon-workflow.md
 │   │   ├── parallel-subagents.md
 │   │   ├── quality-gates.md
 │   │   └── security-validation.md
@@ -221,7 +217,6 @@ The `.claude/patterns/` directory contains reusable implementation patterns extr
 
 | Pattern | Purpose | Link |
 |---------|---------|------|
-| archon-workflow | Archon MCP integration, health checks, graceful degradation | [View](.claude/patterns/archon-workflow.md) |
 | parallel-subagents | 3x speedup through multi-task parallelization | [View](.claude/patterns/parallel-subagents.md) |
 | quality-gates | Validation loops ensuring 8+/10 PRP scores | [View](.claude/patterns/quality-gates.md) |
 | security-validation | 5-level security checks for user input | [View](.claude/patterns/security-validation.md) |

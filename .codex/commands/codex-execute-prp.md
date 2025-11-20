@@ -729,27 +729,18 @@ print("")
 
 ---
 
-## Phase 5: Archon Integration (Optional)
 
-Update Archon project with completion status if available.
 
 ```python
-# Check if Archon is available
 try:
-    health = mcp__archon__health_check()
-    archon_available = health.get("status") == "healthy"
 except:
-    archon_available = False
 
-if archon_available:
     print(f"==========================================")
-    print(f"Archon Integration")
     print(f"==========================================")
     print("")
 
     try:
         # Search for existing project for this feature
-        projects = mcp__archon__find_projects(query=f"PRP: {feature_name}")
 
         if projects and len(projects.get('projects', [])) > 0:
             project_id = projects['projects'][0]['id']
@@ -758,7 +749,6 @@ if archon_available:
             # Update project with completion status
             status_summary = f"Execution {'COMPLETE' if validation_success else 'FAILED'}: {completed_tasks}/{total_tasks} tasks, {coverage_percentage}% coverage"
 
-            mcp__archon__manage_project("update",
                 project_id=project_id,
                 description=status_summary)
 
@@ -766,7 +756,6 @@ if archon_available:
 
             # Create task for follow-up if there are blockers
             if validation_context['blockers']:
-                task = mcp__archon__manage_task("create",
                     project_id=project_id,
                     title=f"Fix {len(validation_context['blockers'])} validation blockers",
                     description=f"Blockers from PRP execution:\n" + "\n".join(f"- {b['error'][:100]}" for b in validation_context['blockers']),
@@ -778,11 +767,9 @@ if archon_available:
             print(f"  No existing project found - skipping update")
 
     except Exception as e:
-        print(f"  Archon integration failed: {e}")
 
     print("")
 else:
-    print(f"ℹ️  Archon unavailable - skipping project updates")
     print("")
 
 print(f"==========================================")
@@ -875,7 +862,6 @@ Before reporting completion, verify:
 - Error analysis checked PRP gotchas for solutions
 - Coverage measurement attempted (even if not 70%+)
 - Completion report comprehensive and actionable
-- Archon project updated (if available)
 
 ---
 
@@ -886,7 +872,6 @@ Before reporting completion, verify:
 - All validation levels passed
 - Test coverage >= 70%
 - No blockers
-- Archon project updated
 
 **Partial Success**:
 - Most tasks completed (>= 80%)

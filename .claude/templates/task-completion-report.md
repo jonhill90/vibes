@@ -6,7 +6,6 @@ This template is used for documenting task implementation completion in PRP exec
 It should be filled out after completing each implementation task.
 
 REQUIRED VARIABLES:
-- {task_id}: Archon task UUID (if available, otherwise "N/A")
 - {task_number}: Task number (e.g., 1, 2, 17)
 - {task_name}: Human-readable task name (e.g., "Task 17: Frontend - List View")
 - {responsibility}: What this task accomplishes (brief description)

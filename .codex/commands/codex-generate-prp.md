@@ -24,7 +24,6 @@ Generate a complete, implementation-ready PRP through systematic research and an
 
 ### Phase 0: Setup & Initialization
 
-**Immediate**: Read INITIAL.md → Extract feature name → Create directories → Check Archon → Phase 1 (no user interaction)
 
 **CRITICAL SECURITY: 6-Level Feature Name Validation**
 
@@ -147,26 +146,18 @@ mkdir -p "prps/${FEATURE_NAME}/examples"
 mkdir -p "prps/${FEATURE_NAME}/codex/logs"
 
 # ========================================
-# ARCHON SETUP (Graceful Degradation)
 # ========================================
-# Check if Archon MCP server is available
 # If not, proceed without task tracking
-ARCHON_AVAILABLE=false
 PROJECT_ID=""
 
-# Test Archon health
-if mcp__archon__health_check 2>/dev/null | grep -q "healthy"; then
-    ARCHON_AVAILABLE=true
 
     # Create project for PRP generation tracking
-    PROJECT_RESULT=$(mcp__archon__manage_project "create" \
         --title "PRP Generation: ${FEATURE_NAME}" \
         --description "Creating PRP from ${INITIAL_MD}")
     PROJECT_ID=$(echo "$PROJECT_RESULT" | jq -r '.project.id')
 
     # Create tasks for each phase
     # Phase 1: Feature Analysis
-    mcp__archon__manage_task "create" \
         --project-id "$PROJECT_ID" \
         --title "Phase 1: Feature Analysis" \
         --assignee "prp-gen-feature-analyzer" \
@@ -174,7 +165,6 @@ if mcp__archon__health_check 2>/dev/null | grep -q "healthy"; then
         --task-order 100
 
     # Phase 2A: Codebase Research
-    mcp__archon__manage_task "create" \
         --project-id "$PROJECT_ID" \
         --title "Phase 2A: Codebase Research" \
         --assignee "prp-gen-codebase-researcher" \
@@ -182,7 +172,6 @@ if mcp__archon__health_check 2>/dev/null | grep -q "healthy"; then
         --task-order 90
 
     # Phase 2B: Documentation Hunt
-    mcp__archon__manage_task "create" \
         --project-id "$PROJECT_ID" \
         --title "Phase 2B: Documentation Hunt" \
         --assignee "prp-gen-documentation-hunter" \
@@ -190,7 +179,6 @@ if mcp__archon__health_check 2>/dev/null | grep -q "healthy"; then
         --task-order 85
 
     # Phase 2C: Example Curation
-    mcp__archon__manage_task "create" \
         --project-id "$PROJECT_ID" \
         --title "Phase 2C: Example Curation" \
         --assignee "prp-gen-example-curator" \
@@ -198,7 +186,6 @@ if mcp__archon__health_check 2>/dev/null | grep -q "healthy"; then
         --task-order 80
 
     # Phase 3: Gotcha Detection
-    mcp__archon__manage_task "create" \
         --project-id "$PROJECT_ID" \
         --title "Phase 3: Gotcha Detection" \
         --assignee "prp-gen-gotcha-detective" \
@@ -206,16 +193,13 @@ if mcp__archon__health_check 2>/dev/null | grep -q "healthy"; then
         --task-order 75
 
     # Phase 4: PRP Assembly
-    mcp__archon__manage_task "create" \
         --project-id "$PROJECT_ID" \
         --title "Phase 4: PRP Assembly" \
         --assignee "prp-gen-assembler" \
         --status "todo" \
         --task-order 70
 
-    echo "✅ Archon project created: $PROJECT_ID"
 else
-    echo "ℹ️  Archon unavailable - proceeding without tracking"
 fi
 ```
 
@@ -231,12 +215,8 @@ echo "=========================================="
 echo "Phase 1: Feature Analysis"
 echo "=========================================="
 
-# Update Archon task (if available)
-if [ "$ARCHON_AVAILABLE" = true ]; then
     # Find task by title
-    TASK_1_ID=$(mcp__archon__find_tasks --filter-by "project" --filter-value "$PROJECT_ID" | \
                 jq -r '.tasks[] | select(.title | contains("Phase 1")) | .id')
-    mcp__archon__manage_task "update" --task-id "$TASK_1_ID" --status "doing"
 fi
 
 # Execute Phase 1 agent
@@ -250,12 +230,10 @@ Analyze INITIAL.md for PRP generation.
 
 **INITIAL.md Path**: ${INITIAL_MD}
 **Feature Name**: ${FEATURE_NAME}
-**Archon Project ID**: ${PROJECT_ID}
 
 **Your Task**:
 1. Read INITIAL.md thoroughly
 2. Extract requirements (explicit and implicit)
-3. Search Archon for similar PRPs (if available)
 4. Identify technical components needed
 5. Make intelligent assumptions for gaps
 6. Create comprehensive feature-analysis.md
@@ -275,7 +253,6 @@ Analyze INITIAL.md for PRP generation.
 ## Technical Components
 - [What needs to be built]
 
-## Similar PRPs (from Archon)
 - [Reference similar implementations]
 
 ## Assumptions
@@ -293,8 +270,6 @@ PHASE1_EXIT=$?
 # Check exit code
 if [ $PHASE1_EXIT -eq 0 ]; then
     echo "✅ Phase 1 complete"
-    if [ "$ARCHON_AVAILABLE" = true ]; then
-        mcp__archon__manage_task "update" --task-id "$TASK_1_ID" --status "done"
     fi
 elif [ $PHASE1_EXIT -eq 124 ]; then
     echo "❌ Phase 1 TIMEOUT (exceeded ${TIMEOUT_SEC}s)"
@@ -319,12 +294,8 @@ echo "=========================================="
 echo "Phase 2: Parallel Research (3 agents)"
 echo "=========================================="
 
-# Update Archon tasks to "doing" (if available)
-if [ "$ARCHON_AVAILABLE" = true ]; then
     for phase in "Phase 2A" "Phase 2B" "Phase 2C"; do
-        TASK_ID=$(mcp__archon__find_tasks --filter-by "project" --filter-value "$PROJECT_ID" | \
                   jq -r ".tasks[] | select(.title | contains(\"$phase\")) | .id")
-        mcp__archon__manage_task "update" --task-id "$TASK_ID" --status "doing"
     done
 fi
 
@@ -344,7 +315,6 @@ Search codebase patterns for PRP generation.
 **Feature Analysis**: prps/${FEATURE_NAME}/planning/feature-analysis.md (READ FIRST)
 **Your Task**:
 1. Read feature-analysis.md to understand requirements
-2. Search Archon knowledge base for similar patterns (if available)
 3. Grep local codebase for relevant implementations
 4. Extract naming conventions, file structure, coding patterns
 5. Document what to mimic vs what to adapt
@@ -356,7 +326,6 @@ Search codebase patterns for PRP generation.
 # Codebase Patterns: ${FEATURE_NAME}
 
 ## Similar Implementations
-- [List from Archon/codebase with file paths]
 
 ## Patterns to Mimic
 - [Specific patterns with code examples]
@@ -385,7 +354,6 @@ Find official documentation for PRP generation.
 **Feature Analysis**: prps/${FEATURE_NAME}/planning/feature-analysis.md (READ FIRST)
 **Your Task**:
 1. Read feature-analysis.md to understand technologies needed
-2. Search Archon knowledge base for documentation (if available)
 3. Use WebSearch for official docs
 4. Find sections with code examples
 5. Document URLs with specific sections
@@ -424,7 +392,6 @@ Extract code examples for PRP generation.
 **Feature Analysis**: prps/${FEATURE_NAME}/planning/feature-analysis.md (READ FIRST)
 **Your Task**:
 1. Read feature-analysis.md to understand what examples are needed
-2. Search Archon + local codebase for relevant code
 3. EXTRACT actual code to prps/${FEATURE_NAME}/examples/ (NOT just references!)
 4. Create README.md in examples/ with \"what to mimic\" guidance
 5. Document examples in examples-to-include.md
@@ -481,12 +448,8 @@ if [[ $EXIT_2A -eq 0 && $EXIT_2B -eq 0 && $EXIT_2C -eq 0 ]]; then
     echo "✅ Phase 2 complete (all agents succeeded)"
     echo "   Duration: ${DURATION}s"
 
-    # Update Archon tasks to "done"
-    if [ "$ARCHON_AVAILABLE" = true ]; then
         for phase in "Phase 2A" "Phase 2B" "Phase 2C"; do
-            TASK_ID=$(mcp__archon__find_tasks --filter-by "project" --filter-value "$PROJECT_ID" | \
                       jq -r ".tasks[] | select(.title | contains(\"$phase\")) | .id")
-            mcp__archon__manage_task "update" --task-id "$TASK_ID" --status "done"
         done
     fi
 else
@@ -524,11 +487,7 @@ echo "=========================================="
 echo "Phase 3: Gotcha Detection"
 echo "=========================================="
 
-# Update Archon task (if available)
-if [ "$ARCHON_AVAILABLE" = true ]; then
-    TASK_3_ID=$(mcp__archon__find_tasks --filter-by "project" --filter-value "$PROJECT_ID" | \
                 jq -r '.tasks[] | select(.title | contains("Phase 3")) | .id')
-    mcp__archon__manage_task "update" --task-id "$TASK_3_ID" --status "doing"
 fi
 
 TIMEOUT_SEC=300  # 5 minutes
@@ -544,7 +503,6 @@ Identify gotchas for PRP generation.
 
 **Your Task**:
 1. Read all research documents
-2. Search Archon for common gotchas (if available)
 3. Use WebSearch for security/performance gotchas
 4. Document SOLUTIONS (not just warnings)
 5. Categorize by severity (Critical, High, Medium, Low)
@@ -577,8 +535,6 @@ PHASE3_EXIT=$?
 
 if [ $PHASE3_EXIT -eq 0 ]; then
     echo "✅ Phase 3 complete"
-    if [ "$ARCHON_AVAILABLE" = true ]; then
-        mcp__archon__manage_task "update" --task-id "$TASK_3_ID" --status "done"
     fi
 elif [ $PHASE3_EXIT -eq 124 ]; then
     echo "❌ Phase 3 TIMEOUT (exceeded ${TIMEOUT_SEC}s)"
@@ -601,11 +557,7 @@ echo "=========================================="
 echo "Phase 4: PRP Assembly"
 echo "=========================================="
 
-# Update Archon task (if available)
-if [ "$ARCHON_AVAILABLE" = true ]; then
-    TASK_4_ID=$(mcp__archon__find_tasks --filter-by "project" --filter-value "$PROJECT_ID" | \
                 jq -r '.tasks[] | select(.title | contains("Phase 4")) | .id')
-    mcp__archon__manage_task "update" --task-id "$TASK_4_ID" --status "doing"
 fi
 
 TIMEOUT_SEC=180  # 3 minutes
@@ -663,7 +615,6 @@ Assemble final PRP from all research.
 **Overall Confidence**: [HIGH/MEDIUM/LOW] - [explanation]
 \`\`\`
 
-**Store in Archon** (if available):
 - Create document with title \"PRP: ${FEATURE_NAME}\"
 - Type: \"prp\"
 - Content: Full PRP markdown
@@ -673,8 +624,6 @@ PHASE4_EXIT=$?
 
 if [ $PHASE4_EXIT -eq 0 ]; then
     echo "✅ Phase 4 complete"
-    if [ "$ARCHON_AVAILABLE" = true ]; then
-        mcp__archon__manage_task "update" --task-id "$TASK_4_ID" --status "done"
     fi
 elif [ $PHASE4_EXIT -eq 124 ]; then
     echo "❌ Phase 4 TIMEOUT (exceeded ${TIMEOUT_SEC}s)"
@@ -792,15 +741,10 @@ echo "1. Review: cat $PRP_FILE"
 echo "2. Execute: codex exec --prompt \"Implement prps/${FEATURE_NAME}.md\""
 echo ""
 
-# Update Archon project (if available)
-if [ "$ARCHON_AVAILABLE" = true ]; then
-    mcp__archon__manage_project "update" \
         --project-id "$PROJECT_ID" \
         --description "COMPLETED: PRP quality ${QUALITY_SCORE}/10"
 
     # Store PRP as document
-    # (Implementation depends on Archon document API)
-    echo "✅ Archon project updated: $PROJECT_ID"
 fi
 ```
 
@@ -935,9 +879,6 @@ if [ $EXIT -ne 0 ]; then
     esac
 fi
 
-# Archon unavailable - graceful degradation
-if [ "$ARCHON_AVAILABLE" = false ]; then
-    echo "ℹ️  Archon unavailable - proceeding without tracking"
 fi
 
 # Quality score <8/10 - offer regeneration

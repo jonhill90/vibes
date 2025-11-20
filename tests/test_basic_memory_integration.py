@@ -223,10 +223,6 @@ class TestMockedBasicMemoryResponses:
 class TestBasicMemoryIntegrationWithCommands:
     """Test basic-memory integration with generate-prp command."""
 
-    def test_replace_archon_rag_with_basic_memory(self):
-        """Test replacing Archon RAG calls with basic-memory."""
-        # OLD: Archon pattern
-        # mcp__archon__rag_search_knowledge_base(query="patterns", page_size=5)
 
         # NEW: Basic-memory pattern
         def search_knowledge_base(query: str, max_results: int = 5):

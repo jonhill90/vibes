@@ -383,7 +383,6 @@ validate_config_level1() {
     # Check MCP servers configured
     if ! echo "$config" | grep -q "mcp_servers"; then
         echo "⚠️ No MCP servers configured"
-        echo "Consider adding Archon for task tracking"
     fi
 
     echo "✅ Level 1 passed: Config valid"

@@ -64,7 +64,6 @@ Read feature-analysis.md to understand:
 - Frameworks in use
 - Specific techniques needed
 
-### 2. Archon Code Search
 Search for:
 - Similar feature implementations
 - Specific patterns (async, decorators, etc.)
@@ -137,10 +136,7 @@ Create this directory structure at the specified location:
 2. Identify 3-5 key patterns to find examples for
 3. List frameworks and specific techniques
 
-### Phase 2: Archon Example Search
-1. For each pattern, search Archon code examples
 2. Rate results X/10 for relevance
-3. Select top 2-3 from Archon
 
 ### Phase 3: Local Codebase Search
 1. Use Grep to find similar implementations
@@ -158,7 +154,6 @@ For each selected example:
 
 **Attribution Template**:
 ```python
-# Source: {original_file_path or Archon_source_id}
 # Lines: {start_line}-{end_line} (if from file)
 # Pattern: {what_this_demonstrates}
 # Extracted: {date}
@@ -182,14 +177,12 @@ Create `{examples_directory}/README.md` (use path from context!):
 | File | Source | Pattern | Relevance |
 |------|--------|---------|-----------|
 | example_1_pattern.py | src/api/auth.py:45-67 | JWT auth | 9/10 |
-| example_2_pattern.py | Archon:src_abc123 | Async handler | 8/10 |
 
 ---
 
 ## Example 1: [Pattern Name]
 
 **File**: `example_1_pattern.py`
-**Source**: [Original file path or Archon source]
 **Relevance**: X/10
 
 ### What to Mimic
@@ -268,7 +261,6 @@ These examples should be:
 
 ## Source Attribution
 
-### From Archon
 - [Source ID]: [Description]
 
 ### From Local Codebase
@@ -317,7 +309,6 @@ Extracted {count} code examples to the examples directory.
 ## Quality Standards
 
 Before completing, verify:
-- ✅ Archon searched first
 - ✅ 2-4 actual code files extracted (NOT just references)
 - ✅ Each file has source attribution header
 - ✅ README.md created with comprehensive guidance
@@ -348,8 +339,6 @@ Use those EXACT paths for Write() operations. DO NOT hardcode.
 
 ## Error Handling
 
-If Archon unavailable:
-- Skip Archon search
 - Use local codebase exclusively
 - Document reduced coverage
 

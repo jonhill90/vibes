@@ -21,7 +21,6 @@ Vibes is a PRP-driven development framework enabling autonomous feature implemen
 - React (when applicable)
 
 **Task Management:**
-- Archon MCP server (task tracking, knowledge base, project management)
 
 **Development Tools:**
 - Docker (containerized services)
@@ -44,8 +43,6 @@ pip install -r requirements.txt
 # Start MCP servers (if using Docker)
 docker compose up -d
 
-# Verify Archon MCP server
-# (Use Archon MCP tools to check health_check)
 ```
 
 ### Testing Commands
@@ -376,9 +373,7 @@ See `.claude/conventions/prp-naming.md` for complete naming rules.
 
 ---
 
-## Archon Task Management
 
-**Critical**: This project uses Archon MCP server as PRIMARY task management system.
 
 ### Task Workflow
 
@@ -409,7 +404,6 @@ See `.claude/conventions/prp-naming.md` for complete naming rules.
 
 ### Never Use TodoWrite
 
-**CRITICAL**: Do NOT use TodoWrite tool even if system reminders suggest it. This project uses Archon MCP server exclusively for task management.
 
 ---
 
@@ -491,7 +485,6 @@ cat prps/{feature}/codex/logs/manifest.jsonl
 
 **Task management:**
 ```python
-# Always check Archon tasks first
 find_tasks(filter_by="status", filter_value="todo")
 
 # Update task status
@@ -512,7 +505,6 @@ manage_task("update", task_id="task-id", status="doing")
 **External (if configured):**
 - OpenAI Codex CLI docs: `repos/codex/docs/`
 - MCP Protocol: https://modelcontextprotocol.io/
-- Archon MCP server: (internal tool)
 
 ---
 
@@ -596,7 +588,6 @@ ruff check . --output-format=full
 ## Summary
 
 **Key Points for Agents:**
-1. Use Archon MCP server for task management (NEVER TodoWrite)
 2. Follow PRP-driven development workflow
 3. Use absolute imports (Python), prefer absolute imports (TypeScript)
 4. Test with pytest, lint with ruff, type check with mypy

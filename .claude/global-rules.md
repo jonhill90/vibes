@@ -173,21 +173,17 @@ See `.claude/patterns/quality-gates.md` for validation loops.
 - ❌ Direct external service calls without fallback
 - ✅ Abstraction layer with graceful degradation
 
-**Archon References** (Deprecated):
-- ❌ `mcp__archon__*` calls (removed)
 - ✅ File-based task tracking or basic-memory
 
 ---
 
 ## Migration Notes
 
-**Archon → Skills/Basic-Memory Migration**:
 - Task tracking: Use file-based state (`.claude/patterns/task-tracking.md`)
 - Knowledge search: Use basic-memory with explicit `project` parameter
 - Agent generation: Use `/create-agent` command
 - This migration completed in `prps/agent_architecture_modernization.md`
 
-See `docs/migration-archon-to-skills.md` for complete migration guide.
 
 ---
 
@@ -198,4 +194,3 @@ See `docs/migration-archon-to-skills.md` for complete migration guide.
 **Patterns**: `.claude/patterns/README.md`
 **Commands**: `.claude/commands/*.md`
 **Conventions**: `.claude/conventions/prp-naming.md`
-**Migration**: `docs/migration-archon-to-skills.md`

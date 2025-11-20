@@ -329,7 +329,6 @@ git mv prps/prp_old_name.md prps/old_name.md
 mv prps/prp_old_name.md prps/old_name.md
 ```
 
-Then update any references in documentation, Archon projects, or other PRPs.
 
 ### Q4: Can I use `strip_prefix="prp_"` to handle legacy files?
 
@@ -538,7 +537,6 @@ print(f"✅ Valid feature name: {feature_name}")
    grep -r "prp_old_name" .
 
    # Update each reference
-   # (In documentation, Archon projects, etc.)
    ```
 
 4. **Verify directory structure**:

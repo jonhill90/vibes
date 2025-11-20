@@ -186,9 +186,7 @@ graph TD
 
 for group in execution_plan.groups:
     if group.mode == "parallel":
-        # Update Archon tasks to "doing"
         for task in group.tasks:
-            archon.update_task(task.id, status="doing")
 
         # Invoke multiple implementers in SINGLE message
         parallel_invoke([
@@ -198,13 +196,10 @@ for group in execution_plan.groups:
 
         # Mark all complete
         for task in group.tasks:
-            archon.update_task(task.id, status="done")
 
     elif group.mode == "sequential":
         for task in group.tasks:
-            archon.update_task(task.id, status="doing")
             invoke_subagent("prp-exec-implementer", prepare_context(task))
-            archon.update_task(task.id, status="done")
 ```
 
 ---
@@ -214,7 +209,6 @@ for group in execution_plan.groups:
 For each task, prepare this context for implementer:
 
 ```yaml
-task_id: {archon task id if available}
 task_name: {from PRP}
 responsibility: {from PRP}
 files_to_modify: {from PRP}
@@ -367,7 +361,6 @@ If unclear dependencies:
 Your output (execution-plan.md) is used by:
 1. **Orchestrator**: Executes groups in order
 2. **Implementers**: Receive tasks from groups
-3. **Archon**: Tasks tracked per execution plan
 
 **Success means**: The orchestrator can execute tasks in optimal order, parallelizing where safe, and completing implementation 30-50% faster than sequential execution.
 

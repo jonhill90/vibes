@@ -277,11 +277,6 @@ class TestNoBreakingChangesForUsers:
 class TestMigrationPath:
     """Test migration path from old to new architecture."""
 
-    def test_archon_to_file_backend_migration(self, temp_prp_dir):
-        """Test migration from Archon to file backend state."""
-        # Simulate Archon project data
-        archon_project = {
-            "project_id": "archon-123",
             "name": "existing_feature",
             "tasks": {
                 "task-1": {"status": "done"},
@@ -293,49 +288,33 @@ class TestMigrationPath:
         state_path = temp_prp_dir / "existing_feature" / "execution" / "state.json"
         state_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Convert Archon format to file backend format
         file_backend_state = {
             "schema_version": "1.0",
-            "project_id": archon_project["project_id"],
-            "name": archon_project["name"],
             "created_at": "2025-11-20T12:00:00.000Z",
-            "tasks": archon_project["tasks"]
         }
 
         state_path.write_text(json.dumps(file_backend_state, indent=2))
 
         # Verify migration
         migrated = json.loads(state_path.read_text())
-        assert migrated["project_id"] == archon_project["project_id"]
-        assert len(migrated["tasks"]) == len(archon_project["tasks"])
 
     def test_gradual_rollout_support(self):
         """Test gradual rollout of new architecture."""
-        # Should support both Archon and file backend simultaneously
-        def get_task_tracker(prefer_archon: bool = False):
             """Get task tracker with preference."""
-            if prefer_archon:
                 try:
-                    # Try Archon first
-                    return "archon"
                 except Exception:
                     return "file"  # Fallback to file
             else:
                 return "file"  # Default to file
 
         # New users get file backend
-        new_user_tracker = get_task_tracker(prefer_archon=False)
         assert new_user_tracker == "file"
 
-        # Existing users can opt for Archon
-        existing_user_tracker = get_task_tracker(prefer_archon=True)
-        assert existing_user_tracker in ["archon", "file"]
 
     def test_documentation_migration_notes(self):
         """Test migration documentation exists."""
         # Migration guide should cover:
         required_sections = [
-            "Archon to Skills migration",
             "Task tracking abstraction",
             "Basic-memory integration",
             "Breaking changes (if any)",
@@ -350,10 +329,7 @@ class TestMigrationPath:
 
 
 class TestPerformanceParity:
-    """Test performance parity with Archon-based system."""
 
-    def test_file_backend_faster_than_archon(self):
-        """Test file backend is faster than Archon (no network)."""
         import time
 
         # File backend operation (fast, local)
@@ -363,22 +339,14 @@ class TestPerformanceParity:
         json.dumps(data)
         file_time = time.time() - start
 
-        # Archon would be slower (network latency)
         simulated_network_latency = 0.1  # 100ms
-        archon_time = file_time + simulated_network_latency
 
-        assert file_time < archon_time, \
-            "File backend should be faster than Archon"
 
     def test_no_external_dependency_overhead(self):
         """Test no external dependency overhead with file backend."""
         # File backend has zero external dependencies
         external_deps_file = []
 
-        # Archon backend would have network dependency
-        external_deps_archon = ["network", "archon_server"]
 
         assert len(external_deps_file) == 0, \
             "File backend should have no external dependencies"
-        assert len(external_deps_archon) > 0, \
-            "Archon backend has external dependencies"

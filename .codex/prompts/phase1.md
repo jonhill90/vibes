@@ -10,7 +10,6 @@ You are the lead analyst for `${FEATURE_NAME}`.
 1. Read **every section** of the INITIAL file to extract explicit requirements, constraints, success criteria, stakeholders, and pain points.
 2. Infer hidden/implicit requirements or assumptions needed to make the feature production ready.
 3. Identify the architectural areas of the codebase that will be touched (APIs, CLIs, scripts, configuration, documentation).
-4. Note integrations with existing tooling (Archon, Codex CLI, CI/CD, etc.).
 5. Produce a crisp blueprint the downstream researchers can act on without rereading INITIAL.md.
 
 ## Deliverable
@@ -32,7 +31,6 @@ Create `${PLANNING_DIR}/feature-analysis.md` with the following structure (overw
 - [Subsystems, files, services that will change]
 
 ## External Interfaces & Integrations
-- [Codex CLI, Archon MCP, CI/CD, etc.]
 
 ## Risks & Open Questions
 - [What needs clarification]
