@@ -71,6 +71,7 @@ Tight feedback loops produce better results than letting the agent run unchecked
 - After 2 failed corrections in one session, start fresh with a better prompt
 - **Claude Code:** `Esc` to stop, `/rewind` to restore, `/clear` to reset
 - **Copilot:** Start a new chat session, reference files with `#`
+- **Codex CLI:** Interrupt early and restart with a tighter prompt and explicit file targets
 
 ## 7. Use Sub-Agents for Research
 
@@ -86,6 +87,7 @@ Go beyond plain text prompts. Pipe files, paste images, and reference paths dire
 - `cat log.txt | claude` — pipe content directly into the session
 - Paste screenshots for UI tasks — the agent can compare before/after
 - Allowlist URLs with `/permissions` so agents can fetch live docs
+- In Codex, provide concrete paths and command outputs directly in the prompt
 
 ## 9. Let the Agent Interview You
 

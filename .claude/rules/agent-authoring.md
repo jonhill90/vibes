@@ -13,7 +13,7 @@ When writing or editing subagent markdown files:
 
 ## Required Frontmatter
 - `name`: Unique identifier (lowercase, hyphens)
-- `description`: When Claude should delegate to this agent
+- `description`: When the agent should be delegated to
 
 ## Optional Frontmatter
 - `tools`: Allowlist of tools as a **YAML array** (inherits all if omitted)

@@ -20,12 +20,12 @@ When writing or editing SKILL.md files:
 ## Content
 - Use imperative/infinitive form ("Run tests" not "Running tests")
 - Prefer concise examples over verbose explanations
-- Only include what Claude doesn't already know
+- Only include what the agent doesn't already know
 
 ## Progressive Disclosure
 - Core workflow in SKILL.md
 - Detailed reference material in separate files
-- Claude reads reference files on demand
+- Agent reads reference files on demand
 
 ## Modern Features to Consider
 - `context: fork` for isolated execution

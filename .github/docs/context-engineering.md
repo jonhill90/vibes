@@ -7,6 +7,8 @@
 - [Anthropic: Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
 - [Anthropic: Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
 - [VS Code: Context Engineering Guide](https://code.visualstudio.com/docs/copilot/guides/context-engineering-guide)
+- [OpenAI: Prompt Engineering Guide](https://platform.openai.com/docs/guides/prompt-engineering)
+- [OpenAI: Conversation State Guide](https://platform.openai.com/docs/guides/conversation-state)
 
 ---
 
@@ -45,6 +47,7 @@ When approaching context limits, summarize message history. Preserve critical de
 
 - **Claude Code:** `/compact` to summarize, `/clear` between unrelated tasks
 - **Copilot:** Use separate chat sessions for different activities (planning vs. coding)
+- **Codex CLI:** Keep sessions task-scoped; when context drifts, start a fresh session and carry forward only a brief state summary
 
 ### 5. Sub-Agent Isolation
 

@@ -1,5 +1,6 @@
 ---
 paths:
+  - ".github/docs/**/*.md"
   - ".claude/references/**/*.md"
   - "CLAUDE.md"
 ---
