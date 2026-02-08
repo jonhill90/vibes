@@ -10,7 +10,11 @@ Agent that analyzes without modifying:
 ---
 name: code-reviewer
 description: Review code for quality and best practices
-tools: Read, Glob, Grep, Bash
+tools:
+  - Read
+  - Glob
+  - Grep
+  - Bash
 model: inherit
 ---
 
@@ -35,7 +39,10 @@ Agent with specialized knowledge:
 ---
 name: data-scientist
 description: Data analysis with SQL and BigQuery
-tools: Bash, Read, Write
+tools:
+  - Bash
+  - Read
+  - Write
 model: sonnet
 ---
 
@@ -56,7 +63,12 @@ Agent that can both analyze and fix:
 ---
 name: debugger
 description: Debug errors and test failures
-tools: Read, Edit, Bash, Grep, Glob
+tools:
+  - Read
+  - Edit
+  - Bash
+  - Grep
+  - Glob
 ---
 
 You are an expert debugger.
@@ -79,7 +91,8 @@ Agent with hook-based validation:
 ---
 name: db-reader
 description: Execute read-only database queries
-tools: Bash
+tools:
+  - Bash
 hooks:
   PreToolUse:
     - matcher: "Bash"
@@ -116,7 +129,10 @@ Agent for parallel investigation:
 ---
 name: researcher
 description: Research codebase topics in parallel
-tools: Read, Grep, Glob
+tools:
+  - Read
+  - Grep
+  - Glob
 model: haiku
 ---
 
@@ -146,7 +162,10 @@ Agent with specific permission mode:
 ---
 name: auto-fixer
 description: Automatically fix linting errors
-tools: Read, Edit, Bash
+tools:
+  - Read
+  - Edit
+  - Bash
 permissionMode: acceptEdits
 ---
 

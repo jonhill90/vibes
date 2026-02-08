@@ -58,7 +58,10 @@ Use `/agents` command for interactive creation, or create markdown files manuall
 ---
 name: code-reviewer
 description: Reviews code for quality and best practices
-tools: Read, Glob, Grep
+tools:
+  - Read
+  - Glob
+  - Grep
 model: sonnet
 ---
 
@@ -101,7 +104,11 @@ claude --agents '{
 ---
 name: safe-researcher
 description: Research agent with restricted capabilities
-tools: Read, Grep, Glob, Bash
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
 ---
 ```
 
@@ -109,8 +116,14 @@ tools: Read, Grep, Glob, Bash
 ```yaml
 ---
 name: read-only-agent
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
+disallowedTools:
+  - Write
+  - Edit
 ---
 ```
 
@@ -203,7 +216,11 @@ claude --disallowedTools "Task(Explore)"
 ---
 name: code-reviewer
 description: Expert code review specialist. Proactively reviews code for quality, security, and maintainability.
-tools: Read, Grep, Glob, Bash
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
 model: inherit
 ---
 
@@ -234,7 +251,12 @@ Provide feedback organized by priority:
 ---
 name: debugger
 description: Debugging specialist for errors, test failures, and unexpected behavior.
-tools: Read, Edit, Bash, Grep, Glob
+tools:
+  - Read
+  - Edit
+  - Bash
+  - Grep
+  - Glob
 ---
 
 You are an expert debugger specializing in root cause analysis.
@@ -259,7 +281,10 @@ For each issue, provide:
 ---
 name: data-scientist
 description: Data analysis expert for SQL queries, BigQuery operations, and data insights.
-tools: Bash, Read, Write
+tools:
+  - Bash
+  - Read
+  - Write
 model: sonnet
 ---
 

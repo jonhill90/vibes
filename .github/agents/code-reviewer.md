@@ -1,7 +1,11 @@
 ---
 name: code-reviewer
 description: Expert code review specialist. Use proactively after code changes to review for quality, security, and maintainability.
-tools: Read, Grep, Glob, Bash
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
 model: inherit
 ---
 

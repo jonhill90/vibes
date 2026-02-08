@@ -1,7 +1,10 @@
 ---
 name: researcher
 description: Codebase research specialist. Use for thorough investigation of code patterns, architecture, or implementation details.
-tools: Read, Grep, Glob
+tools:
+  - Read
+  - Grep
+  - Glob
 model: haiku
 ---
 

@@ -60,7 +60,10 @@ touch .claude/agents/my-agent.md
 ---
 name: my-agent
 description: What my agent does
-tools: Read, Grep, Glob
+tools:
+  - Read
+  - Grep
+  - Glob
 model: haiku
 ---
 

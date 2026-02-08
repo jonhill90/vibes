@@ -16,12 +16,27 @@ When writing or editing subagent markdown files:
 - `description`: When Claude should delegate to this agent
 
 ## Optional Frontmatter
-- `tools`: Allowlist of tools (inherits all if omitted)
-- `disallowedTools`: Denylist to remove from inherited
+- `tools`: Allowlist of tools as a **YAML array** (inherits all if omitted)
+- `disallowedTools`: Denylist as a **YAML array**
 - `model`: `sonnet`, `opus`, `haiku`, or `inherit`
 - `permissionMode`: Permission handling
 - `skills`: Skills to preload into context
 - `hooks`: Lifecycle hooks
+
+## Tools Syntax
+
+The `tools` and `disallowedTools` fields **must be YAML arrays**, not comma-separated strings.
+
+```yaml
+# Correct
+tools:
+  - Read
+  - Grep
+  - Glob
+
+# Wrong — will error: "The 'tools' attribute must be an array"
+tools: Read, Grep, Glob
+```
 
 ## System Prompt Guidelines
 - Be clear about agent's role and purpose
@@ -32,4 +47,4 @@ When writing or editing subagent markdown files:
 ## Tool Restrictions
 - Grant only necessary permissions
 - Use `disallowedTools` for read-only agents
-- Common read-only set: `Read, Grep, Glob, Bash`
+- Common read-only set: `[Read, Grep, Glob, Bash]`
