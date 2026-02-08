@@ -98,3 +98,30 @@ For large or ambiguous features, prompt the agent to ask clarifying questions be
 
 - "Interview me about the requirements before writing any code"
 - Works best when combined with Section 2 (Explore, Plan, Code)
+
+## 10. Push Reliability Into Deterministic Code
+
+90% accuracy per step sounds good until you chain 5 steps: 0.9^5 = 59%. Errors compound fast when the agent improvises multi-step procedures.
+
+- Push **reliability** into deterministic code (scripts, tools, skills with concrete commands)
+- Push **reasoning and decisions** into the LLM
+- A skill that runs a tested script beats an agent improvising shell commands every time
+- When a workflow has more than 2-3 steps, encode it — don't leave it to the model's judgment
+
+## 11. Validate Integrations Before Building
+
+Test every external connection before writing code against it. Nothing wastes more time than building for an hour, then discovering the API auth doesn't work.
+
+- MCP servers: call one simple tool to confirm it responds
+- APIs: make a test request, verify the response format matches expectations
+- Auth: confirm tokens/keys work before building flows around them
+- Environment: check that required variables, CLIs, and dependencies are in place
+
+## 12. Document Learned Mistakes
+
+Maintain a short list of agent-specific gotchas — things the agent gets wrong repeatedly. Keep it in CLAUDE.md, CLAUDE.local.md, or a rule file. Cap at ~15 items; prune when stale.
+
+- "Don't assume APIs support batch operations — check first"
+- "Verify tool output format before chaining into another tool"
+- "Read the full goal/spec before starting — don't skim"
+- This is a living document — add entries as mistakes happen, remove when no longer relevant
