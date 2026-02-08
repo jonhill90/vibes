@@ -79,20 +79,32 @@ vibes/
 │   │   ├── skill-authoring.instructions.md
 │   │   ├── agent-authoring.instructions.md
 │   │   ├── documentation.instructions.md
-│   │   └── testing.instructions.md
-│   ├── docs/
+│   │   ├── testing.instructions.md
+│   │   └── reference-freshness.instructions.md
+│   ├── docs/                          # Platform-agnostic reference docs
+│   │   ├── context-engineering.md
+│   │   ├── best-practices.md
+│   │   └── tdd-workflow.md
 │   ├── plugins/
 │   └── prompts/
 │
 ├── .claude/                           # Claude Code platform directory
 │   ├── skills → ../.github/skills     # Symlink
 │   ├── agents → ../.github/agents     # Symlink
-│   ├── references/                    # Claude Code-specific knowledge
+│   ├── references/                    # Knowledge docs (mixed)
+│   │   ├── context-engineering.md → ../../.github/docs/context-engineering.md
+│   │   ├── best-practices.md → ../../.github/docs/best-practices.md
+│   │   ├── tdd-workflow.md → ../../.github/docs/tdd-workflow.md
+│   │   ├── skills-guide.md            # Claude-specific
+│   │   ├── hooks-guide.md             # Claude-specific
+│   │   ├── memory-system.md           # Claude-specific
+│   │   └── ...
 │   └── rules/                         # Claude Code-specific path rules
 │       ├── skill-authoring.md
 │       ├── agent-authoring.md
 │       ├── documentation.md
-│       └── testing.md
+│       ├── testing.md
+│       └── reference-freshness.md
 │
 ├── .codex/                            # Codex platform directory
 │
@@ -109,7 +121,8 @@ vibes/
 - **`CLAUDE.md`** symlinks to `AGENTS.md` — Claude Code reads the same source
 - **`.github/copilot-instructions.md`** symlinks to `AGENTS.md` — GitHub Copilot gets the same guidance
 - **`skills/`** at the repo root provides categorized language-based browsing via symlinks
-- **`.claude/references/`** holds Claude Code-specific knowledge documents
+- **`.github/docs/`** holds platform-agnostic reference docs (context engineering, best practices, TDD)
+- **`.claude/references/`** holds Claude-specific knowledge + symlinks to agnostic docs from `.github/docs/`
 - **`.claude/rules/`** holds path-specific authoring rules for Claude Code (`paths:` frontmatter)
 - **`.github/instructions/`** holds scoped instruction files for GitHub Copilot (`applyTo:` frontmatter)
 
