@@ -258,7 +258,7 @@ You're doing it right when:
 
 Use Claude Code's built-in plan mode for feature planning and implementation.
 
-1. **Explore** — understand the current state before proposing changes
+1. **Explore** — run /primer to orient, then dig deeper as needed
 2. **Plan** — surface tradeoffs and get alignment
 3. **Red** — write failing tests that define success criteria
 4. **Green** — write minimum code to pass tests
