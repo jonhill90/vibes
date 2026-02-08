@@ -1,0 +1,17 @@
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+
+[mcp_servers.microsoft-learn]
+url = "https://learn.microsoft.com/api/mcp"
+
+[mcp_servers.deepwiki]
+url = "https://mcp.deepwiki.com/mcp"
+
+# Execution policy: require approval for non-read operations
+approval_policy = "on-request"
+
+# Prevent writes outside the workspace
+sandbox_mode = "workspace-write"
+
+# Fallback instruction filenames if AGENTS.md is missing
+project_doc_fallback_filenames = ["CLAUDE.md", "CODEX.md"]

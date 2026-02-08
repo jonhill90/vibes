@@ -5,4 +5,5 @@ __pycache__/
 
 # Platform-local config (not shared)
 CLAUDE.local.md
+AGENTS.override.md
 .claude/settings.local.json

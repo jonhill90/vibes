@@ -106,7 +106,10 @@ vibes/
 │       ├── testing.md
 │       └── reference-freshness.md
 │
-├── .codex/                            # Codex platform directory
+├── .codex/                            # Codex CLI platform directory
+│   ├── agents → ../.github/agents     # Symlink
+│   ├── skills → ../.github/skills     # Symlink
+│   └── config.toml                    # MCP servers, approval policy, sandbox
 │
 └── skills/                            # Categorized browsing view
     ├── python/
@@ -125,6 +128,9 @@ vibes/
 - **`.claude/references/`** holds Claude-specific knowledge + symlinks to agnostic docs from `.github/docs/`
 - **`.claude/rules/`** holds path-specific authoring rules for Claude Code (`paths:` frontmatter)
 - **`.github/instructions/`** holds scoped instruction files for GitHub Copilot (`applyTo:` frontmatter)
+- **`.codex/config.toml`** configures MCP servers, approval policy, and sandbox mode for Codex CLI
+- **`AGENTS.md`** is read natively by Codex CLI from the project root (no symlink needed)
+- **`AGENTS.override.md`** (git-ignored) provides local Codex overrides, analogous to `CLAUDE.local.md`
 
 ---
 
