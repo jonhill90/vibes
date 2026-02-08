@@ -22,6 +22,13 @@ Use this checklist for every fixture run.
 - [ ] Verification steps or evidence are included when needed
 - [ ] Error handling/edge case behavior is acceptable
 
+## TDD Compliance (for code changes)
+
+- [ ] Tests were written before implementation
+- [ ] Test failed first (Red), then passed (Green)
+- [ ] Implementation is minimum required to pass tests
+- [ ] Refactoring kept tests green
+
 ## Regression Decision
 
 - [ ] Pass

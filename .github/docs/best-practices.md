@@ -15,6 +15,7 @@
 The single highest-leverage thing you can do. Provide tests, screenshots, expected outputs, or validation commands so the agent can check its own work.
 
 - Without verification criteria, the human becomes the only feedback loop
+- **For code: write tests first** — see `.github/docs/tdd-workflow.md` for Red-Green-Refactor
 - Include specific test cases, not just "write tests"
 - UI changes: paste screenshots, have the agent compare before/after
 
@@ -24,10 +25,12 @@ Separate research from implementation. Jumping straight to code solves the wrong
 
 1. **Explore** — read files, understand the current state
 2. **Plan** — create a detailed implementation approach, surface tradeoffs
-3. **Implement** — code against the plan, verify as you go
-4. **Commit** — descriptive message, clean diff
+3. **Red** — write failing tests that define success criteria
+4. **Green** — write minimum code to pass tests
+5. **Refactor** — clean up while keeping tests green
+6. **Commit** — descriptive message, clean diff
 
-Skip planning for trivial changes. Plan when uncertain about approach, touching multiple files, or unfamiliar with the code.
+Skip steps 3-5 for non-code changes (docs, config). Skip planning for trivial changes. See `.github/docs/tdd-workflow.md` for TDD details.
 
 ## 3. Specific Prompts Beat Vague Ones
 

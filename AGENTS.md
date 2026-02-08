@@ -50,7 +50,7 @@ Skills and agent patterns evolve — verify against current docs, not memory.
 
 ### 4. Goal-Driven Execution
 
-- Define success criteria before starting
+- Define success criteria as tests before writing implementation (see `.github/docs/tdd-workflow.md`)
 - Verify your work — run tests, check output, validate behavior
 - Loop until the task is actually done, not just attempted
 - If blocked, try a different approach before asking for help
@@ -210,6 +210,7 @@ When: Understanding a GitHub project's architecture or API
 Before committing any skill, agent, or documentation change:
 
 - [ ] **Does it work?** — Tested, verified, produces expected output
+- [ ] **Tests first?** — Tests written before implementation (for code changes)
 - [ ] **Is it simple?** — No unnecessary abstraction or indirection
 - [ ] **Is it focused?** — Does one thing well
 - [ ] **Does it match existing patterns?** — Naming, structure, style
@@ -223,6 +224,7 @@ Before committing any skill, agent, or documentation change:
 
 - Use MCP tools for fresh documentation before writing code
 - Write focused skills that do one thing well
+- Write tests before implementation for code changes (Red-Green-Refactor)
 - Test and verify before committing
 - Ask clarifying questions when requirements are ambiguous
 - Use progressive disclosure — core workflow in SKILL.md, details in reference files
@@ -236,6 +238,7 @@ Before committing any skill, agent, or documentation change:
 - Add features that weren't requested
 - Modify files outside the scope of the current task
 - Commit without reviewing changes
+- Skip the Red step — implementation without a failing test first
 
 ---
 
@@ -257,6 +260,9 @@ Use Claude Code's built-in plan mode for feature planning and implementation.
 
 1. **Explore** — understand the current state before proposing changes
 2. **Plan** — surface tradeoffs and get alignment
-3. **Implement** — make surgical, focused changes
-4. **Verify** — test, validate, review
-5. **Commit** — clean, descriptive commit messages
+3. **Red** — write failing tests that define success criteria
+4. **Green** — write minimum code to pass tests
+5. **Refactor** — clean up while keeping tests green
+6. **Commit** — clean, descriptive commit messages
+
+For non-code changes (docs, config), skip steps 3-5 and go directly from Plan to Commit.

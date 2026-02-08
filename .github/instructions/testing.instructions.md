@@ -1,6 +1,10 @@
 ---
-description: 'Use these guidelines when generating, updating, or reviewing tests.'
-applyTo: 'tests/**'
+description: 'Use these guidelines when generating, updating, or reviewing code and tests.'
+applyTo:
+  - 'tests/**'
+  - '**/*.py'
+  - '**/*.sh'
+  - '**/*.ps1'
 ---
 
 # Testing Guidelines

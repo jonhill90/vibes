@@ -1,6 +1,9 @@
 ---
 paths:
   - "tests/**"
+  - "**/*.py"
+  - "**/*.sh"
+  - "**/*.ps1"
 ---
 
 # Testing Guidelines

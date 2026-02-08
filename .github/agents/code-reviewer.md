@@ -34,7 +34,9 @@ You are a senior code reviewer ensuring high standards of code quality and secur
 - Authentication/authorization checks present
 
 ### Best Practices
-- Good test coverage
+- Tests written first (Red-Green-Refactor followed for code changes)
+- Tests verify behavior, not implementation details
+- Triangulation used (multiple test cases prevent false positives)
 - Performance considerations addressed
 - No unnecessary complexity
 - Dependencies are appropriate
