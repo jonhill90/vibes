@@ -1,0 +1,127 @@
+# Agent Best Practices
+
+> Distilled from authoritative sources. Verify against these URLs before relying on local content.
+
+## Sources
+
+- [Claude Code: Best Practices](https://code.claude.com/docs/en/best-practices)
+- [VS Code: Prompt Engineering Guide](https://code.visualstudio.com/docs/copilot/guides/prompt-engineering-guide)
+- [microsoft/skills](https://github.com/microsoft/skills) — context rot warning
+
+---
+
+## 1. Give Agents a Way to Verify
+
+The single highest-leverage thing you can do. Provide tests, screenshots, expected outputs, or validation commands so the agent can check its own work.
+
+- Without verification criteria, the human becomes the only feedback loop
+- **For code: write tests first** — see `.github/docs/tdd-workflow.md` for Red-Green-Refactor
+- Include specific test cases, not just "write tests"
+- UI changes: paste screenshots, have the agent compare before/after
+
+## 2. Explore First, Then Plan, Then Code
+
+Separate research from implementation. Jumping straight to code solves the wrong problem.
+
+1. **Explore** — read files, understand the current state
+2. **Plan** — create a detailed implementation approach, surface tradeoffs
+3. **Red** — write failing tests that define success criteria
+4. **Green** — write minimum code to pass tests
+5. **Refactor** — clean up while keeping tests green
+6. **Commit** — descriptive message, clean diff
+
+Skip steps 3-5 for non-code changes (docs, config). Skip planning for trivial changes. See `.github/docs/tdd-workflow.md` for TDD details.
+
+## 3. Specific Prompts Beat Vague Ones
+
+Reference specific files, mention constraints, point to example patterns.
+
+| Vague | Specific |
+|-------|----------|
+| "add tests for foo.py" | "write a test for foo.py covering the edge case where the user is logged out. avoid mocks." |
+| "fix the login bug" | "users report login fails after session timeout. check src/auth/, especially token refresh." |
+| "make the dashboard look better" | "[paste screenshot] implement this design. take a screenshot and compare." |
+
+Vague prompts are fine for exploration. Be specific when you know what you want.
+
+## 4. Load Skills Selectively
+
+**Loading all skills causes context rot: diluted attention, wasted tokens, conflated patterns.** Only load skills essential for the current task.
+
+- Each skill consumes context window space
+- Irrelevant skills create ambiguous activation triggers
+- Prefer on-demand loading over preloading everything
+
+## 5. Keep AGENTS.md / CLAUDE.md Lean
+
+These files load every session. Only include things that apply broadly.
+
+| Include | Exclude |
+|---------|---------|
+| Commands the agent can't guess | Anything inferrable from code |
+| Style rules that differ from defaults | Standard language conventions |
+| Testing instructions and runners | Detailed API docs (link instead) |
+| Repo conventions (branches, PRs) | Information that changes frequently |
+| Common gotchas | Self-evident practices |
+
+If the agent keeps ignoring a rule, the file is probably too long and the rule is getting lost. Prune ruthlessly.
+
+## 6. Course-Correct Early
+
+Tight feedback loops produce better results than letting the agent run unchecked.
+
+- Stop the agent as soon as you see it going off track
+- After 2 failed corrections in one session, start fresh with a better prompt
+- **Claude Code:** `Esc` to stop, `/rewind` to restore, `/clear` to reset
+- **Copilot:** Start a new chat session, reference files with `#`
+- **Codex CLI:** Interrupt early and restart with a tighter prompt and explicit file targets
+
+## 7. Use Sub-Agents for Research
+
+Investigation reads lots of files, all consuming context. Delegate research to sub-agents that report back summaries, keeping your main session clean for implementation.
+
+- **Writer/Reviewer pattern:** run parallel sessions — one writes implementation, another reviews with fresh context. The reviewer catches issues the writer's accumulated context blinds it to.
+
+## 8. Feed Rich Context
+
+Go beyond plain text prompts. Pipe files, paste images, and reference paths directly.
+
+- `@path/to/file` — reference files inline (CLAUDE.md also imports other files this way)
+- `cat log.txt | claude` — pipe content directly into the session
+- Paste screenshots for UI tasks — the agent can compare before/after
+- Allowlist URLs with `/permissions` so agents can fetch live docs
+- In Codex, provide concrete paths and command outputs directly in the prompt
+
+## 9. Let the Agent Interview You
+
+For large or ambiguous features, prompt the agent to ask clarifying questions before it plans. This front-loads requirements gathering and prevents wasted implementation cycles.
+
+- "Interview me about the requirements before writing any code"
+- Works best when combined with Section 2 (Explore, Plan, Code)
+
+## 10. Push Reliability Into Deterministic Code
+
+90% accuracy per step sounds good until you chain 5 steps: 0.9^5 = 59%. Errors compound fast when the agent improvises multi-step procedures.
+
+- Push **reliability** into deterministic code (scripts, tools, skills with concrete commands)
+- Push **reasoning and decisions** into the LLM
+- A skill that runs a tested script beats an agent improvising shell commands every time
+- When a workflow has more than 2-3 steps, encode it — don't leave it to the model's judgment
+
+## 11. Validate Integrations Before Building
+
+Test every external connection before writing code against it. Nothing wastes more time than building for an hour, then discovering the API auth doesn't work.
+
+- MCP servers: call one simple tool to confirm it responds
+- APIs: make a test request, verify the response format matches expectations
+- Auth: confirm tokens/keys work before building flows around them
+- Environment: check that required variables, CLIs, and dependencies are in place
+
+## 12. Document Learned Mistakes
+
+Maintain a short list of agent-specific gotchas — things the agent gets wrong repeatedly. Keep it in CLAUDE.md, CLAUDE.local.md, or a rule file. Cap at ~15 items; prune when stale.
+
+- "Don't assume APIs support batch operations — check first"
+- "Verify tool output format before chaining into another tool"
+- "Read the full goal/spec before starting — don't skim"
+- This is a living document — add entries as mistakes happen, remove when no longer relevant

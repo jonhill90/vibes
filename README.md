@@ -1,245 +1,153 @@
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jonhill90/vibes)
+# vibes
 
-# Vibes - Conversational Development Environment
+A multi-platform skill and agent framework for AI coding assistants.
 
-Vibes transforms Claude Desktop into a conversational development environment through distributed MCP servers. Instead of learning command-line tools, you describe what you want to build and Claude implements it while teaching you.
+## What is vibes?
 
-## Core Philosophy
+Vibes provides a shared set of skills, agents, and reference documentation for AI coding assistants. Write your agent instructions once in `AGENTS.md`, and every supported platform — Claude Code, GitHub Copilot, Codex CLI — gets the same guidance through symlinks and platform-specific configuration.
 
-**Ask → Build → Understand → Improve → Create**
-
-## Current Architecture
-
-**Production Stack**: Claude Desktop + MCP Servers + Docker Containers + Vector Database
-
-Vibes runs as a distributed system of specialized MCP servers, each handling specific capabilities:
-
-| Server | Purpose | Status | Connection |
-|--------|---------|--------|------------|
-| `mcp-vibes-server` | Shell access, container management | ✅ Active | Docker exec |
-| `mcp-vibesbox-server` | Unified shell + VNC GUI | ✅ Active | Docker exec |
-| `basic-memory` | Persistent memory across Claude sessions | ✅ Active | Docker exec |
-| `MCP_DOCKER` | Container orchestration gateway | ✅ Active | docker mcp |
+Skills teach agents _how_ to perform specific tasks (fetch library docs, manage GitHub PRs, review code). Agents define _roles_ with scoped tools and system prompts. MCP servers provide _live documentation_ so agents work from current APIs instead of stale training data.
 
 ## Quick Start
 
-### Prerequisites
-- Docker Desktop
-- Claude Desktop
-- Git
-
-### 1. Clone Repository
 ```bash
 git clone https://github.com/jonhill90/vibes.git
 cd vibes
-docker network create vibes-network
 ```
 
-### 2. Start MCP Servers
+Open the repo in your editor. The platform reads its instruction file automatically — no build step, no install.
+
+### MCP Servers
+
+Three MCP servers provide live documentation. They are pre-configured in `.mcp.json` (Claude Code), `.vscode/mcp.json` (VS Code), and `.codex/config.toml` (Codex CLI). No API keys required.
+
+| Server | Purpose |
+|--------|---------|
+| **context7** | Library and framework docs (npm, PyPI, crates, etc.) |
+| **microsoft-learn** | Azure, .NET, M365, and Microsoft docs |
+| **deepwiki** | GitHub repository wikis and documentation |
+
+### Platform Setup
+
+| Platform | Instruction File | MCP Config |
+|----------|-----------------|------------|
+| **Claude Code** | `CLAUDE.md` (symlink → `AGENTS.md`) | `.mcp.json` |
+| **GitHub Copilot** | `.github/copilot-instructions.md` (symlink → `AGENTS.md`) | `.vscode/mcp.json` |
+| **Codex CLI** | `AGENTS.md` (read natively) | `.codex/config.toml` |
+
+## Skills
+
+Skills are invocable instruction sets that teach an agent how to perform a specific task. Each lives in `.github/skills/<name>/SKILL.md`.
+
+### Documentation
+
+| Skill | Trigger | Description |
+|-------|---------|-------------|
+| `primer` | `/primer` | Orient in any codebase — structure, docs, key files, current state |
+| `context7` | `/context7` | Fetch live library/framework docs via MCP (Python, Bash, PowerShell variants) |
+| `ms-learn` | `/ms-learn` | Query official Microsoft docs for Azure, .NET, M365 |
+
+### Platform Integration
+
+| Skill | Trigger | Description |
+|-------|---------|-------------|
+| `gh-cli` | `/gh-cli` | Manage GitHub via CLI — PRs, issues, workflows, releases |
+| `az-devops` | `/az-devops` | Manage Azure DevOps — repos, pipelines, boards, work items |
+| `obsidian` | `/obsidian` | Read, write, search, and manage Obsidian vault notes |
+| `youtube-transcript` | `/youtube-transcript` | Fetch YouTube video transcripts and metadata |
+
+### Authoring & Validation
+
+| Skill | Trigger | Description |
+|-------|---------|-------------|
+| `create-skill` | `/create-skill` | Guide for creating new skills with scripts and references |
+| `validate-skill` | `/validate-skill` | Validate a SKILL.md against the spec |
+| `lint-agents` | `/lint-agents` | Check agent definition files for correct YAML frontmatter |
+
+## Agents
+
+Agents are specialized roles with scoped tools and a system prompt. Defined in `.github/agents/<name>.md`.
+
+| Agent | Purpose | Tools |
+|-------|---------|-------|
+| `code-reviewer` | Code quality and security review after changes | Read, Grep, Glob, Bash |
+| `researcher` | Codebase investigation and pattern analysis | Read, Grep, Glob |
+
+## Architecture
+
+```mermaid
+graph TD
+    AGENTS["AGENTS.md<br/><i>Single source of truth</i>"]
+
+    AGENTS -->|symlink| CLAUDE["CLAUDE.md<br/>Claude Code"]
+    AGENTS -->|symlink| COPILOT[".github/copilot-instructions.md<br/>GitHub Copilot"]
+    AGENTS -->|reads natively| CODEX["Codex CLI"]
+
+    GH[".github/<br/>skills/ agents/ docs/ instructions/"]
+    GH -->|symlink| CLAUDE_DIR[".claude/<br/>skills/ agents/ references/ rules/"]
+    GH -->|symlink| CODEX_DIR[".codex/<br/>skills/ agents/ config.toml"]
+
+    MCP["MCP Servers<br/>context7 · microsoft-learn · deepwiki"]
+    MCP -.->|live docs| CLAUDE
+    MCP -.->|live docs| COPILOT
+    MCP -.->|live docs| CODEX
+```
+
+**Key decisions:**
+
+- **`.github/` is the single source.** Platform directories (`.claude/`, `.codex/`) contain only symlinks and platform-specific config.
+- **One instruction file for all platforms.** `AGENTS.md` is symlinked so every tool reads the same guidance.
+- **Progressive disclosure.** Skill metadata (name + description) is always in context. The SKILL.md body loads on trigger. Reference files load on demand.
+- **Platform-specific rules stay separate.** `.claude/rules/` and `.github/instructions/` use their own formats rather than a forced shared one.
+
+## Reference Documentation
+
+Platform-agnostic docs live in `.github/docs/` and are symlinked into `.claude/references/`.
+
+| Document | Path | Topic |
+|----------|------|-------|
+| Best Practices | `.github/docs/best-practices.md` | Operational patterns for agent development |
+| Context Engineering | `.github/docs/context-engineering.md` | Token budget management, progressive disclosure |
+| TDD Workflow | `.github/docs/tdd-workflow.md` | Red-Green-Refactor process for agents |
+
+## Workflow
+
+```
+Explore → Plan → Red → Green → Refactor → Commit
+```
+
+1. **Explore** — Run `/primer` to orient, then dig deeper as needed
+2. **Plan** — Surface tradeoffs and get alignment
+3. **Red** — Write failing tests that define success
+4. **Green** — Write minimum code to pass
+5. **Refactor** — Clean up while tests stay green
+6. **Commit** — Clean, descriptive messages
+
+For non-code changes (docs, config), skip Red/Green/Refactor and go from Plan to Commit. See [`AGENTS.md`](AGENTS.md) for the full instruction set.
+
+## Adding Skills and Agents
+
+**New skill:**
+
 ```bash
-cd mcp/mcp-vibes-server
-docker-compose up -d
-cd ..
+mkdir -p .github/skills/my-skill
+# Create SKILL.md with name + description frontmatter
+# Validate: /validate-skill .github/skills/my-skill
 ```
 
-### 3. Configure Claude Desktop MCP Settings
+**New agent:**
 
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "vibesbox": {
-      "command": "docker",
-      "args": ["exec", "-i", "mcp-vibesbox-server", "python3", "/workspace/server.py"]
-    },
-    "basic-memory": {
-      "command": "docker",
-      "args": ["exec", "-i", "basic-memory-mcp", "/app/start.sh"]
-    },
-    "MCP_DOCKER": {
-      "command": "docker",
-      "args": ["mcp", "gateway", "run"]
-    },
-      "command": "npx",
-      "args": ["mcp-remote", "http://localhost:8051/mcp"]
-    }
-  }
-}
+```bash
+# Create .github/agents/my-agent.md
+# YAML frontmatter (name, description, tools) + markdown system prompt
+# Validate: /lint-agents
 ```
 
-### 4. Restart Claude Desktop
+See `/create-skill` for the full skill authoring guide and [`AGENTS.md`](AGENTS.md) for naming conventions.
 
-After updating the configuration, restart Claude Desktop to load the MCP servers.
+## Further Reading
 
-## Current Capabilities
-
-- **Shell execution & container management** via `mcp-vibes-server` MCP
-  - Run bash commands in isolated environments
-  - Docker container lifecycle management
-  - Network access to vibes-network
-
-- **Desktop automation & visual feedback** via `mcp-vibesbox-server` MCP
-  - VNC desktop environment (XFCE4, 1920x1080)
-  - Screenshot capture for Claude's vision
-  - Mouse/keyboard control (click, drag, type)
-  - ARM64 Chromium browser automation
-
-  - Task tracking (find_tasks, manage_task)
-  - RAG search across documentation (2-5 keyword queries)
-  - Project management and organization
-
-- **Persistent memory** via `basic-memory` MCP
-  - Local Markdown-based knowledge storage
-  - Conversation context across sessions
-  - Semantic linking and knowledge graphs
-
-- **Container orchestration** via `MCP_DOCKER` gateway
-  - Unified MCP server management
-  - Security isolation and secrets management
-  - Enterprise observability
-
-## Context Optimization
-
-We compressed the context Claude sees by **59-70%** without losing functionality.
-
-**File Sizes Achieved**:
-- **CLAUDE.md**: 107 lines (from 143, 25% reduction)
-- **Patterns**: 47-150 lines each (target ≤150)
-- **Commands**: 202-320 lines each (target ≤350)
-
-**Context Per Command**:
-- `/generate-prp`: 427 lines (59% reduction from 1044 baseline)
-- `/execute-prp`: 309 lines (70% reduction from 1044 baseline)
-
-**Impact**: ~320,400 tokens saved annually (assuming 10 PRP workflows/month)
-
-**Why this matters**: Claude has an "attention budget"—more tokens doesn't mean better results. By compressing context, we improved both speed and accuracy.
-
-See [validation report](prps/context_refactor/execution/validation-report.md) for detailed methodology.
-
-## Context Engineering & PRPs
-
-Vibes uses **Context Engineering** to transform AI coding from generic code generation to production-ready implementation. Instead of prompting in the dark, we engineer comprehensive context that enables first-pass success.
-
-### What are PRPs?
-
-**PRP** (Product Requirements Prompt) = **PRD** + **Curated Codebase Intelligence** + **Agent Runbook**
-
-A PRP is a context engineering artifact that treats Claude like a competent junior developer who needs a comprehensive briefing. It includes:
-
-- **PRD**: Clear goals, business value, success criteria
-- **Curated Context**: Documentation URLs, file references, existing patterns, known gotchas
-- **Agent Runbook**: Implementation blueprint, pseudocode, task list, validation gates
-
-**Naming Convention**: PRPs follow a standardized naming convention documented in [.claude/conventions/prp-naming.md](.claude/conventions/prp-naming.md). Key rules:
-- Use `prps/{feature_name}.md` (no `prp_` prefix)
-- Initial PRPs use `INITIAL_` prefix (auto-detected)
-- Directory structure matches feature name
-
-### PRP Workflow
-
-```
-1. Create INITIAL.md      → Describe your feature
-2. /generate-prp          → Research and create comprehensive PRP
-3. /execute-prp           → Implement with validation loops
-4. Validation             → Tests pass, code quality verified
-5. Done                   → Production-ready code
-```
-
-### Directory Structure
-
-```
-vibes/
-├── .claude/              # Context-engineered components (59-70% reduction)
-│   ├── commands/         # Slash commands for Claude Code
-│   │   ├── generate-prp.md    # 320 lines (59% reduction)
-│   │   ├── execute-prp.md     # 202 lines (70% reduction)
-│   │   ├── list-prps.md
-│   │   └── prep-parallel.md
-│   ├── patterns/         # Reusable implementation patterns
-│   │   ├── README.md          # Pattern library index
-│   │   ├── parallel-subagents.md
-│   │   ├── quality-gates.md
-│   │   └── security-validation.md
-│   ├── agents/           # Subagent specifications
-│   └── templates/        # Report templates
-├── prps/                 # Per-feature PRP artifacts
-│   ├── {feature_name}/   # Feature-specific directory
-│   │   ├── planning/     # Research outputs
-│   │   ├── examples/     # Concrete examples
-│   │   └── execution/    # Implementation artifacts
-│   └── templates/        # PRP templates
-│       ├── prp_base.md          # Comprehensive base
-│       ├── feature_template.md  # Standard features
-│       ├── tool_template.md     # API integrations
-│       └── documentation_template.md
-├── CLAUDE.md             # 107 lines (project rules only)
-└── mcp/                  # MCP server implementations
-    ├── mcp-vibesbox-server/
-    └── mcp-vibes-server/
-```
-
-### Core Principles
-
-1. **Context is King**: Include ALL necessary documentation, examples, and gotchas
-2. **Validation Loops**: Provide executable tests the AI can run and fix iteratively
-3. **Information Dense**: Use keywords and patterns from your codebase
-4. **Progressive Success**: Start simple, validate, then enhance
-5. **One-Pass Implementation**: Comprehensive context enables getting it right the first time
-
-### Available Commands
-
-- `/generate-prp <file>` - Research codebase and create comprehensive PRP
-- `/execute-prp <prp>` - Execute PRP with iterative validation
-- `/list-prps [status]` - List PRPs by status (active/completed/archived)
-
-### Example Templates
-
-Choose the right template for your task:
-
-- **Feature Template**: Standard feature development
-- **Tool Template**: API integrations and external tools
-- **Documentation Template**: READMEs, API docs, guides
-
-### Learn More
-
-- [PRP Base Template](prps/templates/prp_base.md) - Comprehensive template with all sections
-- [Pattern Library](.claude/patterns/README.md) - Reusable implementation patterns
-- [Context Engineering Intro](https://github.com/coleam00/context-engineering-intro) - Original philosophy
-
-**Philosophy**: Context engineering is 10x better than prompt engineering and 100x better than vibe coding. Give Claude the context it needs to succeed.
-
-## Pattern Library
-
-The `.claude/patterns/` directory contains reusable implementation patterns extracted from the PRP system. These patterns enable consistent, high-quality implementations across all features.
-
-| Pattern | Purpose | Link |
-|---------|---------|------|
-| parallel-subagents | 3x speedup through multi-task parallelization | [View](.claude/patterns/parallel-subagents.md) |
-| quality-gates | Validation loops ensuring 8+/10 PRP scores | [View](.claude/patterns/quality-gates.md) |
-| security-validation | 5-level security checks for user input | [View](.claude/patterns/security-validation.md) |
-
-See [.claude/patterns/README.md](.claude/patterns/README.md) for complete pattern documentation and usage guidelines.
-
-## Future Vision
-
-**Phase 1: Observable Agent Execution** (In Development)
-- Real-time screen sharing of AI work (terminal, browser, Neovim)
-- Agent-specific environments with persistent state
-- Pause/resume execution controls
-
-**Phase 2: Team Collaboration**
-- Discord-like interface for human-AI teams
-- Multi-user knowledge spaces
-- Agent coordination visualization
-
-**Phase 3: Advanced Intelligence**
-- Cross-session agent learning and skill accumulation
-- Intelligent task routing between specialized agents
-- Predictive workflow assistance
-
----
-
-*Conversational development environment in production. Observable AI execution in development.*
+- **[`AGENTS.md`](AGENTS.md)** — Full instruction set, conventions, principles, and checklist
+- **[`.claude/references/skills-guide.md`](.claude/references/skills-guide.md)** — Skill authoring reference (frontmatter options, progressive disclosure)
+- **[`.claude/references/subagents-guide.md`](.claude/references/subagents-guide.md)** — Agent configuration and delegation patterns
+- **[`.github/docs/context-engineering.md`](.github/docs/context-engineering.md)** — Token budget management and context architecture

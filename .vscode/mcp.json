@@ -1,0 +1,16 @@
+{
+	"servers": {
+		"context7": {
+			"url": "https://mcp.context7.com/mcp",
+			"type": "http"
+		},
+		"microsoft-docs": {
+			"url": "https://learn.microsoft.com/api/mcp",
+			"type": "http"
+		},
+		"deepwiki": {
+			"url": "https://mcp.deepwiki.com/mcp",
+			"type": "http"
+		}
+	}
+}
