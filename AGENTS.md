@@ -25,6 +25,12 @@ Skills and agent patterns evolve — verify against current docs, not memory.
 
 ---
 
+## Orient First
+
+Run `/primer` at the start of every session before diving into tasks. This analyzes project structure, documentation, key files, and current state — loading essential context for everything that follows.
+
+---
+
 ## Core Principles
 
 ### 1. Think Before Coding
