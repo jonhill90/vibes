@@ -21,6 +21,20 @@ Tests are the best verification loop an agent can have. Writing tests first give
 
 Do not skip steps. The failing test proves the test actually tests something.
 
+## Agent Handoff Cycle
+
+Divide TDD phases across specialized agents, each with a clean context window. Each agent does one job and hands off to the next.
+
+1. **Red agent** — writes failing tests from requirements. No implementation code. Hands off when tests are red.
+2. **Green agent** — receives failing tests, writes minimum code to pass. No refactoring. Hands off when tests are green.
+3. **Refactor agent** — receives passing code, improves structure while keeping tests green. Hands off back to red for the next increment.
+
+Benefits of separation:
+
+- Each agent gets focused context (requirements vs. implementation vs. design)
+- Handoff points create natural verification gates
+- Prevents the common failure of an agent writing implementation during the red phase
+
 ## Triangulation
 
 A single test case can pass by accident (hardcoded return values, overly specific logic). Add multiple examples that force a real implementation.
@@ -46,6 +60,15 @@ Agent-generated code often requires adjustment. The workflow is:
 3. Re-run tests to verify nothing broke
 
 The time to adjust is less than writing from scratch. Don't expect perfection — expect a useful starting point.
+
+## AI-Specific TDD Pitfalls
+
+Agents have predictable failure modes in TDD. Watch for these:
+
+- **Skipping red** — writing tests and implementation simultaneously, so the test never actually fails. Insist on seeing a red test run before any implementation.
+- **Over-implementation** — writing more code than the current test requires, violating "minimum to pass." This couples future tests to premature design.
+- **Testing implementation, not behavior** — asserting on internal calls or data structures instead of observable outputs. See the "Do Not" list in `.claude/rules/testing.md`.
+- **Gold-plating during refactor** — adding features during the refactor phase. Refactor means restructure, not extend.
 
 ## Complements
 

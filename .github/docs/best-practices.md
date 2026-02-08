@@ -75,3 +75,21 @@ Tight feedback loops produce better results than letting the agent run unchecked
 ## 7. Use Sub-Agents for Research
 
 Investigation reads lots of files, all consuming context. Delegate research to sub-agents that report back summaries, keeping your main session clean for implementation.
+
+- **Writer/Reviewer pattern:** run parallel sessions — one writes implementation, another reviews with fresh context. The reviewer catches issues the writer's accumulated context blinds it to.
+
+## 8. Feed Rich Context
+
+Go beyond plain text prompts. Pipe files, paste images, and reference paths directly.
+
+- `@path/to/file` — reference files inline (CLAUDE.md also imports other files this way)
+- `cat log.txt | claude` — pipe content directly into the session
+- Paste screenshots for UI tasks — the agent can compare before/after
+- Allowlist URLs with `/permissions` so agents can fetch live docs
+
+## 9. Let the Agent Interview You
+
+For large or ambiguous features, prompt the agent to ask clarifying questions before it plans. This front-loads requirements gathering and prevents wasted implementation cycles.
+
+- "Interview me about the requirements before writing any code"
+- Works best when combined with Section 2 (Explore, Plan, Code)

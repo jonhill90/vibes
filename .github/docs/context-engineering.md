@@ -62,12 +62,22 @@ For tasks spanning multiple sessions, maintain external memory files. Track prog
 - Update it after each meaningful step
 - Read it at the start of each new session
 - Use JSON for structured data the model shouldn't casually edit
+- **Initializer/coding agent pattern:** initializer creates `init.sh` + progress file + feature checklist; coding agent reads the onboarding checklist at each session start, then updates progress as it works
+
+### 7. Few-Shot Examples
+
+Provide diverse, canonical examples that portray expected behavior. Examples outperform lengthy explanations for formatting, tone, and edge-case handling.
+
+- Include 2-3 examples covering distinct scenarios (happy path, edge case, error)
+- Place examples close to the instruction they illustrate
+- Prefer real input/output pairs over synthetic ones
 
 ## Anti-Patterns
 
-- **Kitchen sink sessions** — mixing unrelated tasks in one context
+- **Kitchen sink sessions (context rot)** — mixing unrelated tasks in one context degrades attention across all of them
 - **Infinite exploration** — unscoped investigation that reads hundreds of files
 - **Excessive correction loops** — failed approaches polluting context (start fresh after 2 failures)
+- **Stale skill loading** — loading irrelevant skills causes context rot: diluted attention, wasted tokens, conflated patterns
 - **Information dumps** — providing everything upfront instead of progressively
 
 ## Guiding Question
