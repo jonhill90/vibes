@@ -1,55 +1,8 @@
-# Local environment files
+# Local environment
 .env
-.vibes/
-.ssh
-
-# Examples
-/examples/*
-!/examples/README.md
-!/examples/prp-workflow/
-!/examples/prp-workflow/*.md
-!/examples/tools/
-!/examples/tools/*.py
-!/examples/documentation/
-!/examples/documentation/*.md
-!/examples/agent-factory/
-!/examples/agent-factory/*.md
-!/examples/agents/
-!/examples/agents/*/
-!/examples/agents/**
-!/examples/workflows/
-!/examples/workflows/*/
-!/examples/workflows/**
-!/examples/enhanced_prp_workflow/
-!/examples/enhanced_prp_workflow/*.md
-!/examples/prp_workflow_improvements/
-!/examples/prp_workflow_improvements/*.md
-
-# Repos
-/repos/*
-!/repos/
-!/repos/README.md
-
-# Projects
-/projects/*
-!/projects/
-!/projects/README.md
-!/projects/vibes/
-!/projects/vibes-ui/
-!/projects/terraform-labs-v2/
-!/projects/Agent-0/
-!/projects/Agent-1/
-
-# PRPs
-/prps/*
-/prps/EXAMPLE_multi_agent_prp.md
-!/prps/templates/
-!/prps/README.md
-
-# Screenshots
-/screenshots/*
-
-# System files
 .DS_Store
 __pycache__/
-.scratch
+
+# Platform-local config (not shared)
+CLAUDE.local.md
+.claude/settings.local.json
