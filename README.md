@@ -53,6 +53,7 @@ Skills are invocable instruction sets that teach an agent how to perform a speci
 |-------|---------|-------------|
 | `gh-cli` | `/gh-cli` | Manage GitHub via CLI — PRs, issues, workflows, releases |
 | `az-devops` | `/az-devops` | Manage Azure DevOps — repos, pipelines, boards, work items |
+| `linear` | `/linear` | Manage Linear via CLI — issues, teams, projects, Git workflow |
 | `obsidian` | `/obsidian` | Read, write, search, and manage Obsidian vault notes |
 | `youtube-transcript` | `/youtube-transcript` | Fetch YouTube video transcripts and metadata |
 
