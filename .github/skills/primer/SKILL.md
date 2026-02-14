@@ -1,7 +1,7 @@
 ---
 name: primer
 description: Orient in any codebase by analyzing structure, documentation, key files, and current state. Use when starting work on an unfamiliar project, switching codebases, or needing a quick overview.
-argument-hint: [subdirectory-or-focus]
+argument-hint: "subdirectory or focus area (optional)"
 ---
 
 # Codebase Primer
