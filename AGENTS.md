@@ -114,8 +114,13 @@ vibes/
 │
 ├── .codex/                            # Codex CLI platform directory
 │   ├── agents → ../.github/agents     # Symlink
-│   ├── skills → ../.github/skills     # Symlink
-│   └── config.toml                    # MCP servers, approval policy, sandbox
+│   ├── skills → ../.github/skills     # Symlink (compatibility alias)
+│   ├── config.toml                    # MCP servers, approval policy, sandbox
+│   └── rules/                         # Codex command policy (*.rules)
+│       └── default.rules
+│
+├── .agents/                           # Codex-native skills discovery
+│   └── skills → ../.github/skills     # Symlink
 │
 └── skills/                            # Categorized browsing view
     ├── python/
@@ -126,7 +131,7 @@ vibes/
 ### Architecture
 
 - **`.github/`** is the source of truth for all skills, agents, plugins, and prompts
-- **`.claude/`** and **`.codex/`** contain symlinks back to `.github/`
+- **`.claude/`**, **`.codex/`**, and **`.agents/`** contain symlinks back to `.github/`
 - **`CLAUDE.md`** symlinks to `AGENTS.md` — Claude Code reads the same source
 - **`.github/copilot-instructions.md`** symlinks to `AGENTS.md` — GitHub Copilot gets the same guidance
 - **`skills/`** at the repo root provides categorized language-based browsing via symlinks
@@ -134,7 +139,9 @@ vibes/
 - **`.claude/references/`** holds Claude-specific knowledge + symlinks to agnostic docs from `.github/docs/`
 - **`.claude/rules/`** holds path-specific authoring rules for Claude Code (`paths:` frontmatter)
 - **`.github/instructions/`** holds scoped instruction files for GitHub Copilot (`applyTo:` frontmatter)
+- **`.agents/skills/`** is the Codex-native skills discovery path (symlinked to `.github/skills`)
 - **`.codex/config.toml`** configures MCP servers, approval policy, and sandbox mode for Codex CLI
+- **`.codex/rules/*.rules`** defines Codex executable command policy (`prefix_rule`)
 - **`AGENTS.md`** is read natively by Codex CLI from the project root (no symlink needed)
 - **`AGENTS.override.md`** (git-ignored) provides local Codex overrides, analogous to `CLAUDE.local.md`
 

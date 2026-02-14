@@ -1,3 +1,5 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
 [mcp_servers.context7]
 url = "https://mcp.context7.com/mcp"
 
@@ -12,6 +14,8 @@ approval_policy = "on-request"
 
 # Prevent writes outside the workspace
 sandbox_mode = "workspace-write"
+
+# Command policy rules live in .codex/rules/*.rules
 
 # Fallback instruction filenames if AGENTS.md is missing
 project_doc_fallback_filenames = ["CLAUDE.md", "CODEX.md"]

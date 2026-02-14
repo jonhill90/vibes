@@ -7,3 +7,9 @@ __pycache__/
 CLAUDE.local.md
 AGENTS.override.md
 .claude/settings.local.json
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+repos

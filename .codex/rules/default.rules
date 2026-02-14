@@ -1,0 +1,44 @@
+# Codex command policy rules for commands requested outside the sandbox.
+
+# Guard against destructive filesystem deletion.
+prefix_rule(
+    pattern = ["rm", "-rf", "/"],
+    decision = "forbidden",
+    justification = "Never run destructive root deletes.",
+    match = [
+        "rm -rf /",
+    ],
+    not_match = [
+        "rm -rf ./tmp",
+    ],
+)
+
+# Prompt before commits so users can review intent and scope.
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "prompt",
+    justification = "Committing changes should always be explicitly approved.",
+    match = [
+        "git commit -m test",
+        ["git", "commit", "--amend"],
+    ],
+    not_match = [
+        "git status",
+        "git add .",
+    ],
+)
+
+# Prompt before force-push operations.
+prefix_rule(
+    pattern = ["git", "push", "--force"],
+    decision = "prompt",
+    justification = "Force-push rewrites history and requires confirmation.",
+    match = [
+        "git push --force",
+        ["git", "push", "--force", "origin", "main"],
+    ],
+    not_match = [
+        "git push",
+        ["git", "push", "origin", "feature/new-skills"],
+    ],
+)

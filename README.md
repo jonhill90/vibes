@@ -35,6 +35,8 @@ Three MCP servers provide live documentation. They are pre-configured in `.mcp.j
 | **GitHub Copilot** | `.github/copilot-instructions.md` (symlink → `AGENTS.md`) | `.vscode/mcp.json` |
 | **Codex CLI** | `AGENTS.md` (read natively) | `.codex/config.toml` |
 
+For Codex skill discovery, this repo exposes `.agents/skills` (symlink → `.github/skills`).
+
 ## Skills
 
 Skills are invocable instruction sets that teach an agent how to perform a specific task. Each lives in `.github/skills/<name>/SKILL.md`.
@@ -53,6 +55,7 @@ Skills are invocable instruction sets that teach an agent how to perform a speci
 |-------|---------|-------------|
 | `gh-cli` | `/gh-cli` | Manage GitHub via CLI — PRs, issues, workflows, releases |
 | `az-devops` | `/az-devops` | Manage Azure DevOps — repos, pipelines, boards, work items |
+| `linear` | `/linear` | Manage Linear via CLI — issues, teams, projects, Git workflow |
 | `obsidian` | `/obsidian` | Read, write, search, and manage Obsidian vault notes |
 | `youtube-transcript` | `/youtube-transcript` | Fetch YouTube video transcripts and metadata |
 
@@ -85,7 +88,8 @@ graph TD
 
     GH[".github/<br/>skills/ agents/ docs/ instructions/"]
     GH -->|symlink| CLAUDE_DIR[".claude/<br/>skills/ agents/ references/ rules/"]
-    GH -->|symlink| CODEX_DIR[".codex/<br/>skills/ agents/ config.toml"]
+    GH -->|symlink| CODEX_DIR[".codex/<br/>agents/ config.toml"]
+    GH -->|symlink| AGENTS_DIR[".agents/<br/>skills/"]
 
     MCP["MCP Servers<br/>context7 · microsoft-learn · deepwiki"]
     MCP -.->|live docs| CLAUDE
@@ -95,9 +99,10 @@ graph TD
 
 **Key decisions:**
 
-- **`.github/` is the single source.** Platform directories (`.claude/`, `.codex/`) contain only symlinks and platform-specific config.
+- **`.github/` is the single source.** Platform directories (`.claude/`, `.codex/`, `.agents/`) contain symlinks and platform-specific config/policy.
 - **One instruction file for all platforms.** `AGENTS.md` is symlinked so every tool reads the same guidance.
 - **Progressive disclosure.** Skill metadata (name + description) is always in context. The SKILL.md body loads on trigger. Reference files load on demand.
+- **Codex uses native surfaces.** Skills are discovered via `.agents/skills/`; runtime policy/config lives under `.codex/` (`config.toml`, `rules/*.rules`).
 - **Platform-specific rules stay separate.** `.claude/rules/` and `.github/instructions/` use their own formats rather than a forced shared one.
 
 ## Reference Documentation
