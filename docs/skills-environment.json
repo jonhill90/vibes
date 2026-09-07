@@ -1,0 +1,258 @@
+{
+  "counts": {
+    "installed_outside_public": 1,
+    "installed_skills": 42,
+    "private_skills": 1,
+    "public_skills": 41,
+    "repo_duplicate_names": 0
+  },
+  "observed_on": "2026-09-07",
+  "public_installs": {
+    "adopt-or-build": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "ask-a-council": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "close-the-loop": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "create-skill": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "decide-by-variant": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "derive-independently-then-compare": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "determine-intent": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "determine-signals": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "devils-advocate": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "dispatch-brief": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "dispatching-subagents": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "distill": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "durable-fact-before-label": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "failing-test-first": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "github-cli": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "keep-me-honest": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "linear": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "loop-contract": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "loop-memory": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "mechanize": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "memory-conventions": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "mine-transcripts": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "notify": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "obsidian": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "plan-parallel-execution": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "prd": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "primer": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "progressive-disclosure": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "prompt-corpus": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "refuse-invented-identity": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "research-the-limit": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "safe-deletion": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "sanity-check": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "spec": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "spec-driven-development": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "supervised-lane-loop": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "tdd": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "test-in-the-consumer-context": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "tmux": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "divergent-or-unresolved-install",
+      "where": "claude-user"
+    },
+    "verify-the-instrument": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    },
+    "wire-it-when-you-write-it": {
+      "repo_home_count": 1,
+      "skill_matches_public": true,
+      "state": "linked-to-canonical",
+      "where": "claude-user"
+    }
+  }
+}

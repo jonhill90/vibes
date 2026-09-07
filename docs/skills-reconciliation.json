@@ -1,0 +1,1733 @@
+{
+  "environment_counts": {
+    "installed_outside_public": 1,
+    "installed_skills": 42,
+    "private_skills": 1,
+    "public_skills": 41,
+    "repo_duplicate_names": 0
+  },
+  "environment_observed_on": "2026-09-07",
+  "generated_by": "scripts/reconcile_skills.py",
+  "schema": 1,
+  "skills": [
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "990f1ee823adbd8bce33a9642f9359171ee77122"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/adopt-or-build",
+      "eval": {
+        "evidence": "skills/adopt-or-build/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "335358889f53d8f80c7e93bfac2243eec17a8fae01ac63c9aa50cca192261dfa",
+        "files": 2,
+        "skill_sha256": "a6e2f99d46cf8e549bdf588333e3fc26f671ddfa4a78aae05a4882dcdd2a9622"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "adopt-or-build",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/adopt-or-build/SKILL.md",
+            "line": 44,
+            "occurrences": 1,
+            "reason": "cli-dependency"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "b1f353962a1c5d68895354332b95422c325a7efd"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/ask-a-council",
+      "eval": {
+        "evidence": "skills/ask-a-council/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "scenario_inadequate",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "0a702f38c704d59fcbe0cebafb47ea5ca88e38636f53b0eed39a13d3e264216a",
+        "files": 2,
+        "skill_sha256": "c182b9264acb4bf61ca298cc0251adc1bc88eaed6e0762acc0276840a9168845"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "ask-a-council",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "acac1f6cafed04f51f3a2af166879c792ae65866"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/close-the-loop",
+      "eval": {
+        "evidence": "skills/close-the-loop/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "dbe02904bac37564ff18a92a5a999f15a9ee77219f7df2244a1f36f5acfd5e30",
+        "files": 2,
+        "skill_sha256": "5765369cdecf4c72945ee6079b903956b7940cb147852debb1a7fd3f26ad9335"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "close-the-loop",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "061c90dd5bf11d7dae1fa03e2a7a4da257eac56a"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/create-skill",
+      "eval": {
+        "evidence": "skills/create-skill/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "2ed0d160c73d712724281e9a08fe1d3b941aef1c04cfebde682244d066b5d15f",
+        "files": 2,
+        "skill_sha256": "1f31ba132cd4ba43fde627fa78453263402fc14ae58d9e919bcfd2be45b8fbb8"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "create-skill",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/create-skill/SKILL.md",
+            "line": 21,
+            "occurrences": 3,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/create-skill/SKILL.md",
+            "line": 98,
+            "occurrences": 1,
+            "reason": "shell-instructions"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "ac295e8858ed05eee0c444446a2cbb1918f6c48d"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/decide-by-variant",
+      "eval": {
+        "evidence": "skills/decide-by-variant/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "57470e88b56394c8f70ceda5e03bf385ca9965aacdd64223bb8a7f136551b042",
+        "files": 2,
+        "skill_sha256": "4d3acb9ffcdf47ed86690a871a1a7c75557e44157244514133f789006f6f73cc"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "decide-by-variant",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "db6b6aa1aa86b54faebc2ddab4a6ed89413f4df5"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/derive-independently-then-compare",
+      "eval": {
+        "evidence": "skills/derive-independently-then-compare/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "abfd7ed08ac9790b73ea02a09b47171d1189f64d0d3c4765c1ac8f50e165d3ba",
+        "files": 3,
+        "skill_sha256": "33fcc45c32460a0615ee03a18b9777c143d56c9e9702bf0ffc381fb7eb83e3b4"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "derive-independently-then-compare",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "09e65716eb2246105e1edd682262e19f8ca8cf9e"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/determine-intent",
+      "eval": {
+        "evidence": "skills/determine-intent/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "6afd9bb064414c7a5b06cdc6576ba65c57dd735df2942f424ed05deb283666f4",
+        "files": 2,
+        "skill_sha256": "4c7b39d9b5803bdd5e20c10e09f162d213880347509239282bf05358706e66ba"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "determine-intent",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "e8162107e86e3b690734ad3b52c94229429f6eae"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/determine-signals",
+      "eval": {
+        "evidence": "skills/determine-signals/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "550bea8c44a48a014d65edcd4132ded363dee14117513620d347aa437637b520",
+        "files": 2,
+        "skill_sha256": "70f8aab1c3c015e49d9047894576ad724e1aa765fd7f3c5ea230f581fe796a7e"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "determine-signals",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "b4752c2403d43eee899f5ab3c547b162fa519547"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/devils-advocate",
+      "eval": {
+        "evidence": "skills/devils-advocate/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "bfde54463e307959f9cb28b2557de9fd0a01c4d942ee8ebe4c07a219c9c94865",
+        "files": 2,
+        "skill_sha256": "c4f53ede0e639f19163971807597cf1896600255c0dcc6b0233ef64650a3f5ca"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "devils-advocate",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "6ba603de90a5663cad63a3600258e233f19a3888"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/dispatch-brief",
+      "eval": {
+        "evidence": "skills/dispatch-brief/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "keep",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "95de248565aafcc05b514855040395fe382da6f895ed445ba72a4333193c15ce",
+        "files": 2,
+        "skill_sha256": "c753e534045bf2138287cea014f0e2d288c282b62d7af312c9cc5aa176468362"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "dispatch-brief",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "e76cad80da27420025bf100df12ac4c96ab27af6"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/dispatching-subagents",
+      "eval": {
+        "evidence": "skills/dispatching-subagents/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "14f9a3f913eb83ee53aaebcc983b4256b0aed145f411a03d93729bc72687ffe5",
+        "files": 2,
+        "skill_sha256": "de2712199cd2205ea287fbebc907d6f02f58b78ddba8a636daeae3e7087e5503"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "dispatching-subagents",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "265f74ae3439b8a7d1f52f476a4e4b615b5b6e30"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/distill",
+      "eval": {
+        "evidence": "skills/distill/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "7edff8e3e870e921ab308b4c2a972aa9810514a453f21da6c3f777f2966ed0c2",
+        "files": 2,
+        "skill_sha256": "cca49e95b623292df45011cf35c4e5b0b887254496e4c3a415106d33ec2f3902"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "distill",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "4a4b3c596cf24cabff2356f016ef3f502bd39789"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/durable-fact-before-label",
+      "eval": {
+        "evidence": "skills/durable-fact-before-label/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "fe75e1e17869c1fe0d35912df2235910eb6e203dc99d6fdf4a2e7f56f23f6ee4",
+        "files": 2,
+        "skill_sha256": "6d42823c44de360f2f0933ce038e70e2c0f651426e0e3eeff9f8735a2cc240c1"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "durable-fact-before-label",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "ce26035d3c496c6a565bf470783a8ff73b89abe9"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/failing-test-first",
+      "eval": {
+        "evidence": "skills/failing-test-first/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "655e1d33a2973b1f2d2ce45f9af078d8cd32ffa9e2c1758bc96d9c4718a5ad0c",
+        "files": 2,
+        "skill_sha256": "29b37aa8dd76ccbed7dfa1b544aa87392c836527c1d5a9e0c75f40bb42e55482"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "failing-test-first",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "acac1f6cafed04f51f3a2af166879c792ae65866"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/github-cli",
+      "eval": {
+        "evidence": "skills/github-cli/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "could_not_measure",
+        "status": "could-not-measure"
+      },
+      "hashes": {
+        "bundle_sha256": "aed158b77dd4cf48c656621bf352fad20d906c44a064ec76d7ee5ac4f4f7cd9b",
+        "files": 7,
+        "skill_sha256": "970be2bef006d98e63813b40b1edd944178b2637e4f42de7f572d66932ddd446"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "github-cli",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/github-cli/SKILL.md",
+            "line": 14,
+            "occurrences": 24,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/github-cli/SKILL.md",
+            "line": 16,
+            "occurrences": 72,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/github-cli/references/actions.md",
+            "line": 9,
+            "occurrences": 18,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/github-cli/references/actions.md",
+            "line": 36,
+            "occurrences": 23,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/github-cli/references/advanced.md",
+            "line": 9,
+            "occurrences": 23,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/github-cli/references/advanced.md",
+            "line": 120,
+            "occurrences": 25,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/github-cli/references/advanced.md",
+            "line": 307,
+            "occurrences": 1,
+            "reason": "machine-path"
+          },
+          {
+            "file": "skills/github-cli/references/eval-blocked.md",
+            "line": 16,
+            "occurrences": 1,
+            "reason": "machine-path"
+          },
+          {
+            "file": "skills/github-cli/references/eval-blocked.md",
+            "line": 23,
+            "occurrences": 1,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/github-cli/references/issues-labels.md",
+            "line": 9,
+            "occurrences": 19,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/github-cli/references/issues-labels.md",
+            "line": 11,
+            "occurrences": 33,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/github-cli/references/repos.md",
+            "line": 9,
+            "occurrences": 16,
+            "reason": "shell-instructions"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "565c982a585d373a39bad04ba19112bc0f797977"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/keep-me-honest",
+      "eval": {
+        "evidence": "skills/keep-me-honest/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "e7126ad189cbfe9dc288f047581c0dff7518212c0f93910e4e215c93ac266b39",
+        "files": 2,
+        "skill_sha256": "aeee77aa650401cd311e32a9b49f9cfcde845f59698fe962d800510a774b0665"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "keep-me-honest",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "061c90dd5bf11d7dae1fa03e2a7a4da257eac56a"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/linear",
+      "eval": {
+        "evidence": "skills/linear/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "could_not_measure",
+        "status": "could-not-measure"
+      },
+      "hashes": {
+        "bundle_sha256": "6a8c5c67493c8365cf7cfe04ba45cf6c98de509e9cf06f765829faa671f037b8",
+        "files": 5,
+        "skill_sha256": "767fd5ff3d724cdececb6e7f936a27af75f8cfd362d5cbc9978826697eba6018"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "linear",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/linear/SKILL.md",
+            "line": 14,
+            "occurrences": 20,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/linear/SKILL.md",
+            "line": 16,
+            "occurrences": 62,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/linear/references/eval-blocked.md",
+            "line": 10,
+            "occurrences": 1,
+            "reason": "machine-path"
+          },
+          {
+            "file": "skills/linear/references/issues.md",
+            "line": 43,
+            "occurrences": 8,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/linear/references/issues.md",
+            "line": 44,
+            "occurrences": 11,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/linear/references/teams-projects.md",
+            "line": 9,
+            "occurrences": 17,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/linear/references/teams-projects.md",
+            "line": 63,
+            "occurrences": 4,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/linear/references/teams-projects.md",
+            "line": 146,
+            "occurrences": 3,
+            "reason": "machine-path"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "2dfa8daff5b76956d7aae59a46b9a9c49307f870"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/loop-contract",
+      "eval": {
+        "evidence": "skills/loop-contract/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "9d8424787dbaefe154b5df59a02cff2f39a06b97b39a50cc3f1d6490e962de67",
+        "files": 3,
+        "skill_sha256": "8c16c7bc7516292c924dc4035660345f1ad4821adebe34e7cb54db16ce515d51"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "loop-contract",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "85e1d26ef7fb4d4df7d12268e45942dfdee2dc89"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/loop-memory",
+      "eval": {
+        "evidence": "skills/loop-memory/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "9a7642400f7dafddae2f5a1ff4825eda219969ab0774544fb7d0f5a225b87d08",
+        "files": 4,
+        "skill_sha256": "3243c67a9d6bc9bcc300d12ab0c95c67dff1cdb5024fe66ad5da2e65177b2db8"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "loop-memory",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/loop-memory/SKILL.md",
+            "line": 27,
+            "occurrences": 1,
+            "reason": "external-vault"
+          },
+          {
+            "file": "skills/loop-memory/SKILL.md",
+            "line": 153,
+            "occurrences": 1,
+            "reason": "cli-dependency"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "821093135c0b9d7caaff18e9a3d4e21a6b66cf5a"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/mechanize",
+      "eval": {
+        "evidence": "skills/mechanize/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "scenario_inadequate",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "5d358968595e779e9db25f0e54b78f3847f8b27871cf85805b5f120678b04e2a",
+        "files": 3,
+        "skill_sha256": "0b9ab8f129504449679528f0f8aae4254a54b47c7e79c23284a8a84e1aee4f5a"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "mechanize",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "e4e1661187d0c246de78d4891dec535b104d9ca4"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/memory-conventions",
+      "eval": {
+        "evidence": "skills/memory-conventions/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "3133fb2f50072d7bff4383523869d93854ca71cfd19dafed091129e30b45352a",
+        "files": 2,
+        "skill_sha256": "c5b407002eaff9459776748cebdbc8ced806747a4aa8dfa1dba427ab8b9126bc"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "memory-conventions",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/memory-conventions/SKILL.md",
+            "line": 3,
+            "occurrences": 4,
+            "reason": "external-vault"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "a2b3e308125ae60ae450a1c63dc4b495d698fdeb"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/mine-transcripts",
+      "eval": {
+        "evidence": "skills/mine-transcripts/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "a93e46fe7eaeec3b3001f2fe1d4944556a392aa14db669b0f1b4804877a7dab9",
+        "files": 3,
+        "skill_sha256": "e13aeab0c2fb7bce849d4fdc5b45cd874f780bb8972119a92b1a044696b11321"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "mine-transcripts",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/mine-transcripts/SKILL.md",
+            "line": 50,
+            "occurrences": 2,
+            "reason": "machine-path"
+          },
+          {
+            "file": "skills/mine-transcripts/SKILL.md",
+            "line": 141,
+            "occurrences": 1,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/mine-transcripts/SKILL.md",
+            "line": 142,
+            "occurrences": 3,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/mine-transcripts/references/eval-case.md",
+            "line": 47,
+            "occurrences": 1,
+            "reason": "cli-dependency"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "9a8e753f96ccc19a1a726b57518d09c5acdf476e"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/notify",
+      "eval": {
+        "evidence": "skills/notify/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "scenario_inadequate",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "d3fb7b942ecbe06dca70829c3a031650b99e678e48555f76cb20dd605f0043fe",
+        "files": 4,
+        "skill_sha256": "3a33b2d8212c890da690d1a1a003ab486c700bd30abdb22630535a05d79ec90a"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "notify",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/notify/SKILL.md",
+            "line": 72,
+            "occurrences": 2,
+            "reason": "machine-path"
+          },
+          {
+            "file": "skills/notify/SKILL.md",
+            "line": 85,
+            "occurrences": 1,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/notify/SKILL.md",
+            "line": 87,
+            "occurrences": 4,
+            "reason": "cli-dependency"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "061c90dd5bf11d7dae1fa03e2a7a4da257eac56a"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/obsidian",
+      "eval": {
+        "evidence": "skills/obsidian/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "could_not_measure",
+        "status": "could-not-measure"
+      },
+      "hashes": {
+        "bundle_sha256": "262cdf1bc96078f59138d2f53208fd8ad1a3d0391bab6a973118e77d19f8d2bb",
+        "files": 5,
+        "skill_sha256": "c9ff52a4f4a122a92115135dff4661e5afe0dd7c1ac04ebe071bfc24205ad2b8"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "obsidian",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/obsidian/SKILL.md",
+            "line": 21,
+            "occurrences": 16,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/obsidian/SKILL.md",
+            "line": 23,
+            "occurrences": 9,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/obsidian/SKILL.md",
+            "line": 36,
+            "occurrences": 2,
+            "reason": "machine-path"
+          },
+          {
+            "file": "skills/obsidian/references/command-reference.md",
+            "line": 16,
+            "occurrences": 9,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/obsidian/references/eval-blocked.md",
+            "line": 10,
+            "occurrences": 2,
+            "reason": "machine-path"
+          },
+          {
+            "file": "skills/obsidian/references/templates.md",
+            "line": 28,
+            "occurrences": 1,
+            "reason": "external-vault"
+          },
+          {
+            "file": "skills/obsidian/references/templates.md",
+            "line": 54,
+            "occurrences": 4,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/obsidian/references/templates.md",
+            "line": 82,
+            "occurrences": 3,
+            "reason": "cli-dependency"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "97b2befa1b02f745fd53e64490ecfb0e045c9887"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/plan-parallel-execution",
+      "eval": {
+        "evidence": "skills/plan-parallel-execution/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "349462ece74fb75d2ddeee150c33d03343065bea21b82fe57b5008b0ccb11d75",
+        "files": 2,
+        "skill_sha256": "85dd0693c4e1bec8848d004860b399b72cbba64b38dbd946269a99a2e09b0c82"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "plan-parallel-execution",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "e329f52ef93dda8110158a192cd5a981bc701410"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/prd",
+      "eval": {
+        "evidence": "skills/prd/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "7eea8b57e15b7b3f443e4778444d37a5594955dba6724b728a0d65a9f690dcee",
+        "files": 2,
+        "skill_sha256": "25d65a6f8b57e4e29ac167705ee90bf21f8384114e4323c0a77872c0192502b8"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "prd",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "061c90dd5bf11d7dae1fa03e2a7a4da257eac56a"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/primer",
+      "eval": {
+        "evidence": "skills/primer/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "drop",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "ab4028d55e9a378d9d5028661a70923a63142a1d08c3cdf61d4cb6d1955aff6f",
+        "files": 2,
+        "skill_sha256": "dc999406b2e728e632cd17a5ab401b5bce041009f3340f316cd5b9e39ade538a"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "primer",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/primer/SKILL.md",
+            "line": 14,
+            "occurrences": 1,
+            "reason": "shell-instructions"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "e6c33a578a8f8a92b55ba521c72d821e349cdd3d"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/progressive-disclosure",
+      "eval": {
+        "evidence": "skills/progressive-disclosure/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "9e2d5d2ded7f8ced9c04538937eee47701a783ebd49ca196a8b6be71897cc5b3",
+        "files": 2,
+        "skill_sha256": "9618076c1fc7b1c3f8ef305121aa84d5937007de6b9db103f5cad21ff94170cf"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "progressive-disclosure",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "993316a9baaebca4ffea5a4bb12867d3caa0639f"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/prompt-corpus",
+      "eval": {
+        "evidence": "skills/prompt-corpus/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "keep",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "4fcad73c565944974dd01e9ce275dd783d4df3a8637762a6574fe4363641b44c",
+        "files": 2,
+        "skill_sha256": "d54ce0e9fa0f8d71cd616801451b232e875678ea56052b2d2998e1a295b85b4d"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "prompt-corpus",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/prompt-corpus/SKILL.md",
+            "line": 31,
+            "occurrences": 1,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/prompt-corpus/SKILL.md",
+            "line": 91,
+            "occurrences": 1,
+            "reason": "machine-path"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "329d9b9a228804b8b35d61d1922d549b0293ab19"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/refuse-invented-identity",
+      "eval": {
+        "evidence": "skills/refuse-invented-identity/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "cef7326fb5e0bef2f995b3a6a7042b6de33fa45b17a9cefec2eeedffd7c53e57",
+        "files": 2,
+        "skill_sha256": "cf9f127f1516ed60d385afe1cb4ea1b8732b4282ed3b8443fc9e7fa60f244b5b"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "refuse-invented-identity",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "c2ae48c908e4c1abdb3064e64384cb2865f4aa0b"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/research-the-limit",
+      "eval": {
+        "evidence": "skills/research-the-limit/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "03404421d2faf7173430f2c339e1d9ffcea502cc6afad1ce34e9ba5697c0259e",
+        "files": 2,
+        "skill_sha256": "1e9a0bcc4d2def36225585402dee472e0727ade8389ef6bff43ed70042580289"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "research-the-limit",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "ce26035d3c496c6a565bf470783a8ff73b89abe9"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/safe-deletion",
+      "eval": {
+        "evidence": "skills/safe-deletion/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "d06fcd24f8faba2264d53059bd13c5fd3f5373947999dfb5aa414b2f4b1a94dc",
+        "files": 2,
+        "skill_sha256": "202d635edca65c073a6dc88f1987b5aabd5e22eeb7e7ca1a118fa7730a62b201"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "safe-deletion",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "acac1f6cafed04f51f3a2af166879c792ae65866"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/sanity-check",
+      "eval": {
+        "evidence": "skills/sanity-check/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "0d8fc22e9a5816e90dafb8b339a5b265c4125d6ba2a49593da98c63faf73a68d",
+        "files": 2,
+        "skill_sha256": "a08d6f84286be72ef8ae783c8d033df2a3ea1667ba44b51aa1946445bdb3a33c"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "sanity-check",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "e329f52ef93dda8110158a192cd5a981bc701410"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/spec",
+      "eval": {
+        "evidence": "skills/spec/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "45bf2db05d56440ae1cd3f1805a5a7363bf1ddf03723307919282214d3969908",
+        "files": 2,
+        "skill_sha256": "d8c0bbffa93097452f61adb8a3d8ab0b4c3714760ab5091924367605b40ffa35"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "spec",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "58749abaf41b79d754e75ea2e796bb2a08bf8f30"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/spec-driven-development",
+      "eval": {
+        "evidence": "skills/spec-driven-development/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "241721dc97396c443be317038ccd74fa11d16db1772d3dc0643713ef345805c3",
+        "files": 2,
+        "skill_sha256": "3de2741a85c9338d7795301678c95d2ad587b22274935f5a54f45ebefd8fd47b"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "spec-driven-development",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "501e1403ce65faf68a1ec7be54e2d7931272f4a6"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/supervised-lane-loop",
+      "eval": {
+        "evidence": "skills/supervised-lane-loop/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "494a62b4c65c32e0713cf78935c3aa24cabe57b2d07688447f012238231ca7bb",
+        "files": 3,
+        "skill_sha256": "1c2d71ffb4dbabe12a054fa201264d721b741b2913e9f35d1ebc2176cf40516a"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "supervised-lane-loop",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/supervised-lane-loop/SKILL.md",
+            "line": 266,
+            "occurrences": 1,
+            "reason": "external-skill-reference"
+          },
+          {
+            "file": "skills/supervised-lane-loop/references/merge-safety.md",
+            "line": 21,
+            "occurrences": 1,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/supervised-lane-loop/references/merge-safety.md",
+            "line": 94,
+            "occurrences": 1,
+            "reason": "shell-instructions"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "2e5fe6229d5414d2de777a59b3feb3367ccccf01"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/tdd",
+      "eval": {
+        "evidence": "skills/tdd/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "f9d1184db60e77ff9dc429204fa5525aa983065c95267e64227a19365f20c65f",
+        "files": 2,
+        "skill_sha256": "a62eb4ef632229820c842ecbaed0603ca7b52ac3663717085914f439e3b39315"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "tdd",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "97b2befa1b02f745fd53e64490ecfb0e045c9887"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/test-in-the-consumer-context",
+      "eval": {
+        "evidence": "skills/test-in-the-consumer-context/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "no_effect_observed",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "ff6b9bc17c49c85efdae2f36a1b8204064e5969b583c8409c75b41aec6ed81ee",
+        "files": 2,
+        "skill_sha256": "248e8519ecfe519fa6695a4905ae17f46449ba765a4ed27abcd8deab14c40799"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "test-in-the-consumer-context",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "acac1f6cafed04f51f3a2af166879c792ae65866"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/tmux",
+      "eval": {
+        "evidence": "skills/tmux/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "1a2461f86ce291b0d29c5a9a7117fd9b5f6771c68955f7fba51ae9fdcc3d64f9",
+        "files": 8,
+        "skill_sha256": "8bdcc7893130df2813bef638077a9aea04be5542876407e65f1a1c6e93f86847"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "divergent-or-unresolved-install",
+        "where": "claude-user"
+      },
+      "name": "tmux",
+      "packaging": {
+        "findings": [
+          {
+            "file": "skills/tmux/SKILL.md",
+            "line": 12,
+            "occurrences": 20,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/tmux/SKILL.md",
+            "line": 61,
+            "occurrences": 1,
+            "reason": "cli-dependency"
+          },
+          {
+            "file": "skills/tmux/references/fundamentals.md",
+            "line": 36,
+            "occurrences": 22,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/tmux/references/supervisor-lanes.md",
+            "line": 19,
+            "occurrences": 6,
+            "reason": "shell-instructions"
+          },
+          {
+            "file": "skills/tmux/references/supervisor-lanes.md",
+            "line": 20,
+            "occurrences": 8,
+            "reason": "cli-dependency"
+          }
+        ],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "FAIL"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "c14450686f0a781e835430fb50896f22bdf7fae0"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/verify-the-instrument",
+      "eval": {
+        "evidence": "skills/verify-the-instrument/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "keep",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "562baf2ee3ab3a2a438d1acd084f3d067e4b429c1eb190b27e888046f0c91c70",
+        "files": 2,
+        "skill_sha256": "ea771bbf0d04f6050637448b08760bec3fe16038b3b5c999f8cefc7902b4d494"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "verify-the-instrument",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    },
+    {
+      "authorship": {
+        "basis": "Earliest available addition commit; git attribution does not prove absence of upstream copying.",
+        "class": "jon-or-agent-attributed",
+        "commit": "97b2befa1b02f745fd53e64490ecfb0e045c9887"
+      },
+      "canonical_home": "https://github.com/jonhill90/skills/tree/main/skills/wire-it-when-you-write-it",
+      "eval": {
+        "evidence": "skills/wire-it-when-you-write-it/references/eval-result.md",
+        "reason": "Existing record inspected, not rerun; record presence is not a passing result.",
+        "recorded_verdict": "improve",
+        "status": "has-evals"
+      },
+      "hashes": {
+        "bundle_sha256": "2d89b8a916df5b4b0e2daca4a6d98700f17203876961139b0baeba8010562d18",
+        "files": 2,
+        "skill_sha256": "4a0f2f0ce093f6e222628e77ffe564ea1f031b8e4415aa6ad3353bb1fefd5b33"
+      },
+      "home_state": "unique-at-observation",
+      "installed": {
+        "repo_home_count": 1,
+        "skill_matches_public": true,
+        "state": "linked-to-canonical",
+        "where": "claude-user"
+      },
+      "name": "wire-it-when-you-write-it",
+      "packaging": {
+        "findings": [],
+        "meaning": "Static upload-only audit: flagged local/CLI assumptions need review; PASS means none detected, not a web execution test.",
+        "status": "PASS"
+      },
+      "scope": "public",
+      "scope_basis": "Current public repository placement; deployment scope may be narrower."
+    }
+  ]
+}

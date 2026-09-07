@@ -42,65 +42,63 @@ remains the way to install individual skills, and nothing here replaces it.
 
 ## Skills in this collection
 
-All 40, flat and alphabetical — matching `skills/`'s own layout (see
-[Where a skill belongs](#where-a-skill-belongs) for why this repository does
-not bucket by category). Measured `ls -d skills/*/`, verified 2026-08-23.
-This table has drifted from the tree twice: 12 skills short for five days
-(`069e2c4`, 2026-08-09) and, a second time, 13 skills short until this
-correction (skills#224) — `scripts/validate_repository.py`'s
-`validate_readme_table` check now fails CI when the table and `skills/`
-disagree, so a hand-edit that drops or misnames a row is caught before it
-reaches the public repository.
+<!-- generated-skills:start -->
 
-| Skill | Purpose |
-|---|---|
-| [`adopt-or-build`](skills/adopt-or-build/) | Decide, per component, whether to adopt an existing dependency or build it in-house, weighing blast radius over convenience |
-| [`ask-a-council`](skills/ask-a-council/) | Convene several harnesses or models against one question, each given a distinct lens it can fail on |
-| [`close-the-loop`](skills/close-the-loop/) | Confirm you have everything needed to finish a change before starting it |
-| [`create-skill`](skills/create-skill/) | Design, create, and validate portable Agent Skills |
-| [`decide-by-variant`](skills/decide-by-variant/) | Build several genuinely different real artifacts with fake data and let the human pick by looking |
-| [`derive-independently-then-compare`](skills/derive-independently-then-compare/) | Derive an answer from the source corpus a second time, blind to the first derivation, then compare |
-| [`determine-intent`](skills/determine-intent/) | Work out what the user actually wants before starting the work, and state that reading so it can be corrected |
-| [`determine-signals`](skills/determine-signals/) | Find out what has already been said before asking a question or restating a fact as current |
-| [`devils-advocate`](skills/devils-advocate/) | Argue the strongest honest case against a plan or decision before it is committed |
-| [`dispatch-brief`](skills/dispatch-brief/) | Write the brief that hands work to a lane or subagent — name the failure, demand two-directional mutation, forbid weakening the guard |
-| [`dispatching-subagents`](skills/dispatching-subagents/) | Decide whether to delegate to subagents and verify their output with external evidence |
-| [`distill`](skills/distill/) | Reduce a large body of source material to the smallest thing a reader can act on |
-| [`durable-fact-before-label`](skills/durable-fact-before-label/) | Write the durable record before the label that points at it, so a crash leaves a stale label, not a broken record |
-| [`failing-test-first`](skills/failing-test-first/) | Reproduce a bug with a failing test before fixing it |
-| [`github-cli`](skills/github-cli/) | Manage GitHub PRs, issues, workflows, actions, and releases via `gh` |
-| [`keep-me-honest`](skills/keep-me-honest/) | Push back when the user's stated belief conflicts with what you actually observed |
-| [`linear`](skills/linear/) | Manage Linear issues, teams, and projects via the Linear CLI |
-| [`loop-contract`](skills/loop-contract/) | Design a loop before running one — trigger, verification, stop conditions, terminal states |
-| [`loop-memory`](skills/loop-memory/) | Keep the run state a repeating or long-running loop needs between iterations on disk |
-| [`mechanize`](skills/mechanize/) | Decide whether a step done by AI inference should become a deterministic tool instead |
-| [`memory-conventions`](skills/memory-conventions/) | Read and write durable agent memory in a personal Obsidian vault |
-| [`mine-transcripts`](skills/mine-transcripts/) | Mine your own agent transcripts for vocabulary that's a candidate for the next skill, judging what an extractor tool hands back |
-| [`notify`](skills/notify/) | Send a short message to a human on a configured outbound channel from the terminal |
-| [`obsidian`](skills/obsidian/) | Read, write, search, and manage notes in Obsidian vaults |
-| [`plan-parallel-execution`](skills/plan-parallel-execution/) | Turn a task list into groups several agents can execute concurrently without colliding |
-| [`prd`](skills/prd/) | Author or review a Product Requirements Document |
-| [`primer`](skills/primer/) | Orient in an unfamiliar codebase before starting work |
-| [`progressive-disclosure`](skills/progressive-disclosure/) | Load a large corpus the way an index is meant to be used — read the index, pull facts on demand, stop when there's enough |
-| [`prompt-corpus`](skills/prompt-corpus/) | Turn a transcript history into a queryable record of decisions |
-| [`refuse-invented-identity`](skills/refuse-invented-identity/) | Refuse and report unrecoverable when a recovery path cannot positively confirm the prior identity it is restoring |
-| [`research-the-limit`](skills/research-the-limit/) | Check a primary source before asserting a tool or system cannot do something |
-| [`safe-deletion`](skills/safe-deletion/) | Verify contents or state match their described purpose before deleting or killing anything |
-| [`sanity-check`](skills/sanity-check/) | Build a second-opinion reviewer prompt for high-cost reasoning |
-| [`spec`](skills/spec/) | Author or review a technical specification — architecture, interfaces, trade-offs |
-| [`spec-driven-development`](skills/spec-driven-development/) | Write a falsifiable acceptance criterion and its mutation check before writing any code |
-| [`supervised-lane-loop`](skills/supervised-lane-loop/) | Run a long-lived supervisor loop over one or more worker-agent lanes |
-| [`tdd`](skills/tdd/) | Red-green-refactor for code that has never worked yet |
-| [`test-in-the-consumer-context`](skills/test-in-the-consumer-context/) | Run a check where the thing that depends on it runs, before believing its verdict |
-| [`tmux`](skills/tmux/) | Operate tmux safely from an agent: pane targeting, verified input, recovery |
-| [`verify-the-instrument`](skills/verify-the-instrument/) | Check the measuring device before trusting what it reports |
-| [`wire-it-when-you-write-it`](skills/wire-it-when-you-write-it/) | Ship a mechanism and its caller in the same change, and add the check that fails when the caller disappears |
+Generated from 41 current skill bundles and the dated environment observation; do not hand-edit.
+Regenerate with `python3 scripts/reconcile_skills.py`; verify with `--check`.
+The [machine-readable manifest](docs/skills-reconciliation.json) names evidence and static audit locations.
+Installed observations: 2026-09-07; refresh explicitly, never interpret this as a live roster.
+`claude-user` in the manifest means the user-level Claude skills directory; host paths are omitted.
+Packaging PASS = no local coupling detected; FAIL = local/CLI assumptions require review. Web execution is unrun.
+Eval status reports existing evidence, not quality approval; missing external coverage remains unknown.
 
-Each skill's `description` frontmatter is the actual trigger contract —
-read the skill itself for exact wording and preconditions. This repository
-does not yet distinguish user-invoked from model-invoked skills anywhere a
-reader sees before opening `SKILL.md` — tracked as open in
-[`docs/skills-docs-proposal-161.md`](docs/skills-docs-proposal-161.md).
+| Skill | Scope | Installed observation | Upload audit | Eval evidence |
+|---|---|---|---|---|
+| [`adopt-or-build`](skills/adopt-or-build/) | public | linked-to-canonical | FAIL | [has-evals](skills/adopt-or-build/references/eval-result.md) |
+| [`ask-a-council`](skills/ask-a-council/) | public | linked-to-canonical | PASS | [has-evals](skills/ask-a-council/references/eval-result.md) |
+| [`close-the-loop`](skills/close-the-loop/) | public | linked-to-canonical | PASS | [has-evals](skills/close-the-loop/references/eval-result.md) |
+| [`create-skill`](skills/create-skill/) | public | linked-to-canonical | FAIL | [has-evals](skills/create-skill/references/eval-result.md) |
+| [`decide-by-variant`](skills/decide-by-variant/) | public | linked-to-canonical | PASS | [has-evals](skills/decide-by-variant/references/eval-result.md) |
+| [`derive-independently-then-compare`](skills/derive-independently-then-compare/) | public | linked-to-canonical | PASS | [has-evals](skills/derive-independently-then-compare/references/eval-result.md) |
+| [`determine-intent`](skills/determine-intent/) | public | linked-to-canonical | PASS | [has-evals](skills/determine-intent/references/eval-result.md) |
+| [`determine-signals`](skills/determine-signals/) | public | linked-to-canonical | PASS | [has-evals](skills/determine-signals/references/eval-result.md) |
+| [`devils-advocate`](skills/devils-advocate/) | public | linked-to-canonical | PASS | [has-evals](skills/devils-advocate/references/eval-result.md) |
+| [`dispatch-brief`](skills/dispatch-brief/) | public | linked-to-canonical | PASS | [has-evals](skills/dispatch-brief/references/eval-result.md) |
+| [`dispatching-subagents`](skills/dispatching-subagents/) | public | linked-to-canonical | PASS | [has-evals](skills/dispatching-subagents/references/eval-result.md) |
+| [`distill`](skills/distill/) | public | linked-to-canonical | PASS | [has-evals](skills/distill/references/eval-result.md) |
+| [`durable-fact-before-label`](skills/durable-fact-before-label/) | public | linked-to-canonical | PASS | [has-evals](skills/durable-fact-before-label/references/eval-result.md) |
+| [`failing-test-first`](skills/failing-test-first/) | public | linked-to-canonical | PASS | [has-evals](skills/failing-test-first/references/eval-result.md) |
+| [`github-cli`](skills/github-cli/) | public | linked-to-canonical | FAIL | [could-not-measure](skills/github-cli/references/eval-result.md) |
+| [`keep-me-honest`](skills/keep-me-honest/) | public | linked-to-canonical | PASS | [has-evals](skills/keep-me-honest/references/eval-result.md) |
+| [`linear`](skills/linear/) | public | linked-to-canonical | FAIL | [could-not-measure](skills/linear/references/eval-result.md) |
+| [`loop-contract`](skills/loop-contract/) | public | linked-to-canonical | PASS | [has-evals](skills/loop-contract/references/eval-result.md) |
+| [`loop-memory`](skills/loop-memory/) | public | linked-to-canonical | FAIL | [has-evals](skills/loop-memory/references/eval-result.md) |
+| [`mechanize`](skills/mechanize/) | public | linked-to-canonical | PASS | [has-evals](skills/mechanize/references/eval-result.md) |
+| [`memory-conventions`](skills/memory-conventions/) | public | linked-to-canonical | FAIL | [has-evals](skills/memory-conventions/references/eval-result.md) |
+| [`mine-transcripts`](skills/mine-transcripts/) | public | linked-to-canonical | FAIL | [has-evals](skills/mine-transcripts/references/eval-result.md) |
+| [`notify`](skills/notify/) | public | linked-to-canonical | FAIL | [has-evals](skills/notify/references/eval-result.md) |
+| [`obsidian`](skills/obsidian/) | public | linked-to-canonical | FAIL | [could-not-measure](skills/obsidian/references/eval-result.md) |
+| [`plan-parallel-execution`](skills/plan-parallel-execution/) | public | linked-to-canonical | PASS | [has-evals](skills/plan-parallel-execution/references/eval-result.md) |
+| [`prd`](skills/prd/) | public | linked-to-canonical | PASS | [has-evals](skills/prd/references/eval-result.md) |
+| [`primer`](skills/primer/) | public | linked-to-canonical | FAIL | [has-evals](skills/primer/references/eval-result.md) |
+| [`progressive-disclosure`](skills/progressive-disclosure/) | public | linked-to-canonical | PASS | [has-evals](skills/progressive-disclosure/references/eval-result.md) |
+| [`prompt-corpus`](skills/prompt-corpus/) | public | linked-to-canonical | FAIL | [has-evals](skills/prompt-corpus/references/eval-result.md) |
+| [`refuse-invented-identity`](skills/refuse-invented-identity/) | public | linked-to-canonical | PASS | [has-evals](skills/refuse-invented-identity/references/eval-result.md) |
+| [`research-the-limit`](skills/research-the-limit/) | public | linked-to-canonical | PASS | [has-evals](skills/research-the-limit/references/eval-result.md) |
+| [`safe-deletion`](skills/safe-deletion/) | public | linked-to-canonical | PASS | [has-evals](skills/safe-deletion/references/eval-result.md) |
+| [`sanity-check`](skills/sanity-check/) | public | linked-to-canonical | PASS | [has-evals](skills/sanity-check/references/eval-result.md) |
+| [`spec`](skills/spec/) | public | linked-to-canonical | PASS | [has-evals](skills/spec/references/eval-result.md) |
+| [`spec-driven-development`](skills/spec-driven-development/) | public | linked-to-canonical | PASS | [has-evals](skills/spec-driven-development/references/eval-result.md) |
+| [`supervised-lane-loop`](skills/supervised-lane-loop/) | public | linked-to-canonical | FAIL | [has-evals](skills/supervised-lane-loop/references/eval-result.md) |
+| [`tdd`](skills/tdd/) | public | linked-to-canonical | PASS | [has-evals](skills/tdd/references/eval-result.md) |
+| [`test-in-the-consumer-context`](skills/test-in-the-consumer-context/) | public | linked-to-canonical | PASS | [has-evals](skills/test-in-the-consumer-context/references/eval-result.md) |
+| [`tmux`](skills/tmux/) | public | divergent-or-unresolved-install | FAIL | [has-evals](skills/tmux/references/eval-result.md) |
+| [`verify-the-instrument`](skills/verify-the-instrument/) | public | linked-to-canonical | PASS | [has-evals](skills/verify-the-instrument/references/eval-result.md) |
+| [`wire-it-when-you-write-it`](skills/wire-it-when-you-write-it/) | public | linked-to-canonical | PASS | [has-evals](skills/wire-it-when-you-write-it/references/eval-result.md) |
+
+Private skills observed: 1; installed outside this public collection: 1. Private identities are excluded.
+
+<!-- generated-skills:end -->
 
 ## Where a skill belongs
 
