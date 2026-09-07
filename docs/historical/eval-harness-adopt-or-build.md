@@ -4,7 +4,7 @@
 had ever been done on the behavioural eval harness. `git grep` across `docs/` and
 `scripts/` for any prior-art name (in both this repo and `agent-evals`) returns
 nothing but the eval log for the `adopt-or-build` *skill itself* — the tool we
-spent the most weeks on (`docs/eval-harness-findings.md`'s six-obstacle taxonomy,
+spent the most weeks on (`docs/historical/eval-harness-findings.md`'s six-obstacle taxonomy,
 the cost-axis rewrite, the longitudinal design) never had its own first step
 applied to it. This document is that check, run properly: search before judging,
 license first, blast radius per component, a contract over a vendored dependency
@@ -32,7 +32,7 @@ Not the standard eval shape (`prompt → output → reference`). Ours is an
 **ablation**: run a real coding agent, with real tool access, twice — once with a
 skill on the context path, once without — on the identical task, and score the
 resulting *trajectory* (tool calls, files touched, ordering), not final text.
-`docs/eval-harness-findings.md` additionally establishes, from three independent
+`docs/historical/eval-harness-findings.md` additionally establishes, from three independent
 escalation trials (`create-skill`, `distill`, `loop-memory`), that the current
 instrument's real blind spot is **longitudinal**: a **cross-session** design —
 two genuinely separate agent processes, a structural memory wall between them,
@@ -71,8 +71,8 @@ not a second live run). None changes the picture below.
 demonstrates, or even gestures at a scenario spanning genuinely separate agent
 processes with a structural memory wall and pressure introduced after it. This
 is not a gap in the search — four separate research passes looked for it
-specifically and it is not there. The exact axis `docs/eval-harness-findings.md`
-and `docs/eval-longitudinal-design.md` argue is the current instrument's real
+specifically and it is not there. The exact axis `docs/historical/eval-harness-findings.md`
+and `docs/research/eval-longitudinal-design.md` argue is the current instrument's real
 blind spot, and that three hand-run trials already validated as worth pursuing,
 does not exist anywhere in the market as of this check.
 
@@ -283,7 +283,7 @@ What changes if component 2's recommendation is taken: the boundary does not
 need a bespoke runner underneath it. `baseline-equivalence`'s own composition
 — two separate `vally eval` invocations (two genuinely independent agent
 processes, by construction no shared context, exactly the structural wall
-`docs/eval-longitudinal-design.md` requires) joined by `vally compare`, with
+`docs/research/eval-longitudinal-design.md` requires) joined by `vally compare`, with
 `--work-dir` for the second invocation seeded from the first's own output
 artifacts — supplies the boundary as a thin driver script, not a new harness
 feature. This *lowers* the cost of generalizing the design without changing
@@ -324,7 +324,7 @@ belongs — no candidate, of eight checked, documents cross-session/memory-
 boundary support — but **not as a general harness feature yet**. One hand-run
 trial (`loop-memory`) supports the design; run it against one or two more of
 the remaining `clean no-discrimination` skills (`ask-a-council` or
-`sanity-check` first, per `docs/eval-longitudinal-design.md`'s own
+`sanity-check` first, per `docs/research/eval-longitudinal-design.md`'s own
 candidate-selection discipline) before generalizing it into a reusable
 `eval_skill.py` feature. Building the general feature on n=1 is the thing this
 document's own `devils-advocate` pass correctly caught as too early.
@@ -366,7 +366,7 @@ thin, even though the diagnostic work the objection asked for already
 exists.** The attack's premise — "pull the failure taxonomy behind the 74%
 figure before investing in more harness, in case the failure is scenario
 design, not harness capability" — is *already answered* in
-`docs/eval-harness-findings.md`, more thoroughly than the attack could see
+`docs/historical/eval-harness-findings.md`, more thoroughly than the attack could see
 from this document alone: three separate escalation trials each targeted a
 different rival hypothesis (`create-skill`: a leaked-fixture fix, ruling out
 "just a bad scenario" for that one skill; `distill`: three axes of
@@ -376,14 +376,14 @@ the axis nothing else had tested). So this is not an uninvestigated question.
 **But the attack is still right that the evidence for the *specific*
 recommendation — generalize the longitudinal design into a reusable harness
 feature — is thin**: exactly one hand-run trial supports it, and
-`docs/eval-harness-findings.md` says so itself ("does not settle the question
+`docs/historical/eval-harness-findings.md` says so itself ("does not settle the question
 for the remaining six"). **Recommendation sharpened**: do not generalize the
 longitudinal design into a reusable `eval_skill.py` feature yet. Run it
 hand-scored against one or two more of the six untested `clean
 no-discrimination` skills first (`ask-a-council` or `sanity-check` are the
 next-best candidates — neither has a self-diagnosed axis prediction pointing
 elsewhere the way `tdd`'s does toward scale/ambiguity) — the same discipline
-`docs/eval-longitudinal-design.md` itself already used to justify picking
+`docs/research/eval-longitudinal-design.md` itself already used to justify picking
 `loop-memory` first. Generalizing into a harness feature is the right call
 once two or three trials agree, not after one.
 

@@ -46,7 +46,7 @@ remains the way to install individual skills, and nothing here replaces it.
 
 Generated from 41 current skill bundles and the dated environment observation; do not hand-edit.
 Regenerate with `python3 scripts/reconcile_skills.py`; verify with `--check`.
-The [machine-readable manifest](docs/skills-reconciliation.json) names evidence and static audit locations.
+The [machine-readable manifest](state/skills-reconciliation.json) names evidence and static audit locations.
 Installed observations: 2026-09-07; refresh explicitly, never interpret this as a live roster.
 `claude-user` in the manifest means the user-level Claude skills directory; host paths are omitted.
 Packaging PASS = no local coupling detected; FAIL = local/CLI assumptions require review. Web execution is unrun.

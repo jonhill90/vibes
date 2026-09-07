@@ -7,7 +7,7 @@ estate:4).
 Why this exists: the #265-#269 eval lineage delivers skill content to
 Arm A via a prompt instruction ("Arm A only: read skills/<name>/SKILL.md
 before starting"), deliberately NOT via the Skill tool, to dodge a
-DIFFERENT already-known failure mode (`docs/eval-harness-findings.md`'s
+DIFFERENT already-known failure mode (`docs/historical/eval-harness-findings.md`'s
 "Cause D" — the with-skill arm silently never receiving the skill via
 Skill/ToolSearch discovery). But nothing logged whether the model
 actually complied with that instruction: `$STUB_LOG` records only the
@@ -68,7 +68,7 @@ Usage as a library:
 
 Usage as a CLI, to populate eval-result.md's structured field by hand
 (this harness's own passes are hand-run, not auto-wired — see
-`docs/eval-harness-findings.md`'s own "hand-scored, not a general harness
+`docs/historical/eval-harness-findings.md`'s own "hand-scored, not a general harness
 feature" precedent for the longitudinal design):
     $ python3 scripts/skill_read_confirmed.py <transcript.jsonl> <skill_path>
     true

@@ -87,7 +87,7 @@ resulting files are checked for real duplicate sequence numbers.
   list's own header — handing the no-skill arm the answer. Two trials
   against that leaked version were discarded as worthless (both arms
   trivially matched the stated rule). Caught by re-reading the actual
-  prompt text, the same discipline `docs/eval-harness-findings.md`
+  prompt text, the same discipline `docs/historical/eval-harness-findings.md`
   documents for `create-skill`'s own leaked fixture. Fixed: both arms
   are now told only to get the five tasks done quickly, with no hint a
   collision exists.
@@ -122,7 +122,7 @@ leaked instruction left no pressure at all pushing either arm away from
 noticing an obvious-once-you-read-it collision — a capable coding agent's
 own default habit (read the task prose, don't run two writers on one file
 at once) already matches the skill's advice with nothing to choose
-between, the same "habit skill" pattern `docs/eval-harness-findings.md`
+between, the same "habit skill" pattern `docs/historical/eval-harness-findings.md`
 and #248 documented for prose-scored skills, now confirmed to hold for a
 genuinely execution-based, mechanically countable scenario too.
 
@@ -135,7 +135,7 @@ targets the skill's own claimed trade-off, not merely "harder" or
 "under time pressure" in general. `progressive-disclosure`'s success was
 not because it counted something real; `distill`'s and `create-skill`'s
 escalations also ran real, evidenced trials and still found nothing
-(`docs/eval-harness-findings.md` §3). It discriminated because the
+(`docs/historical/eval-harness-findings.md` §3). It discriminated because the
 specific pressure chosen (urgency toward exhaustive reading) was the
 mirror image of the skill's own recommendation (read the index, not
 everything). Building a countable scenario is necessary but not

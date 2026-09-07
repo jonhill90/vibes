@@ -89,7 +89,7 @@ resolve differently, neither to a confirmed value:
   ... stashed") delivers the skill via the harness's native Skill-tool
   discovery, not the prompt-instruction pattern
   (`skill_read_confirmed.py`'s own docstring, and the standing
-  requirement in `docs/eval-harness-findings.md`) that this field and
+  requirement in `docs/historical/eval-harness-findings.md`) that this field and
   tool exist to check. Running the tool against the real transcript
   (`python3 scripts/skill_read_confirmed.py <transcript> skills/tmux/SKILL.md`)
   returns `false` — legible transcript, no `Read` tool_use targeting

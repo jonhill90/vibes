@@ -20,7 +20,7 @@ the evidence file for how that was caught and re-run).
 not independently verifiable from the repository -- `agent-evals` PR #25
 bundled `prediction.md`, fixtures, transcripts, and results into one
 squashed commit that postdates all three transcripts' internal
-timestamps. See `docs/eval-ask-a-council-266.md` for the full accounting.
+timestamps. See `docs/historical/eval-ask-a-council-266.md` for the full accounting.
 The verdict below does not depend on prediction timing (it rests on the
 WITHOUT-arm contamination catch and the both-arms-caught-the-citation
 finding, both independently verified against the transcripts), but the

@@ -24,7 +24,7 @@ this public repo cannot open it.
 **arm_a_skill_read_confirmed: unknown** (skills#280, retroactive pass,
 `scripts/skill_read_confirmed.py`). This scenario delivered the skill to
 Arm A by prompt instruction, the exact class the standing requirement in
-`docs/eval-harness-findings.md` covers. `skills#273`'s own PR body
+`docs/historical/eval-harness-findings.md` covers. `skills#273`'s own PR body
 already recorded that retrofit here was skipped because "their real
 transcripts weren't available in this environment" — re-checked now
 rather than inherited: searched `~/.claude/projects/**/*.jsonl` for any

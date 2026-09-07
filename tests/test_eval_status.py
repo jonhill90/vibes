@@ -753,7 +753,7 @@ class TestConflictDemonstration(unittest.TestCase):
         test class exists to prove is load-bearing, not decoration."""
         repo = Path(tempfile.mkdtemp())
         self._run(repo, "init", "-q", "-b", "main")
-        (repo / "docs" / "eval-log").mkdir(parents=True)
+        (repo / "state" / "eval-log").mkdir(parents=True)
         real_gitattributes = REPO_ROOT / ".gitattributes"
         (repo / ".gitattributes").write_text(
             real_gitattributes.read_text(encoding="utf-8"), encoding="utf-8")
@@ -766,7 +766,7 @@ class TestConflictDemonstration(unittest.TestCase):
         # that never committed anything under docs/eval-log/ can leave it
         # missing on disk, so this recreates it every time rather than
         # trusting _init_repo's own mkdir to have survived a branch switch.
-        path = repo / "docs" / "eval-log" / f"{skill}.jsonl"
+        path = repo / "state" / "eval-log" / f"{skill}.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(entry, sort_keys=True) + "\n")
@@ -779,8 +779,8 @@ class TestConflictDemonstration(unittest.TestCase):
         (#239/#240/#243)."""
         repo = self._init_repo()
         self.addCleanup(shutil.rmtree, repo, ignore_errors=True)
-        base_x = repo / "docs" / "eval-log" / "skill-x.jsonl"
-        base_y = repo / "docs" / "eval-log" / "skill-y.jsonl"
+        base_x = repo / "state" / "eval-log" / "skill-x.jsonl"
+        base_y = repo / "state" / "eval-log" / "skill-y.jsonl"
 
         self._run(repo, "checkout", "-q", "-b", "lane-a")
         self._write_observation(repo, "skill-x", {
@@ -828,7 +828,7 @@ class TestConflictDemonstration(unittest.TestCase):
         order."""
         repo = self._init_repo()
         self.addCleanup(shutil.rmtree, repo, ignore_errors=True)
-        log = repo / "docs" / "eval-log" / "skill-z.jsonl"
+        log = repo / "state" / "eval-log" / "skill-z.jsonl"
 
         self._run(repo, "checkout", "-q", "-b", "lane-a")
         self._write_observation(repo, "skill-z", {

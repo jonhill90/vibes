@@ -1,7 +1,7 @@
 # Why this skill is `unevaluated`, not `could_not_measure`
 
 Recorded 2026-08-23, jonhill90/skills#230's evaluation loop (pass 16,
-following pass 15's `docs/eval-pass15-remaining-four.md`). This file
+following pass 15's `docs/historical/eval-pass15-remaining-four.md`). This file
 re-verifies that pass's finding live against a fresh checkout rather
 than citing it, and narrows it to `github-cli` specifically now that
 `tmux` (the other member of pass 15's "remaining four") has since been

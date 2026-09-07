@@ -253,7 +253,7 @@ def build(root, snapshot):
 def render(manifest):
     rows=manifest['skills']; lines=[START,'',f"Generated from {len(rows)} current skill bundles and the dated environment observation; do not hand-edit.",
         'Regenerate with `python3 scripts/reconcile_skills.py`; verify with `--check`.',
-        'The [machine-readable manifest](docs/skills-reconciliation.json) names evidence and static audit locations.',
+        'The [machine-readable manifest](state/skills-reconciliation.json) names evidence and static audit locations.',
         f"Installed observations: {manifest['environment_observed_on']}; refresh explicitly, never interpret this as a live roster.",
         '`claude-user` in the manifest means the user-level Claude skills directory; host paths are omitted.',
         'Packaging PASS = no local coupling detected; FAIL = local/CLI assumptions require review. Web execution is unrun.',
@@ -273,7 +273,7 @@ def write_outputs(root, manifest, check=False):
     if text.count(START)!=1 or text.count(END)!=1:
         raise ValueError('README must have exactly one generated-skills section')
     start=text.index(START);end=text.index(END)+len(END)
-    outputs={root/'docs/skills-reconciliation.json':encoded(manifest),readme:text[:start]+render(manifest)+text[end:]}
+    outputs={root/'state/skills-reconciliation.json':encoded(manifest),readme:text[:start]+render(manifest)+text[end:]}
     stale=[]
     for path,value in outputs.items():
         if not path.exists() or path.read_text()!=value:
@@ -294,7 +294,7 @@ def main():
     parser.add_argument('--observed-on')
     parser.add_argument('--private-report',type=Path)
     args=parser.parse_args()
-    observation=REPO/'docs/skills-environment.json'
+    observation=REPO/'state/skills-environment.json'
     if args.capture_private is not None:
         if args.check or not all([args.installed,args.observed_on,args.private_report]):
             parser.error('capture requires --installed, --observed-on and --private-report; not --check')

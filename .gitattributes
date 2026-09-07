@@ -1,6 +1,6 @@
-# docs/eval-log/*.jsonl -- jonhill90/skills#230's own append-only,
+# state/eval-log/*.jsonl -- jonhill90/skills#230's own append-only,
 # one-file-per-skill eval observation log (agent-b3.md's fix for
-# docs/eval-status.json generating a merge conflict per PR, three times
+# state/eval-status.json generating a merge conflict per PR, three times
 # in one night: #239, #240, #243).
 #
 # merge=union (git's own built-in driver) is load-bearing, not decoration
@@ -14,4 +14,4 @@
 # exact "two independent evaluations of the same skill must both survive"
 # requirement this fix exists to satisfy, checked with
 # tests/test_eval_status.py's own TestConflictDemonstration, not asserted.
-docs/eval-log/*.jsonl merge=union
+state/eval-log/*.jsonl merge=union
