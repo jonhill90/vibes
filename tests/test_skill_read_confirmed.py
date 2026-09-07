@@ -189,7 +189,7 @@ class SkillReadConfirmedTests(unittest.TestCase):
 
     def test_actions_log_style_self_report_is_never_consulted(self):
         """manifest.json's own actions_log is explicitly untrusted by this
-        harness (docs/eval-harness-findings.md) -- confirm this function
+        harness (docs/historical/eval-harness-findings.md) -- confirm this function
         doesn't accidentally read anything shaped like it out of the
         transcript itself."""
         transcript = _write_transcript(

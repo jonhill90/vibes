@@ -1,7 +1,7 @@
 # Why this skill is `unevaluated`, not `could_not_measure`
 
 Recorded 2026-08-23, jonhill90/skills#230's evaluation loop (pass 16,
-following pass 15's `docs/eval-pass15-remaining-four.md`). Re-verified
+following pass 15's `docs/historical/eval-pass15-remaining-four.md`). Re-verified
 live against a fresh checkout rather than cited from that pass.
 
 ## What was re-checked live, today

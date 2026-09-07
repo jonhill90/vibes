@@ -36,7 +36,7 @@ files directly rather than trusting that summary:
   read.
 
 **So the actual count is 3, not 4** (`github-cli`, `linear`, `obsidian`),
-and this matches `docs/eval-instrument-diagnosis-2026-08-23.md`'s own
+and this matches `docs/historical/eval-instrument-diagnosis-2026-08-23.md`'s own
 "sixth cause" section exactly — it names `github-cli`, `linear`, `obsidian`,
 `tmux` (not `notify`) as the four "arm-wiring cannot be confirmed" records.
 `tmux` has since been reclassified as `blindness` and re-run (this lane,
@@ -116,7 +116,7 @@ a gap larger than one lane rather than paper over it.
 - Did: read all four "undetermined" records directly, rather than trusting
   skills#287's own summary of them, and found the summary overstated by
   one.
-- Did: confirm, by reading `docs/eval-instrument-diagnosis-2026-08-23.md`
+- Did: confirm, by reading `docs/historical/eval-instrument-diagnosis-2026-08-23.md`
   and `scripts/skill_read_confirmed.py` directly, exactly why `github-cli`/
   `linear`/`obsidian` still read `unknown` after the retrofit, and that no
   further retrofit pass can change that outcome.

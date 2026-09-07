@@ -90,7 +90,7 @@ class Reconciliation(unittest.TestCase):
 
     def test_render_deterministic_and_stale_check_fails(self):
         with tempfile.TemporaryDirectory() as d:
-            root=pathlib.Path(d);self.skill(root,'visible');(root/'docs').mkdir()
+            root=pathlib.Path(d);self.skill(root,'visible');(root/'docs').mkdir();(root/'state').mkdir()
             snapshot={'observed_on':'2026-09-07','counts':{},'public_installs':{}}
             a=m.build(root,snapshot);self.assertEqual(a,m.build(root,snapshot))
             (root/'README.md').write_text('# Test\n\n'+m.START+'\n'+m.END+'\n')

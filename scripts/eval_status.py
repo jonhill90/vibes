@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read and check docs/eval-status.json — jonhill90/skills#230's own
+"""Read and check state/eval-status.json — jonhill90/skills#230's own
 machine-readable record of which skills have been run through the
 keep/improve/rename/drop harness (agent-evals, private, not published
 here) and what each run found.
@@ -26,11 +26,11 @@ Exit codes:
      rule (unevaluated <-> date/evidence both null; anything else <->
      both set, evidence pointing at a real file) holds for every entry.
   1  drift found -- printed as findings, one per line.
-  2  could not check at all -- docs/eval-status.json missing or not
+  2  could not check at all -- state/eval-status.json missing or not
      valid JSON, or skills/ not found. Never read as "consistent."
 
 --record (jonhill90/skills#230, estate-loop/agent-b2.md's own rule: "Update
-docs/eval-status.json through scripts/eval_status.py, never by hand"): the
+state/eval-status.json through scripts/eval_status.py, never by hand"): the
 one write path this record has. Every prior pass hand-edited the JSON
 directly -- fine for a handful of entries, but a hand edit cannot be
 stopped from writing a malformed one (a verdict this file wouldn't accept,
@@ -40,18 +40,18 @@ the file, so a --record call can never produce a record its own `check()`
 would then reject. See do_record's own docstring for the exact contract.
 
 STORAGE, since agent-b3.md's own fix (three PRs -- #239, #240, #243 --
-conflicted on this one shared file the same night): docs/eval-status.json
+conflicted on this one shared file the same night): state/eval-status.json
 is no longer hand-authored data. It is GENERATED, by this script, from
-docs/eval-log/<skill>.jsonl -- one APPEND-ONLY file per skill, one JSON
+state/eval-log/<skill>.jsonl -- one APPEND-ONLY file per skill, one JSON
 line per observation ({"verdict", "date", "evidence", "source"}, "source"
 naming the pass/PR that produced it, the attribution the single-record
 shape had no room for). A pass that evaluates skill X now touches only
-docs/eval-log/X.jsonl -- two passes over disjoint skills touch disjoint
+state/eval-log/X.jsonl -- two passes over disjoint skills touch disjoint
 files and cannot conflict at the git level at all; two independent
 evaluations of the SAME skill both survive as separate lines in that
 skill's own log, distinguishable by --history, rather than the second one
 silently overwriting the first the way a single-record entry always did.
-docs/eval-status.json itself keeps its EXACT pre-existing shape ($comment
+state/eval-status.json itself keeps its EXACT pre-existing shape ($comment
 + one current entry per skill, no "source" field) for every reader that
 already depends on it (`check()`, --summary, --unevaluated, downstream
 tooling) -- it is regenerated to show each skill's LATEST observation
@@ -95,9 +95,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_skill_install  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
-RECORD_PATH = REPO / "docs" / "eval-status.json"
+# P12 (run/iteration-queue.md): relocated from docs/eval-status.json and
+# docs/eval-log/ -- state, not documentation. docs/eval-status.json is
+# kept as a symlink to state/eval-status.json for agent-estate's TUI,
+# which hardcodes that exact relative path as a Go constant
+# (src/tui/cmd/estate/skills.go's skillsEvalStatusRelPath) -- this
+# module writes the real file at its new canonical location; the
+# symlink makes the old path keep resolving for that external reader
+# without this repo hand-editing a sibling repo's source in this PR.
+RECORD_PATH = REPO / "state" / "eval-status.json"
 SKILLS_ROOT = REPO / "skills"
-EVAL_LOG_DIR = REPO / "docs" / "eval-log"
+EVAL_LOG_DIR = REPO / "state" / "eval-log"
 # Same pattern as REPO/RECORD_PATH/SKILLS_ROOT/EVAL_LOG_DIR above: a
 # module-level default, monkeypatchable by tests that sandbox the whole
 # record in a tmp dir (see tests/test_eval_status.py's own
@@ -116,7 +124,7 @@ class RecordError(RuntimeError):
 
 
 def load_full_doc(path: Path) -> dict:
-    """The whole parsed docs/eval-status.json -- $comment and all. Kept
+    """The whole parsed state/eval-status.json -- $comment and all. Kept
     separate from load_record (below, which most callers want: just the
     skills mapping) because --record needs to rewrite the file and must
     not lose the $comment or any other top-level key while doing it."""
@@ -153,12 +161,12 @@ def dump_record(doc: dict, path: Path) -> None:
 
 
 def log_path(skill: str) -> Path:
-    """docs/eval-log/<skill>.jsonl -- the ONE file a pass evaluating
+    """state/eval-log/<skill>.jsonl -- the ONE file a pass evaluating
     `skill` ever writes to. Two passes over disjoint skills touch two
     disjoint files here and cannot conflict at the git level; this is the
     property that makes this storage shape the fix for the file-per-PR
     conflict agent-b3.md's own brief measured (three PRs, one night, all
-    on the old single docs/eval-status.json)."""
+    on the old single state/eval-status.json)."""
     return EVAL_LOG_DIR / f"{skill}.jsonl"
 
 
@@ -182,7 +190,7 @@ def read_observations(skill: str) -> list[dict]:
 
 def append_observation(skill: str, entry: dict) -> None:
     """Appends entry as one JSON line to skill's own log file -- the ONLY
-    write this module performs against docs/eval-log/. Never rewrites or
+    write this module performs against state/eval-log/. Never rewrites or
     reorders a line already there: two independent evaluations of the
     same skill both survive as two separate lines, not one overwriting
     the other, which is exactly what the single-record shape could not
@@ -210,8 +218,8 @@ def latest_observation(observations: list[dict]) -> dict | None:
 
 
 def regenerate_record(comment: str, skill_names: set[str]) -> dict:
-    """Rebuilds the FULL docs/eval-status.json doc ($comment + skills)
-    from every skill's own log file under docs/eval-log/ -- the
+    """Rebuilds the FULL state/eval-status.json doc ($comment + skills)
+    from every skill's own log file under state/eval-log/ -- the
     "mechanical, not manual" regeneration agent-b3.md's own brief
     requires. Each skill's entry is its LATEST observation's own
     verdict/date/evidence, in the EXACT shape the record has always had
@@ -238,8 +246,8 @@ def do_record(skill: str, verdict: str | None, evidence: str | None, date: str |
               source: str | None, skip_install_check: str | None = None,
               claude_skills_dir: Path | None = None,
               arm_a_skill_read_confirmed: str | None = None) -> int:
-    """Appends ONE observation to docs/eval-log/<skill>.jsonl, then
-    regenerates docs/eval-status.json from every skill's own log -- the
+    """Appends ONE observation to state/eval-log/<skill>.jsonl, then
+    regenerates state/eval-status.json from every skill's own log -- the
     one path --record exposes, and the one this script wants every future
     pass to use instead of a hand edit (see this module's own docstring).
     Writing only ever APPENDS to skill's own log file; an earlier
@@ -463,9 +471,9 @@ def check(record: dict, skill_names: set[str]) -> list[str]:
 
 def find_log_drift(record: dict, skill_names: set[str]) -> list[str]:
     """Catches the exact failure agent-b3.md's PR comment measured live on
-    PR #245: a git merge can leave docs/eval-status.json's TEXT looking
+    PR #245: a git merge can leave state/eval-status.json's TEXT looking
     correct (because the merge happened to land in a region neither side
-    touched) while the skill's own docs/eval-log/<skill>.jsonl -- the
+    touched) while the skill's own state/eval-log/<skill>.jsonl -- the
     actual source of truth this record is regenerated from -- was never
     updated to match. GitHub reported that PR MERGEABLE; nothing in
     check() caught the drift, because check() only validates the record
@@ -483,7 +491,7 @@ def find_log_drift(record: dict, skill_names: set[str]) -> list[str]:
     Deliberately a SEPARATE function from check(), not folded into it:
     check()'s own test suite (TestCheck) exercises it against synthetic
     records for skill names that do not exist in the real
-    docs/eval-log/ -- folding a hard dependency on the real log directory
+    state/eval-log/ -- folding a hard dependency on the real log directory
     into check() itself would make every one of those tests fail for a
     reason unrelated to what they test. main()'s default (no-flag) path
     calls both, against the real record and the real logs."""
@@ -498,7 +506,7 @@ def find_log_drift(record: dict, skill_names: set[str]) -> list[str]:
         if latest is None:
             if verdict not in (None, "unevaluated"):
                 findings.append(
-                    f"{name}: record shows verdict {verdict!r} but docs/eval-log/{name}.jsonl "
+                    f"{name}: record shows verdict {verdict!r} but state/eval-log/{name}.jsonl "
                     "has NO observations -- the generated record does not match its own source "
                     "of truth (a merge likely landed a regenerated file without the log entry "
                     "that backs it -- re-run --record, or regenerate from the logs, before this "
@@ -509,9 +517,9 @@ def find_log_drift(record: dict, skill_names: set[str]) -> list[str]:
         if (verdict, date, evidence) != (latest["verdict"], latest["date"], latest["evidence"]):
             findings.append(
                 f"{name}: record shows {verdict!r}/{date!r}/{evidence!r} but "
-                f"docs/eval-log/{name}.jsonl's own latest observation is "
+                f"state/eval-log/{name}.jsonl's own latest observation is "
                 f"{latest['verdict']!r}/{latest['date']!r}/{latest['evidence']!r} -- "
-                "regenerate docs/eval-status.json from the logs"
+                "regenerate state/eval-status.json from the logs"
             )
     return findings
 
@@ -525,8 +533,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--summary", action="store_true",
                      help="print a count per verdict and exit")
     ap.add_argument("--record", metavar="SKILL",
-                     help="append an observation for SKILL to docs/eval-log/SKILL.jsonl "
-                          "and regenerate docs/eval-status.json -- the only supported "
+                     help="append an observation for SKILL to state/eval-log/SKILL.jsonl "
+                          "and regenerate state/eval-status.json -- the only supported "
                           "write path for either, requires --verdict, --evidence and --source")
     ap.add_argument("--verdict", choices=sorted(RECORDABLE_VERDICTS),
                      help="verdict to record (with --record)")
