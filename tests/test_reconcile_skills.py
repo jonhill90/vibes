@@ -45,6 +45,19 @@ class Reconciliation(unittest.TestCase):
             self.assertFalse(detail['skills'][0]['repo_copies_identical'])
             self.assertIsNone(m.build(pub,observation)['skills'][0]['canonical_home'])
 
+    def test_installed_only_home_uses_explicit_installer_provenance(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d);pub=root/'public';private=root/'private';installed=root/'installed';installed.mkdir()
+            self.skill(pub,'visible');(private/'skills').mkdir(parents=True)
+            foreign=self.skill(root/'upstream','foreign-canary');(installed/'foreign-canary').symlink_to(foreign)
+            lock=root/'lock.json';lock.write_text(json.dumps({'skills':{'foreign-canary':{'source':'upstream/foreign-canary','sourceType':'github','sourceUrl':'https://github.com/upstream/foreign-canary.git'}}}))
+            observation,detail=m.capture(pub,private,installed,'2026-09-07',lock)
+            self.assertEqual(observation['counts']['unresolved_installed'],0)
+            self.assertEqual(observation['counts']['third_party_installed'],1)
+            row=next(r for r in detail['skills'] if r['name']=='foreign-canary')
+            self.assertEqual(row['canonical_home'],'https://github.com/upstream/foreign-canary.git')
+            self.assertNotIn('foreign-canary',json.dumps(observation))
+
     def test_eval_blindness_not_promoted_to_has_evals(self):
         with tempfile.TemporaryDirectory() as d:
             root=pathlib.Path(d);p=self.skill(root,'visible');(p/'references').mkdir()

@@ -96,7 +96,7 @@ Eval status reports existing evidence, not quality approval; missing external co
 | [`verify-the-instrument`](skills/verify-the-instrument/) | public | linked-to-canonical | PASS | [has-evals](skills/verify-the-instrument/references/eval-result.md) |
 | [`wire-it-when-you-write-it`](skills/wire-it-when-you-write-it/) | public | linked-to-canonical | PASS | [has-evals](skills/wire-it-when-you-write-it/references/eval-result.md) |
 
-Private skills observed: 1; installed outside this public collection: 1. Private identities are excluded.
+Private skills observed: 1; installed outside this public collection: 1. Private identities are excluded. Installer-attributed third-party entries: 1; unresolved installed homes: 0.
 
 <!-- generated-skills:end -->
 

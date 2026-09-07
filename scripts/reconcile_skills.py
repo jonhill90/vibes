@@ -54,13 +54,19 @@ def fingerprints(directory):
             'files':len(records)}
 
 
-def capture(root, private_root, installed_root, observed_on):
+def capture(root, private_root, installed_root, observed_on, install_lock=None):
     public=discover(root/'skills')
     if public is None:
         raise ValueError('public skills directory unavailable')
     private=discover(private_root/'skills')
     installed=discover(installed_root)
     pvt=private or {}; ins=installed or {}
+    lock={}
+    if install_lock is not None:
+        try:
+            lock=json.loads(install_lock.read_text()).get('skills',{})
+        except (OSError,ValueError):
+            lock={}
     details=[]; observations={}
     for name in sorted(set(public)|set(pvt)|set(ins)):
         homes=[]
@@ -89,6 +95,16 @@ def capture(root, private_root, installed_root, observed_on):
                 'authorship':authorship(root if name in public else private_root,Path(canonical)) if canonical else {'class':'unknown'},
                 'eval':eval_status(Path(canonical)) if canonical else {'status':'could-not-measure','reason':'No unique accessible home'},
                 'packaging':packaging(Path(canonical)) if canonical else {'status':'could-not-measure','reason':'No unique accessible home'}}
+        if not homes and install and name in lock:
+            source=lock[name]
+            url=source.get('sourceUrl','')
+            if source.get('sourceType')=='github' and re.fullmatch(r'https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',url):
+                detail.update(canonical_home=url,home_state='unique-from-installer-lock',
+                              scope='public (provisional upstream distribution; usage scope unverified)',
+                              authorship={'class':'jon-or-agent-attributed' if source.get('source','').startswith('jonhill90/') else 'third-party',
+                                          'basis':'Explicit installer provenance; upstream bytes not independently fetched.'},
+                              installer_provenance=source,
+                              eval=eval_status(install),packaging=packaging(install))
         details.append(detail)
         if name in public:
             # Strict allowlist: never serialize a private name, path, or hash.
@@ -98,7 +114,9 @@ def capture(root, private_root, installed_root, observed_on):
     counts={'public_skills':len(public),'private_skills':len(private) if private is not None else None,
             'installed_skills':len(installed) if installed is not None else None,
             'installed_outside_public':len(set(ins)-set(public)) if installed is not None else None,
-            'repo_duplicate_names':len(set(public)&set(pvt)) if private is not None else None}
+            'repo_duplicate_names':len(set(public)&set(pvt)) if private is not None else None,
+            'third_party_installed':sum(d['authorship'].get('class')=='third-party' and d['installed_where'] is not None for d in details) if installed is not None else None,
+            'unresolved_installed':sum(d['home_state'] in {'unresolved','ambiguous'} and d['installed_where'] is not None for d in details) if installed is not None else None}
     return {'observed_on':observed_on,'counts':counts,'public_installs':observations}, {'observed_on':observed_on,'counts':counts,'skills':details}
 
 
@@ -179,7 +197,7 @@ def build(root, snapshot):
                      'hashes':fingerprints(skill),'packaging':packaging(skill),'eval':eval_status(skill)})
     return {'schema':1,'generated_by':'scripts/reconcile_skills.py',
             'environment_observed_on':snapshot.get('observed_on') if re.fullmatch(r'\d{4}-\d{2}-\d{2}',str(snapshot.get('observed_on',''))) else 'could-not-measure',
-            'environment_counts':{k:v if type(v) is int else None for k,v in snapshot.get('counts',{}).items() if k in {'public_skills','private_skills','installed_skills','installed_outside_public','repo_duplicate_names'}},'skills':rows}
+            'environment_counts':{k:v if type(v) is int else None for k,v in snapshot.get('counts',{}).items() if k in {'public_skills','private_skills','installed_skills','installed_outside_public','repo_duplicate_names','third_party_installed','unresolved_installed'}},'skills':rows}
 
 
 def render(manifest):
@@ -196,7 +214,7 @@ def render(manifest):
         if ev.get('evidence'):label=f"[{label}]({ev['evidence']})"
         lines.append(f"| [`{row['name']}`](skills/{row['name']}/) | {row['scope']} | {row['installed']['state']} | {row['packaging']['status']} | {label} |")
     counts=manifest['environment_counts']
-    lines+=['',f"Private skills observed: {counts.get('private_skills') if counts.get('private_skills') is not None else 'could-not-measure'}; installed outside this public collection: {counts.get('installed_outside_public') if counts.get('installed_outside_public') is not None else 'could-not-measure'}. Private identities are excluded.", '',END]
+    lines+=['',f"Private skills observed: {counts.get('private_skills') if counts.get('private_skills') is not None else 'could-not-measure'}; installed outside this public collection: {counts.get('installed_outside_public') if counts.get('installed_outside_public') is not None else 'could-not-measure'}. Private identities are excluded. Installer-attributed third-party entries: {counts.get('third_party_installed') if counts.get('third_party_installed') is not None else 'could-not-measure'}; unresolved installed homes: {counts.get('unresolved_installed') if counts.get('unresolved_installed') is not None else 'could-not-measure'}.", '',END]
     return '\n'.join(lines)
 
 
@@ -222,6 +240,7 @@ def main():
     parser.add_argument('--check',action='store_true')
     parser.add_argument('--capture-private',type=Path)
     parser.add_argument('--installed',type=Path)
+    parser.add_argument('--install-lock',type=Path,help='optional installer provenance, inspected only during capture')
     parser.add_argument('--observed-on')
     parser.add_argument('--private-report',type=Path)
     args=parser.parse_args()
@@ -231,7 +250,7 @@ def main():
             parser.error('capture requires --installed, --observed-on and --private-report; not --check')
         if args.private_report.resolve().is_relative_to(REPO.resolve()):
             parser.error('private report must be outside the public repository')
-        snapshot,detail=capture(REPO,args.capture_private,args.installed,args.observed_on)
+        snapshot,detail=capture(REPO,args.capture_private,args.installed,args.observed_on,args.install_lock)
         args.private_report.write_text(encoded(detail));args.private_report.chmod(0o600)
         observation.write_text(encoded(snapshot))
     else:

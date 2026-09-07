@@ -4,7 +4,9 @@
     "installed_skills": 42,
     "private_skills": 1,
     "public_skills": 41,
-    "repo_duplicate_names": 0
+    "repo_duplicate_names": 0,
+    "third_party_installed": 1,
+    "unresolved_installed": 0
   },
   "environment_observed_on": "2026-09-07",
   "generated_by": "scripts/reconcile_skills.py",
