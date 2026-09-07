@@ -67,7 +67,7 @@ def capture(root, private_root, installed_root, observed_on, install_lock=None):
             lock=json.loads(install_lock.read_text()).get('skills',{})
         except (OSError,ValueError):
             lock={}
-    details=[]; observations={}
+    details=[]; observations={}; install_states={}
     for name in sorted(set(public)|set(pvt)|set(ins)):
         homes=[]
         for label,repo,skills in [('public',root,public),('private',private_root,pvt)]:
@@ -88,6 +88,7 @@ def capture(root, private_root, installed_root, observed_on, install_lock=None):
                 state='identical-installed-copy'
             else:
                 state='divergent-or-unresolved-install'
+            install_states[name]=state
         detail={'name':name,'canonical_home':canonical,'home_state':home_state,'homes':homes,
                 'installed_where':str(install) if install else None,'install_state':state,
                 'installed_hashes':actual,'repo_copies_identical':len(homes)>1 and len({h['bundle_sha256'] for h in homes})==1,
@@ -113,10 +114,59 @@ def capture(root, private_root, installed_root, observed_on, install_lock=None):
                                 'repo_home_count':len(homes) if private is not None else None}
     counts={'public_skills':len(public),'private_skills':len(private) if private is not None else None,
             'installed_skills':len(installed) if installed is not None else None,
-            'installed_outside_public':len(set(ins)-set(public)) if installed is not None else None,
+            # Counted by RESOLVED install state, not by name presence in the
+            # public set: a name that exists in both the public repo and the
+            # installed tree can still resolve to a different physical
+            # location (a same-named install pointed elsewhere, e.g. a
+            # private overlay) -- 'linked-to-canonical' is the only state
+            # that means the install actually resolves into the public repo.
+            # `set(ins)-set(public)` (the prior formula) missed exactly this
+            # case: a same-named divergent install was invisible to it.
+            'installed_outside_public':sum(1 for s in install_states.values() if s!='linked-to-canonical') if installed is not None else None,
             'repo_duplicate_names':len(set(public)&set(pvt)) if private is not None else None,
             'third_party_installed':sum(d['authorship'].get('class')=='third-party' and d['installed_where'] is not None for d in details) if installed is not None else None,
             'unresolved_installed':sum(d['home_state'] in {'unresolved','ambiguous'} and d['installed_where'] is not None for d in details) if installed is not None else None}
+    if installed is not None:
+        # Independent recount, deliberately NOT reusing install_states or the
+        # formula above: walks the actual installed entries and resolves
+        # each one against BOTH known homes (public and, when available,
+        # private) BY GIT IDENTITY, not by literal path -- `root` may
+        # itself be a worktree of the public repo (as it is for every
+        # dispatched reviewer/fixer in this run), so a naive path-prefix
+        # check against `root/'skills'` would wrongly count every install
+        # as "outside" the moment `root` isn't the operator's own primary
+        # checkout. `repository_identity` is the same git-common-dir
+        # comparison the main matching logic (above) already uses for
+        # exactly this reason. "Outside public" means genuinely divergent
+        # or unresolved -- a private-repo-linked install is NOT "outside
+        # public" in the sense this count means (it correctly resolves to
+        # ITS OWN recognized home, just not the public one), matching
+        # 'linked-to-canonical' state's own existing, tested semantics. A
+        # future edit that breaks the formula above -- or this check --
+        # cannot silently drift the aggregate from what the filesystem
+        # actually says again (the P7-class defect this fixes).
+        known_roots=[repo/'skills' for repo in (root,private_root) if repo is not None]
+        known_root_identities=[repository_identity(r) for r in known_roots]
+        known_root_paths=[r.resolve() for r in known_roots]
+        def resolves_to_a_known_home(install_target):
+            ident=repository_identity(install_target.parents[1])
+            for root_ident,root_path in zip(known_root_identities,known_root_paths):
+                if ident is not None and root_ident is not None:
+                    if ident==root_ident:
+                        return True
+                # No git identity on one or both sides (a plain, non-git
+                # directory -- e.g. a test fixture) -- fall back to literal
+                # path containment against that specific known root.
+                elif install_target==root_path or install_target.is_relative_to(root_path):
+                    return True
+            return False
+        resolved_outside=sum(1 for p in ins.values() if not resolves_to_a_known_home(p.resolve()))
+        if counts['installed_outside_public']!=resolved_outside:
+            raise AssertionError(
+                f"installed_outside_public counted {counts['installed_outside_public']}, "
+                f"but {resolved_outside} installed entries actually resolve outside every "
+                f"known home ({[str(r) for r in known_root_paths]}) "
+                f"-- the aggregate and the filesystem have drifted apart")
     return {'observed_on':observed_on,'counts':counts,'public_installs':observations}, {'observed_on':observed_on,'counts':counts,'skills':details}
 
 
